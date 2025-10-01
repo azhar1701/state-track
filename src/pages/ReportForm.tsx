@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,40 @@ const ReportForm = () => {
     category: "",
   });
 
+  const getLocationName = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${TEMP_MAPBOX_TOKEN}`,
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        setLocation((prev) => (prev ? { ...prev, name: data.features[0].place_name } : prev));
+      }
+    } catch (error) {
+      console.error("Error getting location name:", error);
+    }
+  }, []);
+
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLocation({ latitude: lat, longitude: lng });
+        getLocationName(lat, lng);
+      },
+      (error) => {
+        console.log("Error getting location:", error);
+        // Default to Jakarta if location access denied
+        setLocation({ latitude: -6.2088, longitude: 106.8456 });
+      },
+    );
+  }, [getLocationName]);
+
   useEffect(() => {
     if (!user) {
       navigate("/auth");
@@ -51,7 +85,7 @@ const ReportForm = () => {
     }
 
     getUserLocation();
-  }, [user, navigate]);
+  }, [user, navigate, getUserLocation]);
 
   useEffect(() => {
     if (!mapContainer.current || !location) return;
@@ -83,42 +117,7 @@ const ReportForm = () => {
     return () => {
       map.current?.remove();
     };
-  }, [location?.latitude, location?.longitude]);
-
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setLocation({ latitude: lat, longitude: lng });
-          getLocationName(lat, lng);
-        },
-        (error) => {
-          console.log("Error getting location:", error);
-          // Default to Jakarta if location access denied
-          setLocation({ latitude: -6.2088, longitude: 106.8456 });
-        }
-      );
-    }
-  };
-
-  const getLocationName = async (lat: number, lng: number) => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${TEMP_MAPBOX_TOKEN}`
-      );
-      const data = await response.json();
-      if (data.features && data.features.length > 0) {
-        setLocation((prev) => ({
-          ...prev!,
-          name: data.features[0].place_name,
-        }));
-      }
-    } catch (error) {
-      console.error("Error getting location name:", error);
-    }
-  };
+  }, [location, getLocationName]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { MapPin, Menu, X, Map, FileText, LayoutDashboard, LogOut } from "lucide-react";
 import { useState } from "react";
 
