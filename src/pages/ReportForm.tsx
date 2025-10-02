@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
-import { useState, useEffect, useRef, useCallback } from "react";
-=======
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
->>>>>>> Stashed changes
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,16 +59,6 @@ const ReportForm = () => {
     category: "",
   });
 
-<<<<<<< Updated upstream
-  const getLocationName = useCallback(async (lat: number, lng: number) => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${TEMP_MAPBOX_TOKEN}`,
-      );
-      const data = await response.json();
-      if (data.features && data.features.length > 0) {
-        setLocation((prev) => (prev ? { ...prev, name: data.features[0].place_name } : prev));
-=======
   const markerIcon = useMemo(() => createLocationMarkerIcon(), []);
 
   const getLocationName = useCallback(async (lat: number, lng: number) => {
@@ -89,7 +75,6 @@ const ReportForm = () => {
           longitude: lng,
           name: data.display_name,
         });
->>>>>>> Stashed changes
       }
     } catch (error) {
       console.error("Error getting location name:", error);
@@ -97,25 +82,6 @@ const ReportForm = () => {
   }, []);
 
   const getUserLocation = useCallback(() => {
-<<<<<<< Updated upstream
-    if (!navigator.geolocation) {
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setLocation({ latitude: lat, longitude: lng });
-        getLocationName(lat, lng);
-      },
-      (error) => {
-        console.log("Error getting location:", error);
-        // Default to Jakarta if location access denied
-        setLocation({ latitude: -6.2088, longitude: 106.8456 });
-      },
-    );
-=======
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -135,7 +101,6 @@ const ReportForm = () => {
         }
       );
     }
->>>>>>> Stashed changes
   }, [getLocationName]);
 
   useEffect(() => {
@@ -156,36 +121,6 @@ const ReportForm = () => {
     }
   }, [location]);
 
-<<<<<<< Updated upstream
-    mapboxgl.accessToken = TEMP_MAPBOX_TOKEN;
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [location.longitude, location.latitude],
-      zoom: 15,
-    });
-
-    marker.current = new mapboxgl.Marker({ draggable: true, color: "#3b82f6" })
-      .setLngLat([location.longitude, location.latitude])
-      .addTo(map.current);
-
-    marker.current.on("dragend", () => {
-      const lngLat = marker.current!.getLngLat();
-      setLocation({
-        latitude: lngLat.lat,
-        longitude: lngLat.lng,
-      });
-      getLocationName(lngLat.lat, lngLat.lng);
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-    return () => {
-      map.current?.remove();
-    };
-  }, [location, getLocationName]);
-=======
   const markerEventHandlers = useMemo<LeafletEventHandlerFnMap>(
     () => ({
       dragend() {
@@ -203,7 +138,6 @@ const ReportForm = () => {
     }),
     [getLocationName]
   );
->>>>>>> Stashed changes
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
