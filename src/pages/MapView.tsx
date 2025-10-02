@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, X } from "lucide-react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-
-// Temporary Mapbox token input - akan diganti dengan secret management
-const TEMP_MAPBOX_TOKEN = "pk.eyJ1IjoibG92YWJsZS1kZW1vIiwiYSI6ImNtNXRxdzltbTBoa2cybHB6OTNscnU2Y2UifQ.gHvsKRI71gKBBxacxzj3Ew";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L, { type Map as LeafletMap } from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface Report {
   id: string;
@@ -24,10 +22,21 @@ interface Report {
   user_id: string;
 }
 
+type LatLngTuple = [number, number];
+
+const DEFAULT_CENTER: LatLngTuple = [-6.2088, 106.8456];
+const DEFAULT_ZOOM = 12;
+
 const statusColors = {
   baru: "bg-accent text-accent-foreground",
   diproses: "bg-secondary text-secondary-foreground",
   selesai: "bg-green-600 text-white",
+};
+
+const statusMarkerColors = {
+  baru: "#f59e0b",
+  diproses: "#10b981",
+  selesai: "#059669",
 };
 
 const categoryLabels = {
@@ -39,18 +48,24 @@ const categoryLabels = {
   lainnya: "Lainnya",
 };
 
+const createMarkerIcon = (color: string) =>
+  L.divIcon({
+    className: "",
+    html: `<span style="display:inline-block;width:30px;height:30px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);cursor:pointer;"></span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+
 const MapView = () => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
 
   useEffect(() => {
     fetchReports();
     getUserLocation();
 
-    // Realtime subscription
     const channel = supabase
       .channel("reports-changes")
       .on(
@@ -72,63 +87,10 @@ const MapView = () => {
   }, []);
 
   useEffect(() => {
-    if (!mapContainer.current) return;
-
-    mapboxgl.accessToken = TEMP_MAPBOX_TOKEN;
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: userLocation || [106.8456, -6.2088], // Default: Jakarta
-      zoom: 12,
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-    return () => {
-      map.current?.remove();
-    };
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo(userLocation, 15);
+    }
   }, [userLocation]);
-
-  useEffect(() => {
-    if (!map.current || reports.length === 0) return;
-
-    // Clear existing markers
-    const markers = document.querySelectorAll(".mapboxgl-marker");
-    markers.forEach((marker) => marker.remove());
-
-    // Add markers for each report
-    reports.forEach((report) => {
-      const markerColor =
-        report.status === "baru"
-          ? "#f59e0b"
-          : report.status === "diproses"
-          ? "#10b981"
-          : "#059669";
-
-      const el = document.createElement("div");
-      el.className = "marker";
-      el.style.backgroundColor = markerColor;
-      el.style.width = "30px";
-      el.style.height = "30px";
-      el.style.borderRadius = "50%";
-      el.style.cursor = "pointer";
-      el.style.border = "3px solid white";
-      el.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
-
-      el.addEventListener("click", () => {
-        setSelectedReport(report);
-        map.current?.flyTo({
-          center: [report.longitude, report.latitude],
-          zoom: 15,
-        });
-      });
-
-      new mapboxgl.Marker(el)
-        .setLngLat([report.longitude, report.latitude])
-        .addTo(map.current!);
-    });
-  }, [reports]);
 
   const fetchReports = async () => {
     const { data, error } = await supabase
@@ -145,7 +107,7 @@ const MapView = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation([position.coords.longitude, position.coords.latitude]);
+          setUserLocation([position.coords.latitude, position.coords.longitude]);
         },
         (error) => {
           console.log("Error getting location:", error);
@@ -155,11 +117,8 @@ const MapView = () => {
   };
 
   const goToUserLocation = () => {
-    if (userLocation && map.current) {
-      map.current.flyTo({
-        center: userLocation,
-        zoom: 15,
-      });
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo(userLocation, 15);
     }
   };
 
@@ -174,9 +133,41 @@ const MapView = () => {
         </div>
 
         <div className="relative h-[calc(100vh-220px)] rounded-lg overflow-hidden shadow-lg border">
-          <div ref={mapContainer} className="absolute inset-0" />
+          <MapContainer
+            center={userLocation || DEFAULT_CENTER}
+            zoom={DEFAULT_ZOOM}
+            scrollWheelZoom
+            className="absolute inset-0"
+            style={{ height: "100%", width: "100%" }}
+            whenCreated={(mapInstance) => {
+              mapRef.current = mapInstance;
+            }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
 
-          {/* User location button */}
+            {reports.map((report) => {
+              const markerColor =
+                statusMarkerColors[report.status as keyof typeof statusMarkerColors] || "#f59e0b";
+
+              return (
+                <Marker
+                  key={report.id}
+                  position={[report.latitude, report.longitude]}
+                  icon={createMarkerIcon(markerColor)}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedReport(report);
+                      mapRef.current?.flyTo([report.latitude, report.longitude], 15);
+                    },
+                  }}
+                />
+              );
+            })}
+          </MapContainer>
+
           {userLocation && (
             <Button
               onClick={goToUserLocation}
@@ -188,7 +179,6 @@ const MapView = () => {
             </Button>
           )}
 
-          {/* Legend */}
           <Card className="absolute bottom-4 left-4 z-10 shadow-lg">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Status Laporan</CardTitle>
@@ -209,7 +199,6 @@ const MapView = () => {
             </CardContent>
           </Card>
 
-          {/* Selected report details */}
           {selectedReport && (
             <Card className="absolute top-4 right-4 z-10 w-80 max-h-[calc(100vh-280px)] overflow-auto shadow-xl">
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">

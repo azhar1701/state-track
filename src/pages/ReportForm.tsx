@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 import { useState, useEffect, useRef, useCallback } from "react";
+=======
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+>>>>>>> Stashed changes
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,11 +14,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MapPin, Upload, Navigation, Loader2 } from "lucide-react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L, { type LeafletEventHandlerFnMap, type Map as LeafletMap } from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { z } from "zod";
 
-const TEMP_MAPBOX_TOKEN = "pk.eyJ1IjoibG92YWJsZS1kZW1vIiwiYSI6ImNtNXRxdzltbTBoa2cybHB6OTNscnU2Y2UifQ.gHvsKRI71gKBBxacxzj3Ew";
+type LocationState = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+};
+
+type LatLngTuple = [number, number];
+
+const DEFAULT_CENTER: LatLngTuple = [-6.2088, 106.8456];
 
 const reportSchema = z.object({
   title: z.string().min(5, { message: "Judul minimal 5 karakter" }).max(100),
@@ -22,21 +35,27 @@ const reportSchema = z.object({
   category: z.enum(["jalan", "jembatan", "lampu", "drainase", "taman", "lainnya"]),
 });
 
+const createLocationMarkerIcon = () =>
+  L.divIcon({
+    className: "",
+    html: `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;background:#2563eb;border:4px solid white;box-shadow:0 4px 8px rgba(0,0,0,0.25);cursor:grab;"></span>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+  });
+
+const buildReverseGeocodeUrl = (lat: number, lng: number) =>
+  `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=id&email=support@state-track.local`;
+
 const ReportForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [location, setLocation] = useState<{
-    latitude: number;
-    longitude: number;
-    name?: string;
-  } | null>(null);
+  const [location, setLocation] = useState<LocationState | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -44,6 +63,7 @@ const ReportForm = () => {
     category: "",
   });
 
+<<<<<<< Updated upstream
   const getLocationName = useCallback(async (lat: number, lng: number) => {
     try {
       const response = await fetch(
@@ -52,6 +72,24 @@ const ReportForm = () => {
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         setLocation((prev) => (prev ? { ...prev, name: data.features[0].place_name } : prev));
+=======
+  const markerIcon = useMemo(() => createLocationMarkerIcon(), []);
+
+  const getLocationName = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(buildReverseGeocodeUrl(lat, lng));
+      if (!response.ok) {
+        throw new Error(`Reverse geocode failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data?.display_name) {
+        setLocation({
+          latitude: lat,
+          longitude: lng,
+          name: data.display_name,
+        });
+>>>>>>> Stashed changes
       }
     } catch (error) {
       console.error("Error getting location name:", error);
@@ -59,6 +97,7 @@ const ReportForm = () => {
   }, []);
 
   const getUserLocation = useCallback(() => {
+<<<<<<< Updated upstream
     if (!navigator.geolocation) {
       return;
     }
@@ -76,6 +115,27 @@ const ReportForm = () => {
         setLocation({ latitude: -6.2088, longitude: 106.8456 });
       },
     );
+=======
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setLocation({ latitude: lat, longitude: lng });
+          getLocationName(lat, lng);
+          if (mapRef.current) {
+            mapRef.current.flyTo([lat, lng], 15);
+          }
+        },
+        (error) => {
+          console.log("Error getting location:", error);
+          const [defaultLat, defaultLng] = DEFAULT_CENTER;
+          setLocation({ latitude: defaultLat, longitude: defaultLng });
+          getLocationName(defaultLat, defaultLng);
+        }
+      );
+    }
+>>>>>>> Stashed changes
   }, [getLocationName]);
 
   useEffect(() => {
@@ -88,8 +148,15 @@ const ReportForm = () => {
   }, [user, navigate, getUserLocation]);
 
   useEffect(() => {
-    if (!mapContainer.current || !location) return;
+    if (location && mapRef.current) {
+      mapRef.current.flyTo(
+        [location.latitude, location.longitude],
+        mapRef.current.getZoom() ?? 15
+      );
+    }
+  }, [location]);
 
+<<<<<<< Updated upstream
     mapboxgl.accessToken = TEMP_MAPBOX_TOKEN;
 
     map.current = new mapboxgl.Map({
@@ -118,6 +185,25 @@ const ReportForm = () => {
       map.current?.remove();
     };
   }, [location, getLocationName]);
+=======
+  const markerEventHandlers = useMemo<LeafletEventHandlerFnMap>(
+    () => ({
+      dragend() {
+        const currentMarker = markerRef.current;
+        if (currentMarker) {
+          const { lat, lng } = currentMarker.getLatLng();
+          setLocation((prev) => ({
+            latitude: lat,
+            longitude: lng,
+            name: prev?.name,
+          }));
+          getLocationName(lat, lng);
+        }
+      },
+    }),
+    [getLocationName]
+  );
+>>>>>>> Stashed changes
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,128 +213,143 @@ const ReportForm = () => {
         return;
       }
       setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setPhotoPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData({ title: "", description: "", category: "" });
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setLocation(null);
+  };
+
+  const uploadPhoto = async () => {
+    if (!photoFile || !user) return null;
+
+    const fileExt = photoFile.name.split(".").pop();
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+    const filePath = `reports/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("reports")
+      .upload(filePath, photoFile);
+
+    if (uploadError) {
+      toast.error("Gagal mengunggah foto");
+      return null;
+    }
+
+    const { data } = supabase.storage.from("reports").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!location) {
-      toast.error("Lokasi belum dipilih");
+    if (!user) {
+      toast.error("Silakan login terlebih dahulu");
+      navigate("/auth");
       return;
     }
 
-    setLoading(true);
+    const validation = reportSchema.safeParse(formData);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+
+    if (!location) {
+      toast.error("Silakan pilih lokasi laporan");
+      return;
+    }
 
     try {
-      const validation = reportSchema.safeParse(formData);
-      if (!validation.success) {
-        toast.error(validation.error.errors[0].message);
-        return;
-      }
-
+      setLoading(true);
       let photoUrl = null;
 
-      // Upload photo if exists
       if (photoFile) {
-        const fileExt = photoFile.name.split(".").pop();
-        const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("report-photos")
-          .upload(fileName, photoFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage
-          .from("report-photos")
-          .getPublicUrl(fileName);
-
-        photoUrl = publicUrlData.publicUrl;
+        photoUrl = await uploadPhoto();
+        if (!photoUrl) {
+          setLoading(false);
+          return;
+        }
       }
 
-      // Insert report
-      const { error: insertError } = await supabase.from("reports").insert({
-        user_id: user!.id,
-        title: formData.title,
-        description: formData.description,
-        category: formData.category as "jalan" | "jembatan" | "lampu" | "drainase" | "taman" | "lainnya",
-        latitude: location.latitude,
-        longitude: location.longitude,
-        location_name: location.name || null,
-        photo_url: photoUrl,
-      });
+      const { error } = await supabase.from("reports").insert([
+        {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          status: "baru",
+          latitude: location.latitude,
+          longitude: location.longitude,
+          location_name: location.name || null,
+          photo_url: photoUrl,
+          user_id: user.id,
+        },
+      ]);
 
-      if (insertError) throw insertError;
+      if (error) {
+        throw error;
+      }
 
       toast.success("Laporan berhasil dikirim!");
+      resetForm();
       navigate("/map");
     } catch (error) {
       console.error("Error submitting report:", error);
-      toast.error("Gagal mengirim laporan. Silakan coba lagi.");
+      toast.error("Terjadi kesalahan saat mengirim laporan");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!user) return null;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <Card className="shadow-xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6">
+        <Card className="max-w-3xl mx-auto shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl">Buat Laporan Baru</CardTitle>
+            <CardTitle>Buat Laporan Infrastruktur</CardTitle>
             <CardDescription>
-              Laporkan masalah infrastruktur publik dengan lengkap
+              Lengkapi informasi berikut untuk melaporkan masalah infrastruktur di lingkungan Anda
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Judul Laporan *</Label>
-                <Input
-                  id="title"
-                  placeholder="Contoh: Jalan rusak di depan SD Negeri 1"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  required
-                />
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Judul Laporan *</Label>
+                  <Input
+                    id="title"
+                    placeholder="Contoh: Lampu jalan mati"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Kategori *</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jalan">Jalan</SelectItem>
+                      <SelectItem value="jembatan">Jembatan</SelectItem>
+                      <SelectItem value="lampu">Lampu</SelectItem>
+                      <SelectItem value="drainase">Drainase</SelectItem>
+                      <SelectItem value="taman">Taman</SelectItem>
+                      <SelectItem value="lainnya">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* Category */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Kategori *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="jalan">Jalan</SelectItem>
-                    <SelectItem value="jembatan">Jembatan</SelectItem>
-                    <SelectItem value="lampu">Lampu</SelectItem>
-                    <SelectItem value="drainase">Drainase</SelectItem>
-                    <SelectItem value="taman">Taman</SelectItem>
-                    <SelectItem value="lainnya">Lainnya</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Deskripsi *</Label>
                 <Textarea
@@ -256,14 +357,11 @@ const ReportForm = () => {
                   placeholder="Jelaskan masalah secara detail..."
                   rows={4}
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                 />
               </div>
 
-              {/* Photo Upload */}
               <div className="space-y-2">
                 <Label htmlFor="photo">Foto (Opsional)</Label>
                 <div className="flex items-center gap-4">
@@ -283,9 +381,7 @@ const ReportForm = () => {
                     {photoFile ? "Ganti Foto" : "Upload Foto"}
                   </Button>
                   {photoFile && (
-                    <span className="text-sm text-muted-foreground">
-                      {photoFile.name}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{photoFile.name}</span>
                   )}
                 </div>
                 {photoPreview && (
@@ -297,12 +393,39 @@ const ReportForm = () => {
                 )}
               </div>
 
-              {/* Location Map */}
               <div className="space-y-2">
                 <Label>Lokasi *</Label>
                 <div className="space-y-2">
                   <div className="relative h-64 rounded-lg overflow-hidden border">
-                    <div ref={mapContainer} className="absolute inset-0" />
+                    <MapContainer
+                      center={location ? [location.latitude, location.longitude] : DEFAULT_CENTER}
+                      zoom={15}
+                      scrollWheelZoom
+                      className="absolute inset-0"
+                      style={{ height: "100%", width: "100%" }}
+                      whenCreated={(mapInstance) => {
+                        mapRef.current = mapInstance;
+                        if (location) {
+                          mapInstance.setView([location.latitude, location.longitude], 15);
+                        }
+                      }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+
+                      {location && (
+                        <Marker
+                          position={[location.latitude, location.longitude]}
+                          draggable
+                          icon={markerIcon}
+                          ref={markerRef}
+                          eventHandlers={markerEventHandlers}
+                        />
+                      )}
+                    </MapContainer>
+
                     <Button
                       type="button"
                       onClick={getUserLocation}
@@ -312,6 +435,14 @@ const ReportForm = () => {
                       <Navigation className="w-4 h-4 mr-2" />
                       Lokasi Saya
                     </Button>
+
+                    {!location && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/70 backdrop-blur-sm">
+                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Memuat peta...
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {location?.name && (
                     <div className="flex items-start gap-2 text-sm p-3 bg-muted rounded-lg">
@@ -355,3 +486,4 @@ const ReportForm = () => {
 };
 
 export default ReportForm;
+
