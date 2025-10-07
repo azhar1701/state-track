@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { AuthContext, type AuthContextValue } from "./auth-context";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -44,6 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAdminStatus = async (userId: string) => {
     try {
+      if (!isSupabaseConfigured) {
+        setIsAdmin(false);
+        return;
+      }
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")

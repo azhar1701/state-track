@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -103,16 +103,21 @@ const ReportForm = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+  const getLocationName = useCallback(async (lat: number, lng: number) => {
+    try {
+      const result = await reverseGeocode(lat, lng);
+      if (result) {
+        setLocation((prev) => ({
+          ...prev!,
+          name: formatAddress(result),
+        }));
+      }
+    } catch (error) {
+      console.error('Error getting location name:', error);
     }
+  }, []);
 
-    getUserLocation();
-  }, [user, navigate]);
-
-  const getUserLocation = () => {
+  const getUserLocation = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -127,21 +132,15 @@ const ReportForm = () => {
         }
       );
     }
-  };
+  }, [getLocationName]);
 
-  const getLocationName = async (lat: number, lng: number) => {
-    try {
-      const result = await reverseGeocode(lat, lng);
-      if (result) {
-        setLocation((prev) => ({
-          ...prev!,
-          name: formatAddress(result),
-        }));
-      }
-    } catch (error) {
-      console.error('Error getting location name:', error);
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+      return;
     }
-  };
+    getUserLocation();
+  }, [user, navigate, getUserLocation]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;

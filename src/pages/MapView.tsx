@@ -10,7 +10,6 @@ import { BasemapSwitcher, BasemapType } from '@/components/map/BasemapSwitcher';
 import { FilterPanel, MapFilters } from '@/components/map/FilterPanel';
 import { TimeSlider } from '@/components/map/TimeSlider';
 import { OverlayToggle, MapOverlays } from '@/components/map/OverlayToggle';
-import { DrawControls } from '@/components/map/DrawControls';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
@@ -281,11 +280,7 @@ const MapView = () => {
           >
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
-            <DrawControls
-              onPolygonCreated={(polygon) => setDrawnPolygon(polygon)}
-              onPolygonEdited={(polygon) => setDrawnPolygon(polygon)}
-              onPolygonDeleted={() => setDrawnPolygon(null)}
-            />
+            {/* DrawControls removed */}
 
             {filteredReports.map((report) => (
               <Marker
