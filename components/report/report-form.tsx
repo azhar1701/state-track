@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+// @ts-expect-error - mapbox-gl types may be unavailable in this environment
 import mapboxgl, { type Map } from "mapbox-gl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { reportSchema, type ReportFormValues } from "@/lib/validation/report";
+import { reportSchema, type ReportFormValues } from "../../lib/validation/report";
 
 const FALLBACK_COORDS = {
   latitude: -6.2088,
@@ -44,7 +45,7 @@ const osmStyle: mapboxgl.Style = {
         "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
+      attribution: "ï¿½ OpenStreetMap contributors",
     },
   },
   layers: [
@@ -66,7 +67,7 @@ const googleHybridStyle: mapboxgl.Style = {
       type: "raster",
       tiles: ["https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"],
       tileSize: 256,
-      attribution: "Imagery © Google",
+      attribution: "Imagery ï¿½ Google",
     },
   },
   layers: [
@@ -94,18 +95,38 @@ export function ReportForm() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successId, setSuccessId] = useState<string | null>(null);
+
+  // Restore draft from localStorage if available
+  const DRAFT_KEY = "report_form_draft_v1";
+  const savedDraft = useMemo((): Partial<ReportFormValues> | null => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? (JSON.parse(raw) as Partial<ReportFormValues>) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
-      title: "",
-      description: "",
-      category: "jalan",
-      severity: "sedang",
-      reporterName: "",
-      phone: "",
-      location: FALLBACK_COORDS,
-      basemap: "osm",
+      title: savedDraft?.title ?? "",
+      description: savedDraft?.description ?? "",
+      category: savedDraft?.category ?? "jalan",
+      severity: savedDraft?.severity ?? "sedang",
+      damageLevel: savedDraft?.damageLevel ?? 3,
+      reporterName: savedDraft?.reporterName ?? "",
+      phone: savedDraft?.phone ?? "",
+      kecamatan: savedDraft?.kecamatan ?? "",
+      desa: savedDraft?.desa ?? "",
+      location: savedDraft?.location ?? FALLBACK_COORDS,
+      basemap:
+        savedDraft?.basemap === "osm" || savedDraft?.basemap === "satellite"
+          ? (savedDraft.basemap as MapStyleId)
+          : "osm",
     },
   });
 
@@ -177,7 +198,7 @@ export function ReportForm() {
     });
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    map.on("click", (event) => {
+    map.on("click", (event: mapboxgl.MapMouseEvent & mapboxgl.EventData) => {
       const { lat, lng } = event.lngLat;
       const coords = { latitude: lat, longitude: lng };
       handleLocationChange(coords);
@@ -247,10 +268,40 @@ export function ReportForm() {
     setPhotoPreviews(previews);
   }, [photoPreviews]);
 
+  // Auto-save draft on value changes
+  useEffect(() => {
+    const sub = form.watch((value) => {
+      try {
+        // ensure location shape remains intact
+        const v = value as ReportFormValues;
+        const toSave: Partial<ReportFormValues> = {
+          ...v,
+          location: v?.location ? { latitude: Number(v.location.latitude), longitude: Number(v.location.longitude) } : undefined,
+        } as Partial<ReportFormValues>;
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        // ignore storage errors
+      }
+    });
+    return () => {
+      (sub as unknown as { unsubscribe?: () => void }).unsubscribe?.();
+    };
+  }, [form]);
+
+  // Clear draft on successful submit
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   const selectedBasemapLabel = useMemo(() => {
     return MAP_STYLES.find((style) => style.id === mapStyle)?.label ?? "";
   }, [mapStyle]);
 
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const onSubmit = form.handleSubmit(async (values) => {
     if (!currentLocation) {
       toast.error("Silakan pilih lokasi pada peta terlebih dahulu");
@@ -260,14 +311,48 @@ export function ReportForm() {
     setIsSubmitting(true);
     const payload = { ...values, location: currentLocation };
 
+    // Prevent duplicates: simple client-side check by title+nearby location within ~30m via sessionStorage cache
+    try {
+      const key = `dup_${payload.title}_${Math.round(payload.location.latitude*1000)}_${Math.round(payload.location.longitude*1000)}`;
+      const lastAt = sessionStorage.getItem(key);
+      if (lastAt && Date.now() - Number(lastAt) < 2 * 60 * 1000) {
+        toast.error("Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.");
+        setIsSubmitting(false);
+        return;
+      }
+      sessionStorage.setItem(key, String(Date.now()));
+    } catch (e) {
+      // ignore sessionStorage errors
+    }
+
     try {
       const formData = new FormData();
       formData.append("payload", JSON.stringify(payload));
+      // Track upload progress via XHR
       photoFiles.forEach((file) => formData.append("photos", file));
 
-      const response = await fetch("/api/reports", {
-        method: "POST",
-        body: formData,
+      const response = await new Promise<Response>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/reports");
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            // reuse submit button text via toast update
+            toast.info(`Mengunggah... ${percent}%`, { id: "upload-progress" });
+            setUploadPercent(percent);
+          }
+        };
+        xhr.onload = () => {
+          toast.dismiss("upload-progress");
+          setUploadPercent(null);
+          resolve(new Response(xhr.response, { status: xhr.status, statusText: xhr.statusText }));
+        };
+        xhr.onerror = () => {
+          toast.dismiss("upload-progress");
+          setUploadPercent(null);
+          reject(new Error("Gagal mengunggah"));
+        };
+        xhr.send(formData);
       });
 
       if (!response.ok) {
@@ -275,7 +360,9 @@ export function ReportForm() {
         throw new Error(data.message ?? "Gagal mengirim laporan");
       }
 
+  const resJson = await response.json().catch(() => null);
       toast.success("Laporan berhasil dikirim");
+      clearDraft();
       setPhotoFiles([]);
       setPhotoPreviews([]);
       markerRef.current?.remove();
@@ -286,11 +373,17 @@ export function ReportForm() {
         description: "",
         category: "jalan",
         severity: "sedang",
+        damageLevel: 3,
         reporterName: "",
         phone: "",
+        kecamatan: "",
+        desa: "",
         location: FALLBACK_COORDS,
         basemap: mapStyle,
       });
+      // Show success panel with ID if available
+      const id = resJson?.data?.id as string | undefined;
+      if (id) setSuccessId(id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Terjadi kesalahan saat mengirim laporan");
     } finally {
@@ -308,6 +401,29 @@ export function ReportForm() {
           </p>
         </header>
 
+        {successId ? (
+          <div className="space-y-4 text-center">
+            <div className="mx-auto h-16 w-16 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-3xl">âœ“</div>
+            <h2 className="text-xl font-semibold">Laporan Berhasil Dikirim</h2>
+            <p className="text-slate-600">ID Laporan: <span className="font-mono font-medium">{successId}</span></p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => window.location.assign(`/report/status?id=${successId}`)}
+                className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90"
+              >
+                Lihat Status
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuccessId(null)}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Buat Laporan Lain
+              </button>
+            </div>
+          </div>
+        ) : (
         <form className="space-y-5" onSubmit={onSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -337,6 +453,7 @@ export function ReportForm() {
                 <option value="jembatan">Jembatan</option>
                 <option value="irigasi">Irigasi</option>
                 <option value="drainase">Drainase</option>
+                <option value="sungai">Sungai</option>
                 <option value="lainnya">Lainnya</option>
               </select>
               <FormError message={form.formState.errors.category?.message} />
@@ -356,6 +473,21 @@ export function ReportForm() {
                 <option value="berat">Berat</option>
               </select>
               <FormError message={form.formState.errors.severity?.message} />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="damageLevel">
+                Tingkat Kerusakan (1-5)
+              </label>
+              <input
+                id="damageLevel"
+                type="number"
+                min={1}
+                max={5}
+                {...form.register("damageLevel", { valueAsNumber: true })}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <FormError message={form.formState.errors.damageLevel?.message} />
             </div>
 
             <div>
@@ -385,6 +517,34 @@ export function ReportForm() {
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               <FormError message={form.formState.errors.phone?.message} />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="kecamatan">
+                Kecamatan
+              </label>
+              <input
+                id="kecamatan"
+                type="text"
+                {...form.register("kecamatan")}
+                placeholder="Nama kecamatan"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <FormError message={form.formState.errors.kecamatan?.message} />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="desa">
+                Desa/Kelurahan
+              </label>
+              <input
+                id="desa"
+                type="text"
+                {...form.register("desa")}
+                placeholder="Nama desa/kelurahan"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <FormError message={form.formState.errors.desa?.message} />
             </div>
           </div>
 
@@ -480,6 +640,11 @@ export function ReportForm() {
             </div>
           </div>
 
+          {uploadPercent !== null && (
+            <div className="w-full rounded bg-slate-200 h-2 overflow-hidden">
+              <div className="h-2 bg-primary transition-all" style={{ width: `${uploadPercent}%` }} />
+            </div>
+          )}
           <div className="flex items-center justify-end gap-3">
             <button
               type="reset"
@@ -505,11 +670,40 @@ export function ReportForm() {
             </button>
           </div>
         </form>
+        )}
       </section>
 
       <aside className="space-y-4">
-        <div className="h-[420px] overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+        <div className="relative h-[420px] overflow-hidden rounded-xl border border-slate-200 shadow-sm">
           <div ref={mapContainerRef} className="h-full w-full" />
+          {/* Move 'Lokasi Saya' floating button to bottom-left to avoid overlapping zoom controls */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute bottom-3 left-3 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    toast.error("Perangkat tidak mendukung GPS");
+                    return;
+                  }
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      const coords = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                      };
+                      handleLocationChange(coords);
+                      placeMarker(coords, { fly: true });
+                    },
+                    () => toast.error("Tidak dapat mengambil lokasi otomatis"),
+                  );
+                }}
+                className="rounded-md bg-primary/90 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-primary"
+              >
+                Lokasi Saya
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">

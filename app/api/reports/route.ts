@@ -19,10 +19,15 @@ export async function POST(request: NextRequest) {
     // TODO: Simpan data ke basis data atau layanan penyimpanan sesuai kebutuhan aplikasi.
     // Simpan file foto ke storage pilihan Anda di sini.
 
+    const id = (globalThis.crypto && "randomUUID" in globalThis.crypto)
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
     return NextResponse.json(
       {
         message: "Laporan berhasil diterima",
         data: {
+          id,
           ...data,
           photoCount: photos.length,
         },

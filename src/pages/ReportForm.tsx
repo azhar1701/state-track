@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
@@ -17,10 +17,29 @@ import { z } from 'zod';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import { reverseGeocode, geocodeAddress, formatAddress } from '@/lib/geocoding';
 
+type Severity = 'ringan' | 'sedang' | 'berat';
+type Category = 'jalan' | 'jembatan' | 'irigasi' | 'drainase' | 'sungai' | 'lainnya';
+
+type ReportFormData = {
+  title: string;
+  description: string;
+  category: Category;
+  severity: Severity;
+  reporterName: string;
+  phone: string;
+  kecamatan: string;
+  desa: string;
+};
+
 const reportSchema = z.object({
   title: z.string().min(5, { message: 'Judul minimal 5 karakter' }).max(100),
-  description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(1000),
-  category: z.enum(['jalan', 'jembatan', 'lampu', 'drainase', 'taman', 'lainnya']),
+  description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
+  category: z.enum(['jalan', 'jembatan', 'irigasi', 'drainase', 'sungai', 'lainnya']),
+  severity: z.enum(['ringan', 'sedang', 'berat']),
+  reporterName: z.string().min(3, { message: 'Nama minimal 3 karakter' }).max(120),
+  phone: z.string().min(8).max(20).regex(/^\+?[0-9\s-]+$/, { message: 'Nomor telepon tidak valid' }),
+  kecamatan: z.string().min(2).max(120),
+  desa: z.string().min(2).max(120),
 });
 
 const markerIcon = L.icon({
@@ -94,11 +113,45 @@ const ReportForm = () => {
     name?: string;
   } | null>(null);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'lainnya',
-  });
+  const DRAFT_KEY = 'report_form_draft_v2';
+  const savedDraft = useMemo((): ReportFormData | null => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? (JSON.parse(raw) as ReportFormData) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [formData, setFormData] = useState<ReportFormData>(
+    savedDraft ?? {
+      title: '',
+      description: '',
+      category: 'jalan',
+      severity: 'sedang',
+      reporterName: '',
+      phone: '',
+      kecamatan: '',
+      desa: '',
+    }
+  );
+  // Autosave draft
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+    } catch {
+      // ignore quota/serialization errors
+    }
+  }, [formData]);
+
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof ReportFormData | 'location', string>>>({});
+  const [kecamatanList, setKecamatanList] = useState<Array<{ id: string; name: string }>>([]);
+  const [desaList, setDesaList] = useState<Array<{ id: string; name: string; kecamatan_id: string }>>([]);
+  const [allDesaList, setAllDesaList] = useState<Array<{ id: string; name: string; kecamatan_id: string }>>([]);
+  const [selectedKecamatanId, setSelectedKecamatanId] = useState<string | null>(null);
+  const [selectedDesaId, setSelectedDesaId] = useState<string | null>(null);
+
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -141,6 +194,80 @@ const ReportForm = () => {
     }
     getUserLocation();
   }, [user, navigate, getUserLocation]);
+
+  // Load kecamatan and all desa on mount
+  useEffect(() => {
+    const loadKecamatan = async () => {
+      if (!isSupabaseConfigured) return;
+      const { data, error } = await supabase.from('kecamatan').select('id,name').order('name');
+      if (!error && data) {
+        setKecamatanList(data as Array<{ id: string; name: string }>);
+      }
+    };
+    const loadAllDesa = async () => {
+      if (!isSupabaseConfigured) return;
+      const { data, error } = await supabase.from('desa').select('id,name,kecamatan_id').order('name');
+      if (!error && data) {
+        setAllDesaList(data as Array<{ id: string; name: string; kecamatan_id: string }>);
+      }
+    };
+    void loadKecamatan();
+    void loadAllDesa();
+  }, []);
+
+  // When kecamatan list is loaded, if draft contains kecamatan name, preselect it
+  useEffect(() => {
+    if (formData.kecamatan && kecamatanList.length > 0 && !selectedKecamatanId) {
+      const match = kecamatanList.find(k => k.name.toLowerCase() === formData.kecamatan.toLowerCase());
+      if (match) setSelectedKecamatanId(match.id);
+    }
+  }, [kecamatanList, formData.kecamatan, selectedKecamatanId]);
+
+  // Load desa when kecamatan changes
+  useEffect(() => {
+    const loadDesa = async () => {
+      if (!isSupabaseConfigured || !selectedKecamatanId) { setDesaList([]); return; }
+      const { data, error } = await supabase
+        .from('desa')
+        .select('id,name,kecamatan_id')
+        .eq('kecamatan_id', selectedKecamatanId)
+        .order('name');
+      if (!error && data) {
+        setDesaList(data as Array<{ id: string; name: string; kecamatan_id: string }>);
+      }
+    };
+    void loadDesa();
+  }, [selectedKecamatanId]);
+
+  // When allDesaList is available, if draft contains desa name, preselect and sync kecamatan
+  useEffect(() => {
+    if (formData.desa && allDesaList.length > 0 && !selectedDesaId) {
+      const match = allDesaList.find(d => d.name.toLowerCase() === formData.desa.toLowerCase());
+      if (match) {
+        setSelectedDesaId(match.id);
+        if (!selectedKecamatanId) {
+          setSelectedKecamatanId(match.kecamatan_id);
+          const kec = kecamatanList.find(k => k.id === match.kecamatan_id);
+          if (kec) setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
+        }
+      }
+    }
+  }, [allDesaList, formData.desa, selectedDesaId, selectedKecamatanId, kecamatanList]);
+
+  // Realtime validation
+  useEffect(() => {
+    const parsed = reportSchema.safeParse(formData);
+    if (parsed.success) {
+      setErrors((prev) => ({ ...prev, title: undefined, description: undefined, category: undefined, severity: undefined, damageLevel: undefined, reporterName: undefined, phone: undefined, kecamatan: undefined, desa: undefined }));
+    } else {
+      const next: Partial<Record<keyof ReportFormData, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path[0] as keyof ReportFormData;
+        if (!next[field]) next[field] = issue.message;
+      }
+      setErrors((prev) => ({ ...prev, ...next }));
+    }
+  }, [formData]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -197,6 +324,7 @@ const ReportForm = () => {
 
     if (!location) {
       toast.error('Lokasi belum dipilih');
+      setErrors((prev) => ({ ...prev, location: 'Lokasi wajib dipilih' }));
       return;
     }
 
@@ -206,6 +334,7 @@ const ReportForm = () => {
     }
 
   setLoading(true);
+  setUploadPercent(5);
 
     try {
       const validation = reportSchema.safeParse(formData);
@@ -213,8 +342,27 @@ const ReportForm = () => {
         // Hentikan loading jika validasi gagal agar tombol tidak terkunci
         setLoading(false);
         toast.error(validation.error.errors[0].message);
+        // surface first error
+        const first = validation.error.errors[0];
+        if (first && first.path[0]) {
+          setErrors((prev) => ({ ...prev, [first.path[0] as keyof ReportFormData]: first.message }));
+        }
         return;
       }
+
+  // Prevent duplicates (simple client-side): block similar submissions for 2 minutes based on title+rounded coords
+  try {
+    const k = `dup_${formData.title}_${Math.round(location.latitude*1000)}_${Math.round(location.longitude*1000)}`;
+    const last = sessionStorage.getItem(k);
+    if (last && Date.now() - Number(last) < 2 * 60 * 1000) {
+      toast.error('Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.');
+      setLoading(false);
+      return;
+    }
+    sessionStorage.setItem(k, String(Date.now()));
+  } catch {
+    // ignore sessionStorage failures
+  }
 
   let photoUrl = null;
 
@@ -222,6 +370,7 @@ const ReportForm = () => {
         const fileExt = photoFile.name.split('.').pop();
         const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
 
+        setUploadPercent(10);
         const { error: uploadError } = await supabase.storage
           .from('report-photos')
           .upload(fileName, photoFile, { contentType: photoFile.type, upsert: false });
@@ -235,26 +384,40 @@ const ReportForm = () => {
             throw uploadError;
           }
         } else {
+          setUploadPercent(60);
           const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
           photoUrl = publicUrlData.publicUrl;
         }
       }
 
-      const { error: insertError } = await supabase.from('reports').insert({
+      setUploadPercent((p) => (p !== null && p < 80 ? 80 : p));
+      const { data: inserted, error: insertError } = await supabase.from('reports').insert({
         user_id: user!.id,
         title: formData.title,
         description: formData.description,
-        category: formData.category as 'jalan' | 'jembatan' | 'lampu' | 'drainase' | 'taman' | 'lainnya',
+        category: formData.category,
+        status: 'baru',
         latitude: location.latitude,
         longitude: location.longitude,
         location_name: location.name || null,
         photo_url: photoUrl,
-      });
+        severity: formData.severity,
+        reporter_name: formData.reporterName,
+        phone: formData.phone,
+        kecamatan: formData.kecamatan,
+        desa: formData.desa,
+      }).select('id').single();
 
       if (insertError) throw insertError;
 
       toast.success('Laporan berhasil dikirim!');
-      navigate('/map');
+      // Clear draft
+      try { localStorage.removeItem(DRAFT_KEY); } catch {
+        // ignore removeItem failures
+      }
+      setUploadPercent(100);
+      const id = inserted?.id as string | number | undefined;
+      navigate(id ? `/report/success?id=${id}` : '/report/success');
     } catch (error) {
       console.error('Error submitting report:', error);
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
@@ -282,6 +445,7 @@ const ReportForm = () => {
       toast.error(message);
     } finally {
       setLoading(false);
+      setUploadPercent(null);
     }
   };
 
@@ -306,13 +470,14 @@ const ReportForm = () => {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
+                {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="category">Kategori *</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
                   required
                 >
                   <SelectTrigger>
@@ -321,14 +486,32 @@ const ReportForm = () => {
                   <SelectContent>
                     <SelectItem value="jalan">Jalan</SelectItem>
                     <SelectItem value="jembatan">Jembatan</SelectItem>
-                    <SelectItem value="lampu">Lampu</SelectItem>
+                    <SelectItem value="irigasi">Irigasi</SelectItem>
                     <SelectItem value="drainase">Drainase</SelectItem>
-                    <SelectItem value="taman">Taman</SelectItem>
+                    <SelectItem value="sungai">Sungai</SelectItem>
                     <SelectItem value="lainnya">Lainnya</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.category && <p className="text-sm text-red-600">{errors.category}</p>}
               </div>
 
+              {/* Reordered: Severity */}
+              <div className="space-y-2">
+                <Label htmlFor="severity">Tingkat Keparahan *</Label>
+                <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih tingkat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ringan">Ringan</SelectItem>
+                    <SelectItem value="sedang">Sedang</SelectItem>
+                    <SelectItem value="berat">Berat</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.severity && <p className="text-sm text-red-600">{errors.severity}</p>}
+              </div>
+
+              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Deskripsi *</Label>
                 <Textarea
@@ -339,7 +522,87 @@ const ReportForm = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                 />
+                {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
               </div>
+
+              {/* Desa dropdown */}
+              <div className="space-y-2">
+                <Label htmlFor="desa">Desa/Kelurahan *</Label>
+                <Select
+                  value={selectedDesaId ?? ''}
+                  onValueChange={(value) => {
+                    const desa = (selectedKecamatanId ? desaList : allDesaList).find(d => d.id === value);
+                    setSelectedDesaId(value);
+                    if (desa) {
+                      setFormData((prev) => ({ ...prev, desa: desa.name }));
+                      if (!selectedKecamatanId || desa.kecamatan_id !== selectedKecamatanId) {
+                        setSelectedKecamatanId(desa.kecamatan_id);
+                        const kec = kecamatanList.find(k => k.id === desa.kecamatan_id);
+                        if (kec) setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih desa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(selectedKecamatanId ? desaList : allDesaList).map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.desa && <p className="text-sm text-red-600">{errors.desa}</p>}
+              </div>
+
+              {/* Kecamatan dropdown */}
+              <div className="space-y-2">
+                <Label htmlFor="kecamatan">Kecamatan *</Label>
+                <Select
+                  value={selectedKecamatanId ?? ''}
+                  onValueChange={(value) => {
+                    setSelectedKecamatanId(value);
+                    const kec = kecamatanList.find(k => k.id === value);
+                    if (kec) {
+                      setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
+                      // Reset desa if not part of selected kecamatan
+                      const currentDesa = (selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined);
+                      if (!currentDesa || currentDesa.kecamatan_id !== value) {
+                        setSelectedDesaId(null);
+                        setFormData((prev) => ({ ...prev, desa: '' }));
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kecamatan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kecamatanList.map(k => (
+                      <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.kecamatan && <p className="text-sm text-red-600">{errors.kecamatan}</p>}
+              </div>
+
+              {/* Nama Pelapor */}
+              <div className="space-y-2">
+                <Label htmlFor="reporterName">Nama Pelapor *</Label>
+                <Input id="reporterName" value={formData.reporterName}
+                       onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })} />
+                {errors.reporterName && <p className="text-sm text-red-600">{errors.reporterName}</p>}
+              </div>
+
+              {/* Nomor Pelapor */}
+              <div className="space-y-2">
+                <Label htmlFor="phone">Nomor Pelapor *</Label>
+                <Input id="phone" inputMode="tel" value={formData.phone}
+                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
+              </div>
+
+              
 
               <div className="space-y-2">
                 <Label htmlFor="photo">Foto (Opsional)</Label>
@@ -396,10 +659,11 @@ const ReportForm = () => {
                         />
                       </MapContainer>
 
+                      {/* Move 'Lokasi Saya' away from zoom controls (bottom-left) */}
                       <Button
                         type="button"
                         onClick={getUserLocation}
-                        className="absolute top-2 left-2 z-[1000]"
+                        className="absolute bottom-2 left-2 z-[1000]"
                         size="sm"
                       >
                         <Navigation className="w-4 h-4 mr-2" />
@@ -408,6 +672,9 @@ const ReportForm = () => {
                     </div>
                   )}
 
+                  {errors.location && (
+                    <p className="text-sm text-red-600">{errors.location}</p>
+                  )}
                   {location?.name && (
                     <div className="flex items-start gap-2 text-sm p-3 bg-muted rounded-lg">
                       <MapPin className="w-4 h-4 text-primary mt-0.5" />
@@ -434,13 +701,18 @@ const ReportForm = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Mengirim...
+                      {uploadPercent !== null ? `Mengirim ${uploadPercent}%` : 'Mengirim...'}
                     </>
                   ) : (
                     'Kirim Laporan'
                   )}
                 </Button>
               </div>
+              {uploadPercent !== null && (
+                <div className="w-full h-2 bg-muted rounded">
+                  <div className="h-2 bg-primary rounded" style={{ width: `${uploadPercent}%` }} />
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

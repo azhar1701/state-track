@@ -12,6 +12,7 @@ import MapView from "./pages/MapView";
 import ReportForm from "./pages/ReportForm";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import ReportSuccess from "./pages/ReportSuccess";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/report" element={<ReportForm />} />
+              <Route path="/report/success" element={<ReportSuccess />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

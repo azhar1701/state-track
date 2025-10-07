@@ -16,6 +16,9 @@ interface Report {
   status: string;
   created_at: string;
   location_name: string | null;
+  severity?: 'ringan' | 'sedang' | 'berat' | null;
+  kecamatan?: string | null;
+  desa?: string | null;
 }
 
 const AdminDashboard = () => {
@@ -40,7 +43,7 @@ const AdminDashboard = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("reports")
-      .select("*")
+      .select("id,title,category,status,created_at,location_name,severity,kecamatan,desa")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -141,7 +144,11 @@ const AdminDashboard = () => {
                     <h3 className="font-semibold">{report.title}</h3>
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <Badge variant="outline">{report.category}</Badge>
+                      {report.severity && <Badge variant="secondary">{report.severity}</Badge>}
                       {report.location_name && <span>📍 {report.location_name}</span>}
+                      {(report.kecamatan || report.desa) && (
+                        <span>🗺️ {[report.desa, report.kecamatan].filter(Boolean).join(', ')}</span>
+                      )}
                       <span>{new Date(report.created_at).toLocaleDateString("id-ID")}</span>
                     </div>
                   </div>
