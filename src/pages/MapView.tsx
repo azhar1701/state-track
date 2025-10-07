@@ -3,7 +3,7 @@ import { MapContainer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Navigation, Filter as FilterIcon, Layers, Share2, Download, Loader2 } from 'lucide-react';
+import { Navigation, Filter as FilterIcon, Layers, Share2, Download, Loader as Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { BasemapSwitcher, BasemapType } from '@/components/map/BasemapSwitcher';
