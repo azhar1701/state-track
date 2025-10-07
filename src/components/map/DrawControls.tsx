@@ -63,7 +63,7 @@ export const DrawControls = ({ onPolygonCreated, onPolygonEdited, onPolygonDelet
       return { area, perimeter: length * 1000 };
     };
 
-    map.on(L.Draw.Event.CREATED, (e: any) => {
+    map.on(L.Draw.Event.CREATED, (e: L.DrawEvents.Created) => {
       const layer = e.layer as L.Polygon;
       drawnItems.addLayer(layer);
 
@@ -76,7 +76,7 @@ export const DrawControls = ({ onPolygonCreated, onPolygonEdited, onPolygonDelet
       onPolygonCreated?.(layer, area, perimeter);
     });
 
-    map.on(L.Draw.Event.EDITED, (e: any) => {
+    map.on(L.Draw.Event.EDITED, (e: L.DrawEvents.Edited) => {
       const layers = e.layers;
       layers.eachLayer((layer: L.Polygon) => {
         const { area, perimeter } = calculateMetrics(layer);
