@@ -1,24 +1,10 @@
 import { useMap } from 'react-leaflet';
 import { TileLayer } from 'leaflet';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Map, Satellite } from 'lucide-react';
-
-export const basemaps = {
-  osm: {
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  satellite: {
-    name: 'Google Satellite',
-    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google',
-  },
-};
-
-export type BasemapType = keyof typeof basemaps;
+import { basemaps, type BasemapType } from './basemap-config';
 
 interface BasemapSwitcherProps {
   onBasemapChange?: (basemap: BasemapType) => void;
@@ -28,36 +14,34 @@ interface BasemapSwitcherProps {
 export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: BasemapSwitcherProps) => {
   const map = useMap();
   const [currentBasemap, setCurrentBasemap] = useState<BasemapType>(initialBasemap);
-  const [tileLayer, setTileLayer] = useState<TileLayer | null>(null);
+  const tileLayerRef = useRef<TileLayer | null>(null);
 
+  // Initialize and update basemap layer when map or currentBasemap changes
   useEffect(() => {
+    if (!map) return;
+
+    // Remove existing layer
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    // Add new layer
     const layer = new TileLayer(basemaps[currentBasemap].url, {
       attribution: basemaps[currentBasemap].attribution,
       maxZoom: 19,
     });
-
     layer.addTo(map);
-    setTileLayer(layer);
+    tileLayerRef.current = layer;
 
     return () => {
-      if (layer) {
-        map.removeLayer(layer);
+      if (tileLayerRef.current) {
+        map.removeLayer(tileLayerRef.current);
+        tileLayerRef.current = null;
       }
     };
-  }, []);
+  }, [map, currentBasemap]);
 
   const switchBasemap = (basemap: BasemapType) => {
-    if (tileLayer) {
-      map.removeLayer(tileLayer);
-    }
-
-    const newLayer = new TileLayer(basemaps[basemap].url, {
-      attribution: basemaps[basemap].attribution,
-      maxZoom: 19,
-    });
-
-    newLayer.addTo(map);
-    setTileLayer(newLayer);
     setCurrentBasemap(basemap);
     onBasemapChange?.(basemap);
   };

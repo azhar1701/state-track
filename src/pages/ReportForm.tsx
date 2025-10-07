@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,7 +97,7 @@ const ReportForm = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
+    category: 'lainnya',
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -200,28 +200,44 @@ const ReportForm = () => {
       return;
     }
 
-    setLoading(true);
+    if (!isSupabaseConfigured) {
+      toast.error('Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY di .env.local');
+      return;
+    }
+
+  setLoading(true);
 
     try {
       const validation = reportSchema.safeParse(formData);
       if (!validation.success) {
+        // Hentikan loading jika validasi gagal agar tombol tidak terkunci
+        setLoading(false);
         toast.error(validation.error.errors[0].message);
         return;
       }
 
-      let photoUrl = null;
+  let photoUrl = null;
 
       if (photoFile) {
         const fileExt = photoFile.name.split('.').pop();
         const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage.from('report-photos').upload(fileName, photoFile);
+        const { error: uploadError } = await supabase.storage
+          .from('report-photos')
+          .upload(fileName, photoFile, { contentType: photoFile.type, upsert: false });
 
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
-
-        photoUrl = publicUrlData.publicUrl;
+        if (uploadError) {
+          const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
+          if (msg.includes('bucket') && msg.includes('not')) {
+            // Bucket belum dibuat: lanjutkan tanpa foto agar laporan tetap terkirim
+            toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".');
+          } else {
+            throw uploadError;
+          }
+        } else {
+          const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
+          photoUrl = publicUrlData.publicUrl;
+        }
       }
 
       const { error: insertError } = await supabase.from('reports').insert({
@@ -241,7 +257,29 @@ const ReportForm = () => {
       navigate('/map');
     } catch (error) {
       console.error('Error submitting report:', error);
-      toast.error('Gagal mengirim laporan. Silakan coba lagi.');
+      // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
+      let message = 'Gagal mengirim laporan. Silakan coba lagi.';
+      if (error && typeof error === 'object') {
+        const errObj = error as Record<string, unknown>;
+        const msg = typeof errObj.message === 'string' ? errObj.message : undefined;
+        const details = typeof errObj.details === 'string' ? errObj.details : undefined;
+        const hint = typeof errObj.hint === 'string' ? errObj.hint : undefined;
+        const combined = [msg, details, hint].filter(Boolean).join(' | ');
+
+        if (combined) {
+          message = combined;
+        }
+
+        const lower = combined.toLowerCase();
+        if (lower.includes('row-level security') || lower.includes('permission denied')) {
+          message = 'Izin ditolak saat menyimpan laporan. Pastikan Anda login dan memiliki akses.';
+        } else if (lower.includes('report_category')) {
+          message = 'Kategori tidak valid. Silakan pilih salah satu kategori yang tersedia.';
+        } else if (lower.includes('bucket') && lower.includes('not')) {
+          message = 'Bucket foto tidak ditemukan. Laporan dikirim tanpa foto.';
+        }
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }

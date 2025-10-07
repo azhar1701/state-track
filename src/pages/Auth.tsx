@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MapPin, Shield } from "lucide-react";
 import { z } from "zod";
+import { useAuth } from "@/hooks/useAuth";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Email tidak valid" }),
@@ -18,12 +19,24 @@ const authSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     fullName: "",
   });
+
+  // Jika sudah login, arahkan keluar dari halaman auth
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [authLoading, user, isAdmin, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +49,7 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
@@ -49,9 +62,32 @@ const Auth = () => {
         }
         return;
       }
+      // Periksa role admin segera setelah login untuk arahkan ke dashboard
+      try {
+        const user = signInData.user;
+        if (user) {
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "admin")
+            .maybeSingle();
 
-      toast.success("Login berhasil!");
-      navigate("/");
+          toast.success("Login berhasil!");
+          if (roleData && roleData.role === "admin") {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
+        } else {
+          toast.success("Login berhasil!");
+          navigate("/");
+        }
+      } catch {
+        // fallback jika pengecekan role gagal
+        toast.success("Login berhasil!");
+        navigate("/");
+      }
     } catch (error) {
       toast.error("Terjadi kesalahan saat login");
       console.error("Login error:", error);
