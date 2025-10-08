@@ -15,7 +15,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { z } from 'zod';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
-import { reverseGeocode, geocodeAddress, formatAddress } from '@/lib/geocoding';
+import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } from '@/lib/geocoding';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
 type Category = 'jalan' | 'jembatan' | 'irigasi' | 'drainase' | 'sungai' | 'lainnya';
@@ -155,6 +155,8 @@ const ReportForm = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
+  const searchTimerRef = useRef<number | null>(null);
 
   const getLocationName = useCallback(async (lat: number, lng: number) => {
     try {
@@ -271,21 +273,11 @@ const ReportForm = () => {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-
     setSearchLoading(true);
     try {
       const results = await geocodeAddress(searchQuery);
-      if (results.length > 0) {
-        const first = results[0];
-        setLocation({
-          latitude: parseFloat(first.lat.toString()),
-          longitude: parseFloat(first.lon.toString()),
-          name: formatAddress(first),
-        });
-        toast.success('Lokasi ditemukan!');
-      } else {
-        toast.error('Lokasi tidak ditemukan');
-      }
+      setSearchResults(results);
+      if (results.length === 0) toast.error('Lokasi tidak ditemukan');
     } catch (error) {
       toast.error('Gagal mencari lokasi');
     } finally {
@@ -525,37 +517,7 @@ const ReportForm = () => {
                 {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
               </div>
 
-              {/* Desa dropdown */}
-              <div className="space-y-2">
-                <Label htmlFor="desa">Desa/Kelurahan *</Label>
-                <Select
-                  value={selectedDesaId ?? ''}
-                  onValueChange={(value) => {
-                    const desa = (selectedKecamatanId ? desaList : allDesaList).find(d => d.id === value);
-                    setSelectedDesaId(value);
-                    if (desa) {
-                      setFormData((prev) => ({ ...prev, desa: desa.name }));
-                      if (!selectedKecamatanId || desa.kecamatan_id !== selectedKecamatanId) {
-                        setSelectedKecamatanId(desa.kecamatan_id);
-                        const kec = kecamatanList.find(k => k.id === desa.kecamatan_id);
-                        if (kec) setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
-                      }
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih desa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(selectedKecamatanId ? desaList : allDesaList).map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.desa && <p className="text-sm text-red-600">{errors.desa}</p>}
-              </div>
-
-              {/* Kecamatan dropdown */}
+              {/* Kecamatan dropdown (placed before Desa) */}
               <div className="space-y-2">
                 <Label htmlFor="kecamatan">Kecamatan *</Label>
                 <Select
@@ -586,6 +548,32 @@ const ReportForm = () => {
                 {errors.kecamatan && <p className="text-sm text-red-600">{errors.kecamatan}</p>}
               </div>
 
+              {/* Desa dropdown (filtered by selected kecamatan) */}
+              <div className="space-y-2">
+                <Label htmlFor="desa">Desa/Kelurahan *</Label>
+                <Select
+                  value={selectedDesaId ?? ''}
+                  onValueChange={(value) => {
+                    const desa = desaList.find(d => d.id === value);
+                    setSelectedDesaId(value);
+                    if (desa) {
+                      setFormData((prev) => ({ ...prev, desa: desa.name }));
+                    }
+                  }}
+                  disabled={!selectedKecamatanId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {desaList.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.desa && <p className="text-sm text-red-600">{errors.desa}</p>}
+              </div>
+
               {/* Nama Pelapor */}
               <div className="space-y-2">
                 <Label htmlFor="reporterName">Nama Pelapor *</Label>
@@ -596,7 +584,7 @@ const ReportForm = () => {
 
               {/* Nomor Pelapor */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Nomor Pelapor *</Label>
+                <Label htmlFor="phone">Kontak Pelapor *</Label>
                 <Input id="phone" inputMode="tel" value={formData.phone}
                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                 {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
@@ -627,12 +615,48 @@ const ReportForm = () => {
                 <Label>Lokasi *</Label>
                 <div className="space-y-2">
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Cari alamat..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-                    />
+                    <div className="relative w-full">
+                      <Input
+                        placeholder="Cari alamat (min 3 huruf)..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          const q = e.target.value;
+                          setSearchQuery(q);
+                          if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
+                          if (q.trim().length < 3) { setSearchResults([]); return; }
+                          searchTimerRef.current = window.setTimeout(async () => {
+                            try {
+                              const results = await geocodeAddress(q);
+                              setSearchResults(results);
+                            } catch {
+                              setSearchResults([]);
+                            }
+                          }, 400);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); }
+                        }}
+                      />
+                      {searchQuery && searchResults.length > 0 && (
+                        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                          {searchResults.map((r) => (
+                            <button
+                              type="button"
+                              key={`${r.lat}-${r.lon}-${r.display_name}`}
+                              className="block w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground whitespace-normal"
+                              onClick={() => {
+                                const lat = Number(r.lat); const lon = Number(r.lon);
+                                setLocation({ latitude: lat, longitude: lon, name: formatAddress(r) });
+                                setSearchResults([]);
+                                toast.success('Lokasi dipilih');
+                              }}
+                            >
+                              {formatAddress(r)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <Button type="button" onClick={handleSearch} disabled={searchLoading} variant="outline">
                       {searchLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

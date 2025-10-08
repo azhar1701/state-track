@@ -10,6 +10,11 @@ import { toast } from "sonner";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import { reportSchema, type ReportFormValues } from "../../lib/validation/report";
+import { supabase } from "@/integrations/supabase/client";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { geocodeAddress, formatAddress, type GeocodingResult } from "@/lib/geocoding";
 
 const FALLBACK_COORDS = {
   latitude: -6.2088,
@@ -96,6 +101,14 @@ export function ReportForm() {
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [kecamatanOpen, setKecamatanOpen] = useState(false);
+  const [desaOpen, setDesaOpen] = useState(false);
+  const [kecamatanList, setKecamatanList] = useState<string[]>([]);
+  const [desaList, setDesaList] = useState<string[]>([]);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeResults, setPlaceResults] = useState<GeocodingResult[]>([]);
+  const [isSearchingPlace, setIsSearchingPlace] = useState(false);
+  const searchTimerRef = useRef<number | null>(null);
 
   // Restore draft from localStorage if available
   const DRAFT_KEY = "report_form_draft_v1";
@@ -129,6 +142,50 @@ export function ReportForm() {
           : "osm",
     },
   });
+
+  // Load kecamatan from Supabase
+  useEffect(() => {
+    (async () => {
+      try {
+  const { data, error } = await supabase.from("kecamatan").select("name").order("name");
+  if (error) throw error;
+  const rows = (data ?? []) as Array<{ name: string }>;
+  setKecamatanList(rows.map((d) => d.name));
+      } catch (e) {
+        // fallback: leave empty
+      }
+    })();
+  }, []);
+
+  // Load desa when kecamatan changes
+  useEffect(() => {
+    const sub = form.watch(async (value, { name }) => {
+      if (name === "kecamatan") {
+        const kec = (value?.kecamatan || "").trim();
+        form.setValue("desa", "");
+        setDesaList([]);
+        if (!kec) return;
+        try {
+          // fetch desa by joining on kecamatan name
+          const { data: kecRow } = await supabase.from("kecamatan").select("id").eq("name", kec).maybeSingle();
+          if (!kecRow?.id) return;
+          const { data, error } = await supabase
+            .from("desa")
+            .select("name")
+            .eq("kecamatan_id", kecRow.id)
+            .order("name");
+          if (error) throw error;
+          const rows = (data ?? []) as Array<{ name: string }>;
+          setDesaList(rows.map((d) => d.name));
+        } catch (e) {
+          setDesaList([]);
+        }
+      }
+    });
+    return () => {
+      (sub as unknown as { unsubscribe?: () => void }).unsubscribe?.();
+    };
+  }, [form]);
 
   const handleLocationChange = useCallback(
     (next: Coordinate) => {
@@ -506,7 +563,7 @@ export function ReportForm() {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="phone">
-                Nomor Telepon
+                Kontak Pelapor
               </label>
               <input
                 id="phone"
@@ -523,13 +580,35 @@ export function ReportForm() {
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="kecamatan">
                 Kecamatan
               </label>
-              <input
-                id="kecamatan"
-                type="text"
-                {...form.register("kecamatan")}
-                placeholder="Nama kecamatan"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <Popover open={kecamatanOpen} onOpenChange={setKecamatanOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={kecamatanOpen} className="w-full justify-between">
+                    {form.watch("kecamatan") || "Pilih kecamatan"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                  <Command>
+                    <CommandInput placeholder="Cari kecamatan..." />
+                    <CommandList>
+                      <CommandEmpty>Tidak ada hasil.</CommandEmpty>
+                      <CommandGroup>
+                        {kecamatanList.map((name) => (
+                          <CommandItem
+                            key={name}
+                            value={name}
+                            onSelect={(val: string) => {
+                              form.setValue("kecamatan", val, { shouldDirty: true, shouldValidate: true });
+                              setKecamatanOpen(false);
+                            }}
+                          >
+                            {name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormError message={form.formState.errors.kecamatan?.message} />
             </div>
 
@@ -537,13 +616,41 @@ export function ReportForm() {
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="desa">
                 Desa/Kelurahan
               </label>
-              <input
-                id="desa"
-                type="text"
-                {...form.register("desa")}
-                placeholder="Nama desa/kelurahan"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <Popover open={desaOpen && Boolean(form.watch("kecamatan"))} onOpenChange={(open: boolean) => {
+                if (!form.watch("kecamatan")) {
+                  setDesaOpen(false);
+                  return;
+                }
+                setDesaOpen(open);
+              }}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={desaOpen} disabled={!form.watch("kecamatan")} className="w-full justify-between">
+                    {form.watch("desa") || (form.watch("kecamatan") ? "Pilih desa" : "Pilih kecamatan dulu")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                  <Command>
+                    <CommandInput placeholder={form.watch("kecamatan") ? "Cari desa..." : "Pilih kecamatan dulu"} disabled={!form.watch("kecamatan")} />
+                    <CommandList>
+                      <CommandEmpty>{form.watch("kecamatan") ? "Tidak ada hasil." : "Pilih kecamatan dulu"}</CommandEmpty>
+                      <CommandGroup>
+                        {desaList.map((name) => (
+                          <CommandItem
+                            key={name}
+                            value={name}
+                            onSelect={(val: string) => {
+                              form.setValue("desa", val, { shouldDirty: true, shouldValidate: true });
+                              setDesaOpen(false);
+                            }}
+                          >
+                            {name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormError message={form.formState.errors.desa?.message} />
             </div>
           </div>
@@ -702,6 +809,59 @@ export function ReportForm() {
               >
                 Lokasi Saya
               </button>
+            </div>
+            {/* Search like Google Maps */}
+            <div className="absolute top-3 left-3 right-14 pointer-events-auto">
+              <div className="w-full max-w-xl">
+                <input
+                  type="text"
+                  value={placeQuery}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setPlaceQuery(q);
+                    if (searchTimerRef.current) {
+                      window.clearTimeout(searchTimerRef.current);
+                    }
+                    if (q.trim().length < 3) {
+                      setPlaceResults([]);
+                      setIsSearchingPlace(false);
+                      return;
+                    }
+                    setIsSearchingPlace(true);
+                    searchTimerRef.current = window.setTimeout(async () => {
+                      const results = await geocodeAddress(q);
+                      setPlaceResults(results);
+                      setIsSearchingPlace(false);
+                    }, 400);
+                  }}
+                  placeholder="Cari tempat, jalan, atau lokasi (min 3 huruf)..."
+                  className="w-full rounded-md border border-slate-300 bg-white/95 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                {placeQuery && (placeResults.length > 0 || isSearchingPlace) && (
+                  <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                    {isSearchingPlace && <div className="p-2 text-xs text-slate-500">Mencari...</div>}
+                    {!isSearchingPlace && placeResults.map((r) => (
+                      <button
+                        key={`${r.lat}-${r.lon}-${r.display_name}`}
+                        type="button"
+                        onClick={() => {
+                          const lat = Number(r.lat);
+                          const lon = Number(r.lon);
+                          const coords = { latitude: lat, longitude: lon };
+                          handleLocationChange(coords);
+                          placeMarker(coords, { fly: true });
+                          setPlaceQuery(formatAddress(r));
+                          // collapse results after selection
+                          setPlaceResults([]);
+                        }}
+                        className="block w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      >
+                        {formatAddress(r)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

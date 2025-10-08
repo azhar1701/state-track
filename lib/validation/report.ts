@@ -25,10 +25,10 @@ export const reportSchema = z.object({
     .min(3, { message: "Nama minimal 3 karakter" })
     .max(120, { message: "Nama terlalu panjang" }),
   phone: z
-    .string({ required_error: "Nomor telepon wajib diisi" })
-    .min(8, { message: "Nomor telepon minimal 8 digit" })
-    .max(20, { message: "Nomor telepon maksimal 20 digit" })
-    .regex(/^\+?[0-9\s-]+$/, { message: "Nomor telepon tidak valid" }),
+    .string({ required_error: "Kontak pelapor wajib diisi" })
+    .min(8, { message: "Kontak pelapor minimal 8 digit" })
+    .max(20, { message: "Kontak pelapor maksimal 20 digit" })
+    .regex(/^\+?[0-9\s-]+$/, { message: "Kontak pelapor tidak valid" }),
   kecamatan: z
     .string({ required_error: "Kecamatan wajib diisi" })
     .min(2, { message: "Nama kecamatan minimal 2 karakter" })
