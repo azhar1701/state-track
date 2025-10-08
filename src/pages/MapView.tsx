@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapE
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
+import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
+import proj4 from 'proj4';
 
 interface Report {
   id: string;
@@ -122,6 +124,11 @@ const MapView = () => {
     floodZones: false,
   });
 
+  // Administrative boundaries geojson cache
+  const [adminGeoJson, setAdminGeoJson] = useState<FeatureCollection<Geometry> | null>(null);
+  const [kecamatanLines, setKecamatanLines] = useState<FeatureCollection<Geometry> | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
@@ -169,6 +176,151 @@ const MapView = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Lazy-load admin boundaries when toggled on
+  useEffect(() => {
+    const loadAdminBoundaries = async () => {
+      if (!overlays.adminBoundaries) return;
+      if (adminGeoJson || adminLoading) return;
+      setAdminLoading(true);
+      try {
+        // Try common filenames
+        const candidates = [
+          '/data/ciamis_kecamatan.geojson',
+          '/data/adm_ciamis.geojson',
+        ];
+
+        let data: FeatureCollection<Geometry> | null = null;
+        for (const url of candidates) {
+          try {
+            const r = await fetch(url, { cache: 'force-cache' });
+            if (r.ok) {
+              data = (await r.json()) as FeatureCollection<Geometry>;
+              break;
+            }
+          } catch {
+            // try next
+          }
+        }
+
+        if (!data) throw new Error('No admin boundaries file found');
+
+        // Detect CRS from GeoJSON or infer by coordinate magnitude
+        const crsName = (data as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
+
+        const needsUTM49S = !!crsName?.includes('EPSG::32749');
+        const sample = (() => {
+          const f = data!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
+          if (!f) return null;
+          const g = f.geometry;
+          // Try to peek first coordinate
+          const peek = (coords: unknown): [number, number] | null => {
+            if (!Array.isArray(coords)) return null;
+            if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+              return [coords[0] as number, coords[1] as number];
+            }
+            for (const c of coords as unknown[]) {
+              const p = peek(c);
+              if (p) return p;
+            }
+            return null;
+          };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return peek((g as any).coordinates);
+        })();
+
+        const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
+
+        let result = data;
+        if (needsUTM49S || looksProjected) {
+          // Define UTM zone 49S
+          proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
+
+          const transformCoord = (pt: number[]): [number, number] => {
+            const x = pt[0];
+            const y = pt[1];
+            const [lon, lat] = proj4('EPSG:32749', 'EPSG:4326', [x, y]);
+            return [lon, lat];
+          };
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const reprojectGeometry = (geom: any): any => {
+            if (!geom) return geom;
+            const t = geom.type;
+            const coords = geom.coordinates;
+            const mapCoords = (arr: unknown, depth = 0): unknown => {
+              if (!Array.isArray(arr)) return arr;
+              if (arr.length > 0 && typeof arr[0] === 'number') {
+                return transformCoord(arr as number[]);
+              }
+              return (arr as unknown[]).map((a) => mapCoords(a, depth + 1));
+            };
+            if (t === 'GeometryCollection') {
+              return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
+            }
+            return { type: t, coordinates: mapCoords(coords) };
+          };
+
+          result = {
+            type: 'FeatureCollection',
+            features: data.features.map((f) => ({
+              type: 'Feature',
+              properties: f.properties || {},
+              geometry: reprojectGeometry(f.geometry),
+            })),
+          } as FeatureCollection<Geometry>;
+        }
+
+        // Prepare kecamatan boundary lines (Indonesia style: kecamatan dashed thicker)
+        try {
+          const getKecName = (p?: Record<string, unknown>): string | undefined =>
+            (p?.KECAMATAN as string) || (p?.Kecamatan as string) || undefined;
+          const groups = new Map<string, Array<turf.Feature<turf.Polygon | turf.MultiPolygon>>>();
+          for (const f of result.features as Array<turf.Feature<turf.Polygon | turf.MultiPolygon>>) {
+            const name = getKecName(f.properties as Record<string, unknown> | undefined);
+            if (!name) continue;
+            const arr = groups.get(name) || [];
+            arr.push(f);
+            groups.set(name, arr);
+          }
+
+          const lineFeatures: turf.Feature<turf.LineString | turf.MultiLineString>[] = [];
+          groups.forEach((features, name) => {
+            try {
+              let merged = features[0];
+              for (let i = 1; i < features.length; i++) {
+                merged = turf.union(merged, features[i]) as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+              }
+              const line = turf.polygonToLine(merged) as turf.Feature<turf.LineString | turf.MultiLineString>;
+              line.properties = { ...(line.properties || {}), KECAMATAN: name };
+              lineFeatures.push(line);
+            } catch (e) {
+              // Fallback: skip problematic kecamatan
+              console.warn('Failed to build kecamatan boundary for', name, e);
+            }
+          });
+          const kecLinesFC: FeatureCollection<Geometry> = {
+            type: 'FeatureCollection',
+            features: lineFeatures as unknown as turf.AllGeoJSON['features'],
+          } as FeatureCollection<Geometry>;
+          setKecamatanLines(kecLinesFC);
+        } catch (e) {
+          console.warn('Failed generating kecamatan lines', e);
+          setKecamatanLines(null);
+        }
+
+        setAdminGeoJson(result);
+      } catch (err) {
+        console.error('Failed to load admin boundaries', err);
+        toast.error('Gagal memuat batas administratif', {
+          description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson',
+        });
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+    loadAdminBoundaries();
+  }, [overlays.adminBoundaries, adminGeoJson, adminLoading]);
 
   // Attach map interactions once map instance is ready
   useEffect(() => {
@@ -415,6 +567,72 @@ const MapView = () => {
             </div>
             {/* DrawControls removed */}
 
+            {/* Administrative boundaries overlay (under markers) */}
+            {overlays.adminBoundaries && adminGeoJson && (
+              <Pane name="admin-boundaries" style={{ zIndex: 350 }}>
+                <RLGeoJSON
+                  key="admin-boundaries"
+                  data={adminGeoJson}
+                  style={() => ({
+                    // Indonesia guideline approximation:
+                    // Desa: tipis abu-abu
+                    color: '#6b7280',
+                    weight: 1,
+                    opacity: 0.8,
+                    dashArray: '4 3',
+                    fillOpacity: 0,
+                  })}
+                  onEachFeature={(feature, layer) => {
+                    const p = feature.properties as Record<string, unknown> | undefined;
+                    const name =
+                      (p?.DESA_1 as string) ||
+                      (p?.DESA as string) ||
+                      (p?.KECAMATAN as string) ||
+                      (p?.Kecamatan as string) ||
+                      (p?.name as string) ||
+                      (p?.NAMOBJ as string) ||
+                      undefined;
+                    if (name) {
+                      layer.bindTooltip(String(name), { sticky: true, direction: 'center', className: 'bg-black/60 text-white px-1 py-0.5 rounded border text-[11px]' });
+                    }
+                    const desa = (p?.DESA_1 as string) || (p?.DESA as string) || (p?.name as string);
+                    const kec = (p?.KECAMATAN as string) || (p?.Kecamatan as string);
+                    layer.bindPopup(
+                      `<div style="min-width:200px">
+                        <div style="font-weight:600;margin-bottom:4px">Detail Wilayah</div>
+                        <div><strong>Desa:</strong> ${desa ?? '-'}</div>
+                        <div><strong>Kecamatan:</strong> ${kec ?? '-'}</div>
+                      </div>`
+                    );
+                    layer.on('mouseover', () => {
+                      const anyLayer = layer as unknown as { setStyle?: (opts: L.PathOptions) => void };
+                      if (typeof anyLayer.setStyle === 'function') anyLayer.setStyle({ weight: 2, color: '#111827' });
+                    });
+                    layer.on('mouseout', () => {
+                      const anyLayer = layer as unknown as { setStyle?: (opts: L.PathOptions) => void };
+                      if (typeof anyLayer.setStyle === 'function') anyLayer.setStyle({ weight: 1, color: '#6b7280' });
+                    });
+                  }}
+                />
+              </Pane>
+            )}
+
+            {/* Kecamatan boundary lines (dashed thicker) */}
+            {overlays.adminBoundaries && kecamatanLines && (
+              <Pane name="kecamatan-boundaries" style={{ zIndex: 360, pointerEvents: 'none' }}>
+                <RLGeoJSON
+                  key="kecamatan-boundaries"
+                  data={kecamatanLines}
+                  style={() => ({
+                    color: '#111827',
+                    weight: 2,
+                    opacity: 0.9,
+                    dashArray: '6 4',
+                  })}
+                />
+              </Pane>
+            )}
+
             {filteredReports.map((report) => (
               <Marker
                 key={report.id}
@@ -604,6 +822,12 @@ const MapView = () => {
                   <span className="font-medium">Memuat laporan...</span>
                 </div>
               </Card>
+            </div>
+          )}
+          {/* Admin layer loader indicator */}
+          {adminLoading && overlays.adminBoundaries && (
+            <div className="absolute left-4 top-24 z-[1300]">
+              <Card className="px-3 py-2 text-sm">Memuat batas administratif…</Card>
             </div>
           )}
         </div>

@@ -74,7 +74,9 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
               {results.map((r, i) => (
                 <li key={i} className="px-3 py-2 hover:bg-muted cursor-pointer" onClick={() => handleSelect(r)}>
                   <div className="text-sm text-foreground">{formatAddress(r)}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{r.lat.toFixed(6)}, {r.lon.toFixed(6)}</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {Number.isFinite(r.lat) && Number.isFinite(r.lon) ? `${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}` : '—'}
+                  </div>
                 </li>
               ))}
             </ul>

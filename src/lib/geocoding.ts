@@ -2,9 +2,9 @@ import { LatLng } from 'leaflet';
 
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 
-export interface GeocodingResult {
-  lat: number;
-  lon: number;
+export interface GeocodingResultRaw {
+  lat: string;
+  lon: string;
   display_name: string;
   address?: {
     road?: string;
@@ -13,6 +13,13 @@ export interface GeocodingResult {
     state?: string;
     country?: string;
   };
+}
+
+export interface GeocodingResult {
+  lat: number;
+  lon: number;
+  display_name: string;
+  address?: GeocodingResultRaw['address'];
 }
 
 export const geocodeAddress = async (query: string): Promise<GeocodingResult[]> => {
@@ -29,8 +36,15 @@ export const geocodeAddress = async (query: string): Promise<GeocodingResult[]> 
     if (!response.ok) {
       throw new Error('Geocoding failed');
     }
-
-    return await response.json();
+    const raw: GeocodingResultRaw[] = await response.json();
+    return raw
+      .map((r) => ({
+        lat: Number(r.lat),
+        lon: Number(r.lon),
+        display_name: r.display_name,
+        address: r.address,
+      }))
+      .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lon));
   } catch (error) {
     console.error('Geocoding error:', error);
     return [];
@@ -51,8 +65,15 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<Geocodin
     if (!response.ok) {
       throw new Error('Reverse geocoding failed');
     }
-
-    return await response.json();
+    const raw: GeocodingResultRaw = await response.json();
+    const latNum = Number(raw.lat);
+    const lonNum = Number(raw.lon);
+    return {
+      lat: Number.isFinite(latNum) ? latNum : lat,
+      lon: Number.isFinite(lonNum) ? lonNum : lon,
+      display_name: raw.display_name,
+      address: raw.address,
+    };
   } catch (error) {
     console.error('Reverse geocoding error:', error);
     return null;
