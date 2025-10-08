@@ -716,6 +716,19 @@ const MapView = () => {
                 filters={filters}
                 onFilterChange={(newFilters) => {
                   setFilters(newFilters);
+                  // Update URL parameters for share-ability
+                  const url = generateShareableURL({
+                    center: mapCenter,
+                    zoom: mapZoom,
+                    category: newFilters.category,
+                    status: newFilters.status,
+                    dateFrom: newFilters.dateFrom,
+                    dateTo: newFilters.dateTo,
+                    selectedReportId: selectedReport?.id,
+                    basemap,
+                  });
+                  window.history.replaceState({}, '', url);
+                  setShowFilterPanel(false);
                 }}
                 onClose={() => setShowFilterPanel(false)}
               />

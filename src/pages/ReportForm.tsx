@@ -105,8 +105,8 @@ const ReportForm = () => {
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -296,19 +296,27 @@ const ReportForm = () => {
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Ukuran foto maksimal 5MB');
-        return;
-      }
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    // Limit to 10 photos to keep upload reasonable
+    const selected = files.slice(0, 10);
+    const oversize = selected.find((f) => f.size > 5 * 1024 * 1024);
+    if (oversize) {
+      toast.error('Ukuran setiap foto maksimal 5MB');
+      return;
     }
+    setPhotoFiles(selected);
+    // build previews
+    Promise.all(
+      selected.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then(setPhotoPreviews);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -356,30 +364,34 @@ const ReportForm = () => {
     // ignore sessionStorage failures
   }
 
-  let photoUrl = null;
+  let photoUrl: string | null = null;
+  const photoUrls: string[] = [];
 
-      if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop();
-        const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
-
+      if (photoFiles.length > 0) {
         setUploadPercent(10);
-        const { error: uploadError } = await supabase.storage
-          .from('report-photos')
-          .upload(fileName, photoFile, { contentType: photoFile.type, upsert: false });
-
-        if (uploadError) {
-          const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
-          if (msg.includes('bucket') && msg.includes('not')) {
-            // Bucket belum dibuat: lanjutkan tanpa foto agar laporan tetap terkirim
-            toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".');
+        for (let i = 0; i < photoFiles.length; i++) {
+          const file = photoFiles[i];
+          const ext = file.name.split('.').pop();
+          const fileName = `${user!.id}/${Date.now()}_${i}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from('report-photos')
+            .upload(fileName, file, { contentType: file.type, upsert: false });
+          if (uploadError) {
+            const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
+            if (msg.includes('bucket') && msg.includes('not')) {
+              toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".');
+              break;
+            } else {
+              throw uploadError;
+            }
           } else {
-            throw uploadError;
+            const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
+            photoUrls.push(publicUrlData.publicUrl);
           }
-        } else {
-          setUploadPercent(60);
-          const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
-          photoUrl = publicUrlData.publicUrl;
+          const prog = 10 + Math.round(((i + 1) / photoFiles.length) * 50);
+          setUploadPercent(Math.min(60, prog));
         }
+        photoUrl = photoUrls[0] || null;
       }
 
       setUploadPercent((p) => (p !== null && p < 80 ? 80 : p));
@@ -595,19 +607,23 @@ const ReportForm = () => {
               <div className="space-y-2">
                 <Label htmlFor="photo">Foto (Opsional)</Label>
                 <div className="flex items-center gap-4">
-                  <Input id="photo" type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                  <Input id="photo" type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => document.getElementById('photo')?.click()}
                   >
                     <Upload className="icon-sm mr-2" />
-                    {photoFile ? 'Ganti Foto' : 'Upload Foto'}
+                    {photoFiles.length > 0 ? `Ganti Foto (${photoFiles.length})` : 'Upload Foto'}
                   </Button>
-                  {photoFile && <span className="text-sm text-muted-foreground">{photoFile.name}</span>}
+                  {photoFiles.length > 0 && <span className="text-sm text-muted-foreground">{photoFiles.slice(0,3).map(f=>f.name).join(', ')}{photoFiles.length>3 ? ` +${photoFiles.length-3} lagi` : ''}</span>}
                 </div>
-                {photoPreview && (
-                  <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover rounded-lg mt-2" />
+                {photoPreviews.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {photoPreviews.map((src, idx) => (
+                      <img key={idx} src={src} alt={`Preview ${idx+1}`} className="w-full h-28 object-cover rounded border" />
+                    ))}
+                  </div>
                 )}
               </div>
 
