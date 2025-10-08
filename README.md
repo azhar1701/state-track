@@ -60,6 +60,19 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Progressive Web App (PWA)
+
+This app is installable and works offline for key routes thanks to Vite PWA.
+
+- Install: In supported browsers, use the browser menu “Install app” or the install prompt.
+- Offline: Static assets and core pages are cached. Data APIs require connectivity.
+- Update: The service worker auto-updates; a reload will activate new versions.
+
+## Keyboard shortcuts
+
+- Open Command Menu: Ctrl+K (Windows/Linux) or Cmd+K (macOS)
+- Toggle theme: Available in Navbar and Command Menu
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/df59a3b0-9f65-4418-a053-973f630a6512) and click on Share -> Publish.

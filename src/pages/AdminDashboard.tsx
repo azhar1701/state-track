@@ -31,21 +31,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Suspense, lazy } from "react";
 import { toast } from "sonner";
 import { FileText, Clock, CheckCircle, Loader2 } from "lucide-react";
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: {
-      columns: Array<{ header: string; dataKey: string }>;
-      body: Array<Record<string, string | number | null>>;
-      styles?: { fontSize?: number };
-      headStyles?: { fillColor?: [number, number, number] };
-    }) => void;
-  }
-}
+// export libs will be loaded dynamically in handlers to keep initial bundle small
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 
@@ -350,8 +339,9 @@ const AdminDashboard = () => {
     }));
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     try {
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(buildExportRows());
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Reports');
@@ -364,9 +354,19 @@ const AdminDashboard = () => {
     }
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     try {
+      const { default: jsPDF } = await import('jspdf');
+      await import('jspdf-autotable');
       const doc = new jsPDF({ orientation: 'landscape' });
+      // Minimal types for autoTable without bringing full type dependency
+      type AutoTableOptions = {
+        columns: { header: string; dataKey: string }[];
+        body: Array<Record<string, unknown>>;
+        styles?: { fontSize?: number };
+        headStyles?: { fillColor?: [number, number, number] };
+      };
+      type JsPDFWithAutoTable = { autoTable: (opts: AutoTableOptions) => void };
       const rows = buildExportRows();
       const columns = [
         { header: 'ID', dataKey: 'id' },
@@ -379,7 +379,7 @@ const AdminDashboard = () => {
         { header: 'Kecamatan', dataKey: 'kecamatan' },
         { header: 'Desa', dataKey: 'desa' },
       ];
-  doc.autoTable({ columns, body: rows, styles: { fontSize: 8 }, headStyles: { fillColor: [25, 118, 210] } });
+      (doc as unknown as JsPDFWithAutoTable).autoTable({ columns, body: rows as Array<Record<string, unknown>>, styles: { fontSize: 8 }, headStyles: { fillColor: [25, 118, 210] } });
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
       doc.save(`reports-export-${ts}.pdf`);
       toast.success('Export PDF berhasil');
@@ -599,8 +599,7 @@ const AdminDashboard = () => {
       }
       const catArr = Array.from(catCount.entries())
         .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6); // top 6 categories
+        .sort((a, b) => b.count - a.count);
       setChartByCategory(catArr);
     } catch (err) {
       console.error(err);
@@ -726,7 +725,8 @@ const AdminDashboard = () => {
               ) : (
                 <ChartContainer
                   config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                  className="h-64"
+                  className="h-64 md:h-72 lg:h-80"
+                  withAspect={false}
                 >
                   <LineChart data={chartDaily} margin={{ left: 12, right: 12 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -751,11 +751,12 @@ const AdminDashboard = () => {
               ) : (
                 <ChartContainer
                   config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                  className="h-64"
+                  className="h-64 md:h-72 lg:h-80"
+                  withAspect={false}
                 >
-                  <BarChart data={chartByCategory} margin={{ left: 12, right: 12 }}>
+                  <BarChart data={chartByCategory} margin={{ left: 12, right: 12, bottom: 24 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={50} />
                     <YAxis allowDecimals={false} width={28} />
                     <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                     <Bar dataKey="count" fill="var(--color-count)" radius={4} />
@@ -994,90 +995,24 @@ const AdminDashboard = () => {
         <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
           <DrawerContent>
             <DrawerErrorBoundary>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Detail Laporan</DrawerTitle>
-              <DrawerDescription>Informasi lengkap laporan terpilih.</DrawerDescription>
-            </DrawerHeader>
-            <div className="px-6 py-4 space-y-4">
-              {(() => {
-                try {
-                  if (!selectedReport) return <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>;
-                  return (
-                <div className="space-y-2">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Judul</div>
-                    <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-                  </div>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Badge variant="outline">{selectedReport.category || '-'}</Badge>
-                    <select
-                      className="h-9 w-[180px] rounded-md border bg-background px-3 text-sm"
-                      value={editSeverity}
-                      onChange={(e) => setEditSeverity(e.target.value as typeof editSeverity)}
-                    >
-                      <option value="">-</option>
-                      <option value="berat">Berat</option>
-                      <option value="sedang">Sedang</option>
-                      <option value="ringan">Ringan</option>
-                    </select>
-                    {renderStatusBadge(String(selectedReport.status || ''))}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Lokasi</div>
-                      <div>{selectedReport.location_name || '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Wilayah</div>
-                      <div>{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Tanggal</div>
-                      <div>{formatDateTime(selectedReport.created_at)}</div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="text-sm text-muted-foreground">Hasil/Respon</div>
-                      <textarea
-                        className="w-full min-h-[120px] rounded-md border bg-background p-2 text-sm"
-                        value={editResolution}
-                        onChange={(e) => setEditResolution(e.target.value)}
-                        placeholder="Tulis hasil penanganan/respon admin di sini..."
-                      />
-                    </div>
-                  </div>
-                  <div className="pt-4 mt-4 border-t">
-                    <div className="font-medium mb-2">Riwayat Perubahan</div>
-                    {logsLoading ? (
-                      <div className="text-sm text-muted-foreground">Memuat riwayat...</div>
-                    ) : logs.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">Belum ada perubahan.</div>
-                    ) : (
-                      <ul className="space-y-2 max-h-56 overflow-auto pr-2">
-                        {logs.map((log) => (
-                          <li key={log.id} className="text-sm">
-                            <div className="text-muted-foreground">{formatDateTime(log.created_at)} — {log.actor_email || '-'}</div>
-                            <div>{summarizeLog(log)}</div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-                  );
-                } catch (err) {
-                  console.error('Drawer inner render error:', err);
-                  return <div className="text-sm text-red-600">Terjadi kesalahan saat memuat detail.</div>;
-                }
-              })()}
-            </div>
-            <DrawerFooter>
-              <div className="flex items-center justify-end gap-2">
-                <DrawerClose asChild>
-                  <Button variant="outline">Batal</Button>
-                </DrawerClose>
-                <Button onClick={saveEdits} disabled={saving || !selectedReport}>Simpan</Button>
-              </div>
-            </DrawerFooter>
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail…</div>}>
+              <AdminDetail
+                selectedReport={selectedReport}
+                editTitle={editTitle}
+                setEditTitle={setEditTitle}
+                editSeverity={editSeverity}
+                setEditSeverity={setEditSeverity}
+                renderStatusBadge={renderStatusBadge}
+                formatDateTime={formatDateTime}
+                editResolution={editResolution}
+                setEditResolution={setEditResolution}
+                logsLoading={logsLoading}
+                logs={logs}
+                summarizeLog={summarizeLog}
+                saveEdits={saveEdits}
+                saving={saving}
+              />
+            </Suspense>
             </DrawerErrorBoundary>
           </DrawerContent>
         </Drawer>
@@ -1110,3 +1045,124 @@ class DrawerErrorBoundary extends Component<{ children: ReactNode }, { hasError:
 }
 
 export default AdminDashboard;
+
+// Lazy component for Drawer detail to keep Dashboard initial render light
+const AdminDetail = lazy(async () => {
+  const Mod = await import("react");
+  return {
+    default: ({
+      selectedReport,
+      editTitle,
+      setEditTitle,
+      editSeverity,
+      setEditSeverity,
+      renderStatusBadge,
+      formatDateTime,
+      editResolution,
+      setEditResolution,
+      logsLoading,
+      logs,
+      summarizeLog,
+      saveEdits,
+      saving,
+    }: {
+      selectedReport: Report | null;
+      editTitle: string;
+      setEditTitle: (v: string) => void;
+      editSeverity: '' | 'ringan' | 'sedang' | 'berat';
+      setEditSeverity: (v: '' | 'ringan' | 'sedang' | 'berat') => void;
+      renderStatusBadge: (s: string) => ReactNode;
+      formatDateTime: (s?: string | null) => string;
+      editResolution: string;
+      setEditResolution: (v: string) => void;
+      logsLoading: boolean;
+      logs: ReportLog[];
+      summarizeLog: (l: ReportLog) => string;
+      saveEdits: () => Promise<void> | void;
+      saving: boolean;
+    }) => {
+      return (
+        <>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Detail Laporan</DrawerTitle>
+            <DrawerDescription>Informasi lengkap laporan terpilih.</DrawerDescription>
+          </DrawerHeader>
+          <div className="px-6 py-4 space-y-4">
+            {!selectedReport ? (
+              <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>
+            ) : (
+              <div className="space-y-2">
+                <div>
+                  <div className="text-sm text-muted-foreground">Judul</div>
+                  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Badge variant="outline">{selectedReport.category || '-'}</Badge>
+                  <select
+                    className="h-9 w-[180px] rounded-md border bg-background px-3 text-sm"
+                    value={editSeverity}
+                    onChange={(e) => setEditSeverity(e.target.value as typeof editSeverity)}
+                  >
+                    <option value="">-</option>
+                    <option value="berat">Berat</option>
+                    <option value="sedang">Sedang</option>
+                    <option value="ringan">Ringan</option>
+                  </select>
+                  {renderStatusBadge(String(selectedReport.status || ''))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Lokasi</div>
+                    <div>{selectedReport.location_name || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Wilayah</div>
+                    <div>{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Tanggal</div>
+                    <div>{formatDateTime(selectedReport.created_at)}</div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-sm text-muted-foreground">Hasil/Respon</div>
+                    <textarea
+                      className="w-full min-h-[120px] rounded-md border bg-background p-2 text-sm"
+                      value={editResolution}
+                      onChange={(e) => setEditResolution(e.target.value)}
+                      placeholder="Tulis hasil penanganan/respon admin di sini..."
+                    />
+                  </div>
+                </div>
+                <div className="pt-4 mt-4 border-t">
+                  <div className="font-medium mb-2">Riwayat Perubahan</div>
+                  {logsLoading ? (
+                    <div className="text-sm text-muted-foreground">Memuat riwayat...</div>
+                  ) : logs.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Belum ada perubahan.</div>
+                  ) : (
+                    <ul className="space-y-2 max-h-56 overflow-auto pr-2">
+                      {logs.map((log) => (
+                        <li key={log.id} className="text-sm">
+                          <div className="text-muted-foreground">{formatDateTime(log.created_at)} — {log.actor_email || '-'}</div>
+                          <div>{summarizeLog(log)}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DrawerFooter>
+            <div className="flex items-center justify-end gap-2">
+              <DrawerClose asChild>
+                <Button variant="outline">Batal</Button>
+              </DrawerClose>
+              <Button onClick={saveEdits} disabled={saving || !selectedReport}>Simpan</Button>
+            </div>
+          </DrawerFooter>
+        </>
+      );
+    },
+  };
+});

@@ -63,8 +63,7 @@ const Home = () => {
       }
       const catArr = Array.from(catCount.entries())
         .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6);
+        .sort((a, b) => b.count - a.count);
       setChartByCategory(catArr);
     } catch (e) {
       // fail silently on landing page charts
@@ -219,7 +218,8 @@ const Home = () => {
                 ) : (
                   <ChartContainer
                     config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                    className="h-56 md:h-64"
+                    className="h-56 sm:h-64 md:h-72"
+                    withAspect={false}
                   >
                     <LineChart data={chartDaily} margin={{ left: 12, right: 12 }}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -244,11 +244,12 @@ const Home = () => {
                 ) : (
                   <ChartContainer
                     config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                    className="h-56 md:h-64"
+                    className="h-56 sm:h-64 md:h-72"
+                    withAspect={false}
                   >
-                    <BarChart data={chartByCategory} margin={{ left: 12, right: 12 }}>
+                      <BarChart data={chartByCategory} margin={{ left: 12, right: 12, bottom: 24 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={50} />
                       <YAxis allowDecimals={false} width={28} />
                       <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                       <Bar dataKey="count" fill="var(--color-count)" radius={4} />

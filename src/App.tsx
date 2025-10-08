@@ -1,44 +1,54 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// Removed TanStack Query per request
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import Home from "./pages/Home";
-import Auth from "./pages/Auth";
-import MapView from "./pages/MapView";
-import ReportForm from "./pages/ReportForm";
-import AdminDashboard from "./pages/AdminDashboard";
-import NotFound from "./pages/NotFound";
-import ReportSuccess from "./pages/ReportSuccess";
+import CommandMenu from "@/components/CommandMenu";
+import PageLoader from "@/components/PageLoader";
+import { Suspense, lazy } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
+const Home = lazy(() => import("./pages/Home"));
+const Auth = lazy(() => import("./pages/Auth"));
+const MapView = lazy(() => import("./pages/MapView"));
+const ReportForm = lazy(() => import("./pages/ReportForm"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ReportSuccess = lazy(() => import("./pages/ReportSuccess"));
 
-const queryClient = new QueryClient();
+// TanStack Query removed
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+  <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
             <Navbar />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/map" element={<MapView />} />
-              <Route path="/report" element={<ReportForm />} />
-              <Route path="/report/success" element={<ReportSuccess />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <main id="main-content" className="min-h-[calc(100vh-4rem)]">{/* 4rem ~ navbar height */}
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/map" element={<MapView />} />
+                    <Route path="/report" element={<ReportForm />} />
+                    <Route path="/report/success" element={<ReportSuccess />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
+            </main>
+            <CommandMenu />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
-  </QueryClientProvider>
+  </>
 );
 
 export default App;

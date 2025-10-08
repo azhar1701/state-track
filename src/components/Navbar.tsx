@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { MapPin, Menu, X, Map, FileText, LayoutDashboard, LogOut } from "lucide-react";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -10,6 +11,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+  // Prefetch heavy routes on hover/focus for faster navigation
+  const prefetchMap = () => import("@/pages/MapView");
+  const prefetchReport = () => import("@/pages/ReportForm");
+  const prefetchAdmin = () => import("@/pages/AdminDashboard");
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -31,6 +36,8 @@ const Navbar = () => {
                     variant={isActive("/map") ? "default" : "ghost"}
                     size="sm"
                     className="gap-2"
+                    onMouseEnter={prefetchMap}
+                    onFocus={prefetchMap}
                   >
                     <Map className="w-4 h-4" />
                     Peta
@@ -41,6 +48,8 @@ const Navbar = () => {
                     variant={isActive("/report") ? "secondary" : "ghost"}
                     size="sm"
                     className="gap-2"
+                    onMouseEnter={prefetchReport}
+                    onFocus={prefetchReport}
                   >
                     <FileText className="w-4 h-4" />
                     Buat Laporan
@@ -52,6 +61,8 @@ const Navbar = () => {
                       variant={isActive("/admin") ? "accent" : "ghost"}
                       size="sm"
                       className="gap-2"
+                      onMouseEnter={prefetchAdmin}
+                      onFocus={prefetchAdmin}
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       Dashboard
@@ -67,12 +78,16 @@ const Navbar = () => {
                   <LogOut className="w-4 h-4" />
                   Keluar
                 </Button>
+                <ThemeToggle />
               </>
             )}
             {!user && (
-              <Link to="/auth">
-                <Button size="sm">Masuk / Daftar</Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link to="/auth">
+                  <Button size="sm">Masuk / Daftar</Button>
+                </Link>
+                <ThemeToggle />
+              </div>
             )}
           </div>
 
@@ -96,6 +111,8 @@ const Navbar = () => {
                       variant={isActive("/map") ? "default" : "ghost"}
                       size="sm"
                       className="w-full justify-start gap-2"
+                      onMouseEnter={prefetchMap}
+                      onFocus={prefetchMap}
                     >
                       <Map className="w-4 h-4" />
                       Peta
@@ -106,6 +123,8 @@ const Navbar = () => {
                       variant={isActive("/report") ? "secondary" : "ghost"}
                       size="sm"
                       className="w-full justify-start gap-2"
+                      onMouseEnter={prefetchReport}
+                      onFocus={prefetchReport}
                     >
                       <FileText className="w-4 h-4" />
                       Buat Laporan
@@ -117,6 +136,8 @@ const Navbar = () => {
                         variant={isActive("/admin") ? "accent" : "ghost"}
                         size="sm"
                         className="w-full justify-start gap-2"
+                        onMouseEnter={prefetchAdmin}
+                        onFocus={prefetchAdmin}
                       >
                         <LayoutDashboard className="w-4 h-4" />
                         Dashboard
@@ -135,6 +156,9 @@ const Navbar = () => {
                     <LogOut className="w-4 h-4" />
                     Keluar
                   </Button>
+                  <div className="flex w-full justify-start px-2 pt-2">
+                    <ThemeToggle />
+                  </div>
                 </>
               )}
               {!user && (
@@ -143,6 +167,11 @@ const Navbar = () => {
                     Masuk / Daftar
                   </Button>
                 </Link>
+              )}
+              {!user && (
+                <div className="flex w-full justify-start px-2 pt-2">
+                  <ThemeToggle />
+                </div>
               )}
             </div>
           </div>
