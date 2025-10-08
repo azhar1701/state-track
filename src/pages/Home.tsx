@@ -2,22 +2,99 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { MapPin, FileText, Map, Users, CheckCircle, Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { MapPin, FileText, Map as MapIcon, Users, CheckCircle, Clock } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [stats, setStats] = useState({
     total: 0,
     baru: 0,
     diproses: 0,
     selesai: 0,
   });
+  const [chartDays, setChartDays] = useState<7 | 30>(30);
+  const [chartDaily, setChartDaily] = useState<Array<{ date: string; count: number }>>([]);
+  const [chartByCategory, setChartByCategory] = useState<Array<{ name: string; count: number }>>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      setChartLoading(true);
+      const fromISO = new Date(Date.now() - chartDays * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("reports")
+        .select("created_at, category")
+        .gte("created_at", fromISO);
+      if (error) throw error;
+
+      const items = (data || []) as Array<{ created_at: string; category: string | null }>;
+
+      // build daily buckets
+      const days: Array<{ dateKey: string; label: string; count: number }> = [];
+      for (let i = chartDays - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        const dateKey = d.toISOString().slice(0, 10);
+        const label = d.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit" });
+        days.push({ dateKey, label, count: 0 });
+      }
+      const dayMap = new Map(days.map((x) => [x.dateKey, x] as const));
+      for (const it of items) {
+        const d = new Date(it.created_at);
+        if (isNaN(d.getTime())) continue;
+        d.setHours(0, 0, 0, 0);
+        const key = d.toISOString().slice(0, 10);
+        const bucket = dayMap.get(key);
+        if (bucket) bucket.count += 1;
+      }
+      setChartDaily(days.map((x) => ({ date: x.label, count: x.count })));
+
+      // build category counts (top 6)
+      const catCount = new Map<string, number>();
+      for (const it of items) {
+        const name = it.category || "Lainnya";
+        catCount.set(name, (catCount.get(name) || 0) + 1);
+      }
+      const catArr = Array.from(catCount.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+      setChartByCategory(catArr);
+    } catch (e) {
+      // fail silently on landing page charts
+      console.warn("Gagal memuat data chart beranda:", e);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [chartDays]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+    fetchChartData();
+
+    // realtime refresh when reports change
+    const channel = supabase
+      .channel("home-reports-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => {
+        fetchStats();
+        fetchChartData();
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [fetchChartData]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [chartDays, fetchChartData]);
 
   const fetchStats = async () => {
     const { data } = await supabase.from("reports").select("status");
@@ -31,6 +108,8 @@ const Home = () => {
       });
     }
   };
+
+  // moved above
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -49,7 +128,15 @@ const Home = () => {
             Bersama membangun kota yang lebih baik.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            {user ? (
+            {authLoading ? null : !user ? (
+              // Anonymous: only show Login/Signup entry point
+              <Link to="/auth">
+                <Button size="lg" className="gap-2 shadow-lg">
+                  Masuk / Daftar
+                </Button>
+              </Link>
+            ) : (
+              // Authenticated: show actions based on role
               <>
                 <Link to="/report">
                   <Button size="lg" className="gap-2 shadow-lg">
@@ -59,17 +146,18 @@ const Home = () => {
                 </Link>
                 <Link to="/map">
                   <Button size="lg" variant="outline" className="gap-2">
-                    <Map className="w-5 h-5" />
+                    <MapIcon className="w-5 h-5" />
                     Lihat Peta
                   </Button>
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button size="lg" variant="outline" className="gap-2">
+                      Dashboard Admin
+                    </Button>
+                  </Link>
+                )}
               </>
-            ) : (
-              <Link to="/auth">
-                <Button size="lg" className="gap-2 shadow-lg">
-                  Mulai Sekarang
-                </Button>
-              </Link>
             )}
           </div>
         </div>
@@ -105,6 +193,74 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Charts Section */}
+      <section className="container mx-auto px-4 py-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-2xl font-semibold">Insight Laporan</h2>
+            <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
+              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 hari</SelectItem>
+                <SelectItem value="30">30 hari</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chartLoading ? (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                ) : chartDaily.length === 0 ? (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                ) : (
+                  <ChartContainer
+                    config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                    className="h-56 md:h-64"
+                  >
+                    <LineChart data={chartDaily} margin={{ left: 12, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} width={28} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chartLoading ? (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                ) : chartByCategory.length === 0 ? (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                ) : (
+                  <ChartContainer
+                    config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                    className="h-56 md:h-64"
+                  >
+                    <BarChart data={chartByCategory} margin={{ left: 12, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} width={28} />
+                      <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
@@ -125,7 +281,7 @@ const Home = () => {
             <Card className="border-2 hover:border-secondary transition-all duration-300">
               <CardHeader>
                 <div className="p-3 bg-secondary/10 rounded-lg w-fit mb-4">
-                  <Map className="w-8 h-8 text-secondary" />
+                  <MapIcon className="w-8 h-8 text-secondary" />
                 </div>
                 <CardTitle>Peta Interaktif</CardTitle>
                 <CardDescription>

@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { AuthContext, type AuthContextValue } from "./auth-context";
@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   // Optional fallback: allowlist admin emails via env var (comma-separated)
   const ADMIN_EMAILS = useMemo(() => {
     const raw = import.meta.env.VITE_ADMIN_EMAILS as string | undefined;
@@ -101,6 +102,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, [checkAdminStatus]);
+
+  // After auth resolved, redirect away from /auth to role-appropriate page (allow landing / access)
+  useEffect(() => {
+    if (loading) return;
+    const path = location.pathname;
+    const isAuthPage = path === "/auth";
+    if (!user) return; // stay on current page for anonymous until they login
+    if (!isAuthPage) return; // don't hijack navigation from landing or other pages
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+    } else {
+      navigate("/map", { replace: true });
+    }
+  }, [loading, user, isAdmin, navigate, location.pathname]);
 
   const value: AuthContextValue = {
     user,

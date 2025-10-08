@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -96,6 +97,7 @@ const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: numbe
 
 const MapView = () => {
   const urlParams = parseURLParams();
+  const isMobile = useIsMobile();
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,8 +277,8 @@ const MapView = () => {
         try {
           const getKecName = (p?: Record<string, unknown>): string | undefined =>
             (p?.KECAMATAN as string) || (p?.Kecamatan as string) || undefined;
-          const groups = new Map<string, Array<turf.Feature<turf.Polygon | turf.MultiPolygon>>>();
-          for (const f of result.features as Array<turf.Feature<turf.Polygon | turf.MultiPolygon>>) {
+          const groups = new Map<string, Array<Feature<Polygon | MultiPolygon>>>();
+          for (const f of result.features as Array<Feature<Polygon | MultiPolygon>>) {
             const name = getKecName(f.properties as Record<string, unknown> | undefined);
             if (!name) continue;
             const arr = groups.get(name) || [];
@@ -284,16 +286,14 @@ const MapView = () => {
             groups.set(name, arr);
           }
 
-          const lineFeatures: turf.Feature<turf.LineString | turf.MultiLineString>[] = [];
+          const lineFeatures: Array<Feature<LineString | MultiLineString>> = [];
           groups.forEach((features, name) => {
             try {
-              let merged = features[0];
-              for (let i = 1; i < features.length; i++) {
-                merged = turf.union(merged, features[i]) as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+              for (const poly of features) {
+                const line = turf.polygonToLine(poly as unknown as Feature<Polygon | MultiPolygon>) as Feature<LineString | MultiLineString>;
+                line.properties = { ...(line.properties || {}), KECAMATAN: name };
+                lineFeatures.push(line);
               }
-              const line = turf.polygonToLine(merged) as turf.Feature<turf.LineString | turf.MultiLineString>;
-              line.properties = { ...(line.properties || {}), KECAMATAN: name };
-              lineFeatures.push(line);
             } catch (e) {
               // Fallback: skip problematic kecamatan
               console.warn('Failed to build kecamatan boundary for', name, e);
@@ -301,7 +301,7 @@ const MapView = () => {
           });
           const kecLinesFC: FeatureCollection<Geometry> = {
             type: 'FeatureCollection',
-            features: lineFeatures as unknown as turf.AllGeoJSON['features'],
+            features: lineFeatures as unknown as Feature<Geometry>[],
           } as FeatureCollection<Geometry>;
           setKecamatanLines(kecLinesFC);
         } catch (e) {
@@ -550,7 +550,7 @@ const MapView = () => {
           </p>
         </div>
 
-        <div className="relative h-[calc(100vh-220px)] rounded-lg overflow-hidden shadow-lg border">
+  <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-180px)]' : 'h-[calc(100vh-220px)]'}`}>
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -673,7 +673,7 @@ const MapView = () => {
           </MapContainer>
 
           <MapToolbar
-            compact={false}
+            compact={isMobile}
             showSearch={showSearchPanel}
             onToggleSearch={() => {
               setShowSearchPanel((v) => !v);
@@ -698,7 +698,7 @@ const MapView = () => {
 
           {/* Floating mini panels under the toolbar (top-left) */}
           {showSearchPanel && (
-            <div className="absolute top-24 left-4 z-[1200]">
+            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
               <MapSearch
                 onSelect={(lat, lon, label) => {
                   setMapCenter([lat, lon]);
@@ -711,7 +711,7 @@ const MapView = () => {
             </div>
           )}
           {showFilterPanel && (
-            <div className="absolute top-24 left-4 z-[1200]">
+            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
               <FilterPanel
                 filters={filters}
                 onFilterChange={(newFilters) => {
@@ -722,7 +722,7 @@ const MapView = () => {
             </div>
           )}
           {showOverlayPanel && (
-            <div className="absolute top-24 left-4 z-[1200]">
+            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
               <OverlayToggle
                 overlays={overlays}
                 onOverlayChange={setOverlays}
@@ -733,7 +733,7 @@ const MapView = () => {
 
           {/* Floating detail card */}
           {selectedReport && (
-            <div className="absolute top-32 left-4 z-[1300]">
+            <div className={`absolute z-[1300] ${isMobile ? 'bottom-20 left-2 right-2' : 'top-32 left-4'}`}>
               <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
             </div>
           )}
@@ -741,16 +741,18 @@ const MapView = () => {
           {/* SidePanel consolidates Search, Filter, and Overlay */}
 
           {reports.length > 0 && (
-            <div className="absolute bottom-4 left-0 right-0 z-[1000] px-4">
-              {/* On md+, align to right and add dynamic margin to avoid legend */}
-              <div className="w-full max-w-xl md:ml-auto" style={{ marginRight: timelineRightOffset }}>
-                <TimeSlider
-                  minDate={minDate}
-                  maxDate={maxDate}
-                  currentDate={timeFilterDate}
-                  onDateChange={setTimeFilterDate}
-                  compact
-                />
+            <div className="absolute bottom-4 left-0 right-0 z-[1000] px-2 md:px-4 pointer-events-none">
+              {/* Add right padding on larger screens to avoid overlapping legend; center the slider */}
+              <div className="w-full" style={{ paddingRight: isMobile ? 0 : timelineRightOffset }}>
+                <div className="mx-auto max-w-xl pointer-events-auto">
+                  <TimeSlider
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    currentDate={timeFilterDate}
+                    onDateChange={setTimeFilterDate}
+                    compact
+                  />
+                </div>
               </div>
             </div>
           )}
