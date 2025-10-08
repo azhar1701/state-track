@@ -37,6 +37,7 @@ interface Report {
   longitude: number;
   location_name: string | null;
   photo_url: string | null;
+  photo_urls?: string[] | null;
   created_at: string;
   user_id: string;
 }

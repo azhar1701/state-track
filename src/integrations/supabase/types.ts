@@ -45,6 +45,8 @@ export type Database = {
           location_name: string | null
           longitude: number
           photo_url: string | null
+          // Added locally: array of photo URLs for multi-photo support
+          photo_urls?: string[] | null
           status: Database["public"]["Enums"]["report_status"]
           title: string
           updated_at: string
@@ -59,6 +61,7 @@ export type Database = {
           location_name?: string | null
           longitude: number
           photo_url?: string | null
+          photo_urls?: string[] | null
           status?: Database["public"]["Enums"]["report_status"]
           title: string
           updated_at?: string
@@ -73,6 +76,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number
           photo_url?: string | null
+          photo_urls?: string[] | null
           status?: Database["public"]["Enums"]["report_status"]
           title?: string
           updated_at?: string
@@ -119,9 +123,9 @@ export type Database = {
       report_category:
         | "jalan"
         | "jembatan"
-        | "lampu"
+        | "irigasi"
         | "drainase"
-        | "taman"
+        | "sungai"
         | "lainnya"
       report_status: "baru" | "diproses" | "selesai"
     }

@@ -16,6 +16,7 @@ interface Report {
   longitude: number;
   location_name: string | null;
   photo_url: string | null;
+  photo_urls?: string[] | null;
   created_at: string;
   user_id: string;
 }
@@ -34,14 +35,18 @@ const statusColors = {
 const categoryLabels = {
   jalan: 'Jalan',
   jembatan: 'Jembatan',
-  lampu: 'Lampu',
+  irigasi: 'Irigasi',
   drainase: 'Drainase',
-  taman: 'Taman',
+  sungai: 'Sungai',
   lainnya: 'Lainnya',
-};
+} as const;
 
 export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const photos: string[] = (report.photo_urls && report.photo_urls.length > 0)
+    ? report.photo_urls
+    : (report.photo_url ? [report.photo_url] : []);
+  const [activeIndex, setActiveIndex] = useState(0);
   const openInGoogleMaps = () => {
     const url = `https://www.google.com/maps/search/?api=1&query=${report.latitude},${report.longitude}`;
     window.open(url, '_blank');
@@ -80,15 +85,18 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        {report.photo_url && (
-          <div className="flex items-center justify-center">
-            <img
-              src={report.photo_url}
-              alt={report.title}
-              className="h-28 w-auto max-w-full object-cover rounded-md border cursor-zoom-in"
-              loading="lazy"
-              onClick={() => setLightboxOpen(true)}
-            />
+        {photos.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {photos.slice(0, 6).map((src, i) => (
+              <img
+                key={src + i}
+                src={src}
+                alt={`${report.title} ${i + 1}`}
+                className="h-24 w-full object-cover rounded border cursor-zoom-in"
+                loading="lazy"
+                onClick={() => { setActiveIndex(i); setLightboxOpen(true); }}
+              />
+            ))}
           </div>
         )}
 
@@ -125,7 +133,7 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
           </Button>
         </div>
       </CardContent>
-      {report.photo_url && (
+      {photos.length > 0 && (
         <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
           <DialogContent className="sm:max-w-[90vw] p-0">
             <DialogHeader className="px-4 pt-4 pb-2">
@@ -134,11 +142,18 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
             </DialogHeader>
             <div className="w-full flex items-center justify-center p-2">
               <img
-                src={report.photo_url}
-                alt={report.title}
+                src={photos[activeIndex]}
+                alt={`${report.title} ${activeIndex + 1}`}
                 className="max-h-[80vh] w-auto object-contain rounded"
               />
             </div>
+            {photos.length > 1 && (
+              <div className="flex items-center justify-between px-4 pb-4 text-sm text-muted-foreground">
+                <Button size="sm" variant="outline" onClick={() => setActiveIndex((i) => (i - 1 + photos.length) % photos.length)}>Sebelumnya</Button>
+                <span>{activeIndex + 1} / {photos.length}</span>
+                <Button size="sm" variant="outline" onClick={() => setActiveIndex((i) => (i + 1) % photos.length)}>Berikutnya</Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

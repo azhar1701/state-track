@@ -405,6 +405,8 @@ const ReportForm = () => {
         longitude: location.longitude,
         location_name: location.name || null,
         photo_url: photoUrl,
+        // New array column for multiple photos; keep single photo_url for compatibility
+        photo_urls: photoUrls.length > 0 ? photoUrls : null,
         severity: formData.severity,
         reporter_name: formData.reporterName,
         phone: formData.phone,

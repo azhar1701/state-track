@@ -71,6 +71,7 @@ interface FullReport {
   latitude?: number | null;
   longitude?: number | null;
   photo_url?: string | null;
+  photo_urls?: string[] | null;
 }
 
 const AdminDashboard = () => {
@@ -312,7 +313,7 @@ const AdminDashboard = () => {
       setFullReport(null);
       const { data, error } = await supabase
         .from('reports')
-        .select('description, reporter_name, phone, latitude, longitude, photo_url')
+        .select('description, reporter_name, phone, latitude, longitude, photo_url, photo_urls')
         .eq('id', reportId)
         .maybeSingle();
       if (error) throw error;
@@ -1122,7 +1123,8 @@ const AdminDetail = lazy(async () => {
       saveEdits: () => Promise<void> | void;
       saving: boolean;
     }) {
-      const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
       return (
         <>
           <DrawerHeader className="text-left pb-2">
@@ -1224,18 +1226,26 @@ const AdminDetail = lazy(async () => {
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted-foreground">Dokumentasi</div>
                     <div>
-                      {fullReport?.photo_url ? (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={fullReport.photo_url}
-                            alt="Dokumentasi"
-                            className="h-24 w-36 object-cover rounded border cursor-zoom-in"
-                            onClick={() => setLightboxOpen(true)}
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-foreground">-</span>
-                      )}
+                      {(() => {
+                        const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
+                          ? fullReport.photo_urls
+                          : (fullReport?.photo_url ? [fullReport.photo_url] : []);
+                        return photos.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-2">
+                            {photos.slice(0, 6).map((src, i) => (
+                              <img
+                                key={src + i}
+                                src={src}
+                                alt={`Dokumentasi ${i + 1}`}
+                                className="h-24 w-full object-cover rounded border cursor-zoom-in"
+                                onClick={() => { setActivePhotoIndex(i); setLightboxOpen(true); }}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-foreground">-</span>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="md:col-span-2">
@@ -1269,7 +1279,11 @@ const AdminDetail = lazy(async () => {
             )}
           </div>
           {/* Lightbox for Dokumentasi */}
-          {fullReport?.photo_url && (
+          {(() => {
+            const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
+              ? fullReport.photo_urls
+              : (fullReport?.photo_url ? [fullReport.photo_url] : []);
+            return photos.length > 0 ? (
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
               <DialogContent className="sm:max-w-[90vw] p-0">
                 <DialogHeader className="px-4 pt-4 pb-2">
@@ -1278,14 +1292,22 @@ const AdminDetail = lazy(async () => {
                 </DialogHeader>
                 <div className="w-full flex items-center justify-center p-2">
                   <img
-                    src={fullReport.photo_url}
-                    alt="Dokumentasi"
+                    src={photos[activePhotoIndex]}
+                    alt={`Dokumentasi ${activePhotoIndex + 1}`}
                     className="max-h-[80vh] w-auto object-contain rounded"
                   />
                 </div>
+                {photos.length > 1 && (
+                  <div className="flex items-center justify-between px-4 pb-4 text-sm text-muted-foreground">
+                    <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i - 1 + photos.length) % photos.length)}>Sebelumnya</Button>
+                    <span>{activePhotoIndex + 1} / {photos.length}</span>
+                    <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i + 1) % photos.length)}>Berikutnya</Button>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
-          )}
+            ) : null;
+          })()}
 
           <DrawerFooter className="py-3">
             <div className="flex items-center justify-end gap-2">
