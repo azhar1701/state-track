@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { MapPin, FileText, Map as MapIcon, Users, CheckCircle, Clock } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 const Home = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -23,6 +24,11 @@ const Home = () => {
   const [chartLoading, setChartLoading] = useState(false);
 
   const fetchChartData = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setChartDaily([]);
+      setChartByCategory([]);
+      return;
+    }
     try {
       setChartLoading(true);
       const fromISO = new Date(Date.now() - chartDays * 24 * 60 * 60 * 1000).toISOString();
@@ -77,8 +83,10 @@ const Home = () => {
     fetchStats();
     fetchChartData();
 
+    if (!isSupabaseConfigured) return;
+
     // realtime refresh when reports change
-    const channel = supabase
+    const channel: RealtimeChannel = supabase
       .channel("home-reports-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => {
         fetchStats();
@@ -96,16 +104,20 @@ const Home = () => {
   }, [chartDays, fetchChartData]);
 
   const fetchStats = async () => {
-    const { data } = await supabase.from("reports").select("status");
-    
-    if (data) {
-      setStats({
-        total: data.length,
-        baru: data.filter((r) => r.status === "baru").length,
-        diproses: data.filter((r) => r.status === "diproses").length,
-        selesai: data.filter((r) => r.status === "selesai").length,
-      });
-    }
+    if (!isSupabaseConfigured) return;
+    const [totalRes, baruRes, diprosesRes, selesaiRes] = await Promise.all([
+      supabase.from("reports").select("id", { count: "exact", head: true }),
+      supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "baru"),
+      supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "diproses"),
+      supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "selesai"),
+    ]);
+
+    setStats({
+      total: (totalRes.count ?? 0) as number,
+      baru: (baruRes.count ?? 0) as number,
+      diproses: (diprosesRes.count ?? 0) as number,
+      selesai: (selesaiRes.count ?? 0) as number,
+    });
   };
 
   // moved above
@@ -113,16 +125,16 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
+      <section className="container py-14 md:py-20">
         <div className="max-w-4xl mx-auto text-center space-y-6">
-          <div className="inline-flex p-4 bg-primary/10 rounded-full mb-4">
-            <MapPin className="w-12 h-12 text-primary" />
+          <div className="inline-flex p-3 bg-primary/10 rounded-full mb-4">
+            <MapPin className="icon-lg text-primary" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
             Lapor Infrastruktur
             <span className="block text-primary mt-2">Dengan Mudah</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
             Platform pelaporan dan monitoring kondisi infrastruktur publik secara real-time.
             Bersama membangun kota yang lebih baik.
           </p>
@@ -163,29 +175,29 @@ const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="container mx-auto px-4 py-12">
+      <section className="container py-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
           <Card className="text-center">
             <CardHeader className="pb-3">
-              <CardTitle className="text-3xl font-bold text-primary">{stats.total}</CardTitle>
+              <CardTitle className="text-2xl font-bold text-primary">{stats.total}</CardTitle>
               <CardDescription>Total Laporan</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
             <CardHeader className="pb-3">
-              <CardTitle className="text-3xl font-bold text-accent">{stats.baru}</CardTitle>
+              <CardTitle className="text-2xl font-bold text-accent">{stats.baru}</CardTitle>
               <CardDescription>Laporan Baru</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
             <CardHeader className="pb-3">
-              <CardTitle className="text-3xl font-bold text-secondary">{stats.diproses}</CardTitle>
+              <CardTitle className="text-2xl font-bold text-secondary">{stats.diproses}</CardTitle>
               <CardDescription>Diproses</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
             <CardHeader className="pb-3">
-              <CardTitle className="text-3xl font-bold text-green-600">{stats.selesai}</CardTitle>
+              <CardTitle className="text-2xl font-bold text-green-600">{stats.selesai}</CardTitle>
               <CardDescription>Selesai</CardDescription>
             </CardHeader>
           </Card>
@@ -193,7 +205,7 @@ const Home = () => {
       </section>
 
       {/* Charts Section */}
-      <section className="container mx-auto px-4 py-6">
+      <section className="container py-6">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-2xl font-semibold">Insight Laporan</h2>
@@ -221,10 +233,10 @@ const Home = () => {
                     className="h-56 sm:h-64 md:h-72"
                     withAspect={false}
                   >
-                    <LineChart data={chartDaily} margin={{ left: 12, right: 12 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickLine={false} axisLine={false} />
-                      <YAxis allowDecimals={false} width={28} />
+                    <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                      <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -247,10 +259,10 @@ const Home = () => {
                     className="h-56 sm:h-64 md:h-72"
                     withAspect={false}
                   >
-                      <BarChart data={chartByCategory} margin={{ left: 12, right: 12, bottom: 24 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={50} />
-                      <YAxis allowDecimals={false} width={28} />
+                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                      <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                       <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                       <Bar dataKey="count" fill="var(--color-count)" radius={4} />
                     </BarChart>
@@ -263,14 +275,14 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-12">
+      <section className="container py-10">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Fitur Unggulan</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="border-2 hover:border-primary transition-all duration-300">
               <CardHeader>
-                <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4">
-                  <FileText className="w-8 h-8 text-primary" />
+                <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-4">
+                  <FileText className="icon-lg text-primary" />
                 </div>
                 <CardTitle>Laporan Mudah</CardTitle>
                 <CardDescription>
@@ -281,8 +293,8 @@ const Home = () => {
 
             <Card className="border-2 hover:border-secondary transition-all duration-300">
               <CardHeader>
-                <div className="p-3 bg-secondary/10 rounded-lg w-fit mb-4">
-                  <MapIcon className="w-8 h-8 text-secondary" />
+                <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-4">
+                  <MapIcon className="icon-lg text-secondary" />
                 </div>
                 <CardTitle>Peta Interaktif</CardTitle>
                 <CardDescription>
@@ -293,8 +305,8 @@ const Home = () => {
 
             <Card className="border-2 hover:border-accent transition-all duration-300">
               <CardHeader>
-                <div className="p-3 bg-accent/10 rounded-lg w-fit mb-4">
-                  <Users className="w-8 h-8 text-accent" />
+                <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-4">
+                  <Users className="icon-lg text-accent" />
                 </div>
                 <CardTitle>Dashboard Admin</CardTitle>
                 <CardDescription>
@@ -307,7 +319,7 @@ const Home = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="container mx-auto px-4 py-12 mb-12">
+      <section className="container py-10 mb-12">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Cara Kerja</h2>
           <div className="grid md:grid-cols-3 gap-8">

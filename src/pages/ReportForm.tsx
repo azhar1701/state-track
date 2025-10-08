@@ -444,15 +444,15 @@ const ReportForm = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-6">
+      <div className="container max-w-4xl">
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="text-2xl">Buat Laporan Baru</CardTitle>
+            <CardTitle className="text-xl">Buat Laporan Baru</CardTitle>
             <CardDescription>Laporkan masalah infrastruktur publik dengan lengkap</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="title">Judul Laporan *</Label>
                 <Input
@@ -601,7 +601,7 @@ const ReportForm = () => {
                     variant="outline"
                     onClick={() => document.getElementById('photo')?.click()}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="icon-sm mr-2" />
                     {photoFile ? 'Ganti Foto' : 'Upload Foto'}
                   </Button>
                   {photoFile && <span className="text-sm text-muted-foreground">{photoFile.name}</span>}
@@ -659,9 +659,9 @@ const ReportForm = () => {
                     </div>
                     <Button type="button" onClick={handleSearch} disabled={searchLoading} variant="outline">
                       {searchLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="icon-sm animate-spin" />
                       ) : (
-                        <Search className="w-4 h-4" />
+                        <Search className="icon-sm" />
                       )}
                     </Button>
                   </div>
@@ -690,7 +690,7 @@ const ReportForm = () => {
                         className="absolute bottom-2 left-2 z-[1000]"
                         size="sm"
                       >
-                        <Navigation className="w-4 h-4 mr-2" />
+                        <Navigation className="icon-sm mr-2" />
                         Lokasi Saya
                       </Button>
                     </div>

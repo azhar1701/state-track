@@ -731,10 +731,18 @@ const MapView = () => {
             </div>
           )}
 
-          {/* Floating detail card */}
+          {/* Floating detail card (left-aligned on desktop) */}
           {selectedReport && (
-            <div className={`absolute z-[1300] ${isMobile ? 'bottom-20 left-2 right-2' : 'top-32 left-4'}`}>
-              <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
+            <div
+              className={`absolute z-[1300] ${
+                isMobile
+                  ? 'bottom-20 left-2 right-2'
+                  : 'top-28 left-4'
+              }`}
+            >
+              <div className="max-w-[42rem]">
+                <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
+              </div>
             </div>
           )}
 

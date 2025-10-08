@@ -54,13 +54,24 @@ npm run dev
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
 
-## Progressive Web App (PWA)
+# state-track
+
+Important notes for this Vite + React app:
+
+- The `app/` folder contains some Next.js-style examples (pages and `app/api/*`). In this project they are placeholders only and are not executed by Vite. Actual pages are under `src/pages/*` and routing is handled by `react-router-dom`.
+- Submissions use Supabase directly from the client (see `src/pages/ReportForm.tsx`). The `app/api/reports/route.ts` file is not used in this setup. If you want a server endpoint under Vite, use a separate server or functions platform.
+- Configure environment variables in a `.env.local` file at the project root:
+	- VITE_SUPABASE_URL
+	- VITE_SUPABASE_PUBLISHABLE_KEY
+	- VITE_MAPBOX_TOKEN (optional, for Mapbox-based form in components/report)
+
+Dev scripts:
+
+- `npm run dev` - start Vite dev server
+- `npm run build` - production build
+- `npm run typecheck` - TypeScript checks only
+- `npm run lint` - ESLint
 
 This app is installable and works offline for key routes thanks to Vite PWA.
 

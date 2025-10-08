@@ -35,6 +35,10 @@ function createSupabaseStub() {
     const thenable: any = {
       // query builders
       eq: () => thenable,
+      gte: () => thenable,
+      lte: () => thenable,
+      in: () => thenable,
+      limit: () => thenable,
       order: () => Promise.resolve(resultOk),
       maybeSingle: () => Promise.resolve(singleResult),
       // allow awaiting directly on select()
@@ -60,13 +64,22 @@ function createSupabaseStub() {
       }),
     },
     from: (_table: string) => ({
-      select: (_cols?: string) => makeSelectable(),
+      select: (_cols?: string, _opts?: any) => makeSelectable(),
+      insert: (_values: any) => Promise.resolve({ data: null, error: { message: 'DB stub: insert unavailable' } }),
+      update: (_values: any) => ({ eq: () => Promise.resolve({ data: null, error: { message: 'DB stub: update unavailable' } }) }),
+      delete: () => ({ eq: () => Promise.resolve({ data: null, error: { message: 'DB stub: delete unavailable' } }) }),
     }),
     channel: (_name: string) => ({
       on: (_event: any, _filter: any, _cb: any) => ({
-        subscribe: () => ({}),
+        subscribe: () => ({ unsubscribe: () => {} }),
       }),
     }),
+    storage: {
+      from: (_bucket: string) => ({
+        upload: async (_path: string, _file: File, _opts?: any) => ({ data: null, error: { message: 'storage stub' } }),
+        getPublicUrl: (_path: string) => ({ data: { publicUrl: '' }, error: null }),
+      }),
+    },
     removeChannel: (_channel: any) => {},
   };
 

@@ -28,7 +28,7 @@ const App = () => (
           <AuthProvider>
             <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
             <Navbar />
-            <main id="main-content" className="min-h-[calc(100vh-4rem)]">{/* 4rem ~ navbar height */}
+            <main id="main-content" className="min-h-[calc(100vh-3.5rem)]">{/* 3.5rem ~ navbar height */}
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <Routes>

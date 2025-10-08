@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +63,16 @@ interface ReportLog {
   created_at: string;
 }
 
+// Extra fields for detail view
+interface FullReport {
+  description?: string | null;
+  reporter_name?: string | null;
+  phone?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  photo_url?: string | null;
+}
+
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -95,6 +106,8 @@ const AdminDashboard = () => {
   const [chartLoading, setChartLoading] = useState(false);
   const [logs, setLogs] = useState<ReportLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [fullReport, setFullReport] = useState<FullReport | null>(null);
 
   const renderSeverityBadge = (sev?: 'ringan' | 'sedang' | 'berat' | null) => {
     if (!sev) return <span className="text-muted-foreground">-</span>;
@@ -286,9 +299,28 @@ const AdminDashboard = () => {
       setEditResolution(r?.resolution ?? '');
       setDetailOpen(true);
       fetchReportLogs(r.id);
+      fetchReportDetail(r.id);
     } catch (e) {
       console.error('Failed to open detail:', e);
       toast.error('Gagal membuka detail laporan');
+    }
+  };
+
+  const fetchReportDetail = async (reportId: string) => {
+    try {
+      setDetailLoading(true);
+      setFullReport(null);
+      const { data, error } = await supabase
+        .from('reports')
+        .select('description, reporter_name, phone, latitude, longitude, photo_url')
+        .eq('id', reportId)
+        .maybeSingle();
+      if (error) throw error;
+      setFullReport((data || null) as FullReport | null);
+    } catch (err) {
+      console.error('Gagal memuat detail laporan:', err);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -657,20 +689,20 @@ const AdminDashboard = () => {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard Admin</h1>
+    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-6">
+      <div className="container">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-1">Dashboard Admin</h1>
           <p className="text-muted-foreground">Kelola semua laporan infrastruktur</p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Total Laporan</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
-                <FileText className="w-6 h-6 text-primary" />
+                <FileText className="icon-md text-primary" />
                 {stats.total}
               </div>
             </CardHeader>
@@ -679,7 +711,7 @@ const AdminDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Baru</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
-                <Clock className="w-6 h-6 text-accent" />
+                <Clock className="icon-md text-accent" />
                 {stats.baru}
               </div>
             </CardHeader>
@@ -688,7 +720,7 @@ const AdminDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Diproses</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
-                <Loader2 className="w-6 h-6 text-secondary" />
+                <Loader2 className="icon-md text-secondary" />
                 {stats.diproses}
               </div>
             </CardHeader>
@@ -697,7 +729,7 @@ const AdminDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Selesai</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+                <CheckCircle className="icon-md text-green-600" />
                 {stats.selesai}
               </div>
             </CardHeader>
@@ -705,17 +737,20 @@ const AdminDashboard = () => {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
+          <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">7 hari</SelectItem>
+              <SelectItem value="30">30 hari</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
-              <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">7 hari</SelectItem>
-                  <SelectItem value="30">30 hari</SelectItem>
-                </SelectContent>
-              </Select>
             </CardHeader>
             <CardContent>
               {chartLoading ? (
@@ -728,10 +763,10 @@ const AdminDashboard = () => {
                   className="h-64 md:h-72 lg:h-80"
                   withAspect={false}
                 >
-                  <LineChart data={chartDaily} margin={{ left: 12, right: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} width={28} />
+                  <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                    <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -754,10 +789,10 @@ const AdminDashboard = () => {
                   className="h-64 md:h-72 lg:h-80"
                   withAspect={false}
                 >
-                  <BarChart data={chartByCategory} margin={{ left: 12, right: 12, bottom: 24 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={50} />
-                    <YAxis allowDecimals={false} width={28} />
+                  <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                    <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                     <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                     <Bar dataKey="count" fill="var(--color-count)" radius={4} />
                   </BarChart>
@@ -768,8 +803,8 @@ const AdminDashboard = () => {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6 space-y-4">
+        <Card className="mb-5">
+          <CardContent className="pt-5 space-y-3">
             <div className="flex flex-col gap-3">
               <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
                 <TabsList className="grid grid-cols-4 w-full md:w-auto">
@@ -993,11 +1028,13 @@ const AdminDashboard = () => {
 
         {/* Detail Drawer */}
         <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-          <DrawerContent>
+          <DrawerContent className="flex flex-col max-h-[85vh] md:max-h-[80vh] overflow-hidden">
             <DrawerErrorBoundary>
             <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail…</div>}>
               <AdminDetail
                 selectedReport={selectedReport}
+                fullReport={fullReport}
+                detailLoading={detailLoading}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 editSeverity={editSeverity}
@@ -1050,8 +1087,10 @@ export default AdminDashboard;
 const AdminDetail = lazy(async () => {
   const Mod = await import("react");
   return {
-    default: ({
+    default: function AdminDetailView({
       selectedReport,
+      fullReport,
+      detailLoading,
       editTitle,
       setEditTitle,
       editSeverity,
@@ -1067,6 +1106,8 @@ const AdminDetail = lazy(async () => {
       saving,
     }: {
       selectedReport: Report | null;
+      fullReport: FullReport | null;
+      detailLoading: boolean;
       editTitle: string;
       setEditTitle: (v: string) => void;
       editSeverity: '' | 'ringan' | 'sedang' | 'berat';
@@ -1080,26 +1121,27 @@ const AdminDetail = lazy(async () => {
       summarizeLog: (l: ReportLog) => string;
       saveEdits: () => Promise<void> | void;
       saving: boolean;
-    }) => {
+    }) {
+      const [lightboxOpen, setLightboxOpen] = useState(false);
       return (
         <>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>Detail Laporan</DrawerTitle>
-            <DrawerDescription>Informasi lengkap laporan terpilih.</DrawerDescription>
+          <DrawerHeader className="text-left pb-2">
+            <DrawerTitle className="text-base">Detail Laporan</DrawerTitle>
+            <DrawerDescription className="text-xs">Informasi ringkas laporan.</DrawerDescription>
           </DrawerHeader>
-          <div className="px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
             {!selectedReport ? (
               <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div>
-                  <div className="text-sm text-muted-foreground">Judul</div>
-                  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                  <div className="text-xs text-muted-foreground">Judul</div>
+                  <Input className="h-9" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center text-sm">
                   <Badge variant="outline">{selectedReport.category || '-'}</Badge>
                   <select
-                    className="h-9 w-[180px] rounded-md border bg-background px-3 text-sm"
+                    className="h-8 w-[160px] rounded-md border bg-background px-2 text-sm"
                     value={editSeverity}
                     onChange={(e) => setEditSeverity(e.target.value as typeof editSeverity)}
                   >
@@ -1110,37 +1152,110 @@ const AdminDetail = lazy(async () => {
                   </select>
                   {renderStatusBadge(String(selectedReport.status || ''))}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <div>
-                    <div className="text-sm text-muted-foreground">Lokasi</div>
+                    <div className="text-xs text-muted-foreground">Lokasi</div>
                     <div>{selectedReport.location_name || '-'}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Wilayah</div>
+                    <div className="text-xs text-muted-foreground">Wilayah</div>
                     <div>{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Tanggal</div>
+                    <div className="text-xs text-muted-foreground">Tanggal</div>
                     <div>{formatDateTime(selectedReport.created_at)}</div>
                   </div>
+                  {/* Disisipkan: Deskripsi */}
                   <div className="md:col-span-2">
-                    <div className="text-sm text-muted-foreground">Hasil/Respon</div>
+                    <div className="text-xs text-muted-foreground">Deskripsi</div>
+                    <div className="text-foreground">{fullReport?.description || '-'}</div>
+                  </div>
+                  {/* Disisipkan: Nama & Kontak */}
+                  <div>
+                    <div className="text-xs text-muted-foreground">Nama</div>
+                    <div>{fullReport?.reporter_name || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Kontak</div>
+                    <div>{fullReport?.phone || '-'}</div>
+                  </div>
+                  {/* Disisipkan: Koordinat */}
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-muted-foreground">Koordinat</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-[11px]">
+                        {(() => {
+                          const lat = typeof fullReport?.latitude === 'number' ? fullReport?.latitude : undefined;
+                          const lon = typeof fullReport?.longitude === 'number' ? fullReport?.longitude : undefined;
+                          return lat != null && lon != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : '-';
+                        })()}
+                      </div>
+                      {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              const lat = fullReport?.latitude as number;
+                              const lon = fullReport?.longitude as number;
+                              await navigator.clipboard.writeText(`${lat}, ${lon}`);
+                              toast.success('Koordinat disalin');
+                            }}
+                          >
+                            Salin
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const lat = fullReport?.latitude as number;
+                              const lon = fullReport?.longitude as number;
+                              const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            }}
+                          >
+                            Buka Maps
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Disisipkan: Dokumentasi */}
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-muted-foreground">Dokumentasi</div>
+                    <div>
+                      {fullReport?.photo_url ? (
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={fullReport.photo_url}
+                            alt="Dokumentasi"
+                            className="h-24 w-36 object-cover rounded border cursor-zoom-in"
+                            onClick={() => setLightboxOpen(true)}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-foreground">-</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-muted-foreground">Hasil/Respon</div>
                     <textarea
-                      className="w-full min-h-[120px] rounded-md border bg-background p-2 text-sm"
+                      className="w-full min-h-[96px] rounded-md border bg-background p-2 text-sm"
                       value={editResolution}
                       onChange={(e) => setEditResolution(e.target.value)}
                       placeholder="Tulis hasil penanganan/respon admin di sini..."
                     />
                   </div>
                 </div>
-                <div className="pt-4 mt-4 border-t">
-                  <div className="font-medium mb-2">Riwayat Perubahan</div>
+                <div className="pt-3 mt-3 border-t">
+                  <div className="font-medium mb-2 text-sm">Riwayat Perubahan</div>
                   {logsLoading ? (
                     <div className="text-sm text-muted-foreground">Memuat riwayat...</div>
                   ) : logs.length === 0 ? (
                     <div className="text-sm text-muted-foreground">Belum ada perubahan.</div>
                   ) : (
-                    <ul className="space-y-2 max-h-56 overflow-auto pr-2">
+                    <ul className="space-y-2 max-h-48 overflow-auto pr-2">
                       {logs.map((log) => (
                         <li key={log.id} className="text-sm">
                           <div className="text-muted-foreground">{formatDateTime(log.created_at)} — {log.actor_email || '-'}</div>
@@ -1153,12 +1268,46 @@ const AdminDetail = lazy(async () => {
               </div>
             )}
           </div>
-          <DrawerFooter>
+          {/* Lightbox for Dokumentasi */}
+          {fullReport?.photo_url && (
+            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+              <DialogContent className="sm:max-w-[90vw] p-0">
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle>Dokumentasi</DialogTitle>
+                  <DialogDescription>Klik di luar gambar untuk menutup.</DialogDescription>
+                </DialogHeader>
+                <div className="w-full flex items-center justify-center p-2">
+                  <img
+                    src={fullReport.photo_url}
+                    alt="Dokumentasi"
+                    className="max-h-[80vh] w-auto object-contain rounded"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          <DrawerFooter className="py-3">
             <div className="flex items-center justify-end gap-2">
               <DrawerClose asChild>
-                <Button variant="outline">Batal</Button>
+                <Button size="sm" variant="outline">Batal</Button>
               </DrawerClose>
-              <Button onClick={saveEdits} disabled={saving || !selectedReport}>Simpan</Button>
+              <Button size="sm" onClick={saveEdits} disabled={saving || !selectedReport}>Simpan</Button>
+              {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const lat = fullReport?.latitude as number;
+                    const lon = fullReport?.longitude as number;
+                    // open MapView with URL params to center
+                    const params = new URLSearchParams({ center: `${lat},${lon}`, zoom: '16' });
+                    window.open(`/map?${params.toString()}`, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  Lihat di Peta
+                </Button>
+              )}
             </div>
           </DrawerFooter>
         </>

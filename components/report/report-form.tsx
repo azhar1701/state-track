@@ -243,7 +243,10 @@ export function ReportForm() {
       return;
     }
 
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+  // Vite: use import.meta.env for public tokens
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const MAPBOX = (import.meta as any).env?.VITE_MAPBOX_TOKEN ?? "";
+  mapboxgl.accessToken = MAPBOX;
 
     const initialCoords = currentLocation ?? FALLBACK_COORDS;
     const map = new mapboxgl.Map({

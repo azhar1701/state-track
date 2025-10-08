@@ -18,17 +18,17 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <MapPin className="w-5 h-5 text-primary" />
+      <div className="container">
+        <div className="flex h-14 items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+            <div className="p-1.5 bg-primary/10 rounded-lg">
+              <MapPin className="icon-sm text-primary" />
             </div>
             <span className="hidden sm:inline">LaporInfra</span>
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
             {user && (
               <>
                 <Link to="/map">
@@ -39,7 +39,7 @@ const Navbar = () => {
                     onMouseEnter={prefetchMap}
                     onFocus={prefetchMap}
                   >
-                    <Map className="w-4 h-4" />
+                    <Map className="icon-sm" />
                     Peta
                   </Button>
                 </Link>
@@ -51,7 +51,7 @@ const Navbar = () => {
                     onMouseEnter={prefetchReport}
                     onFocus={prefetchReport}
                   >
-                    <FileText className="w-4 h-4" />
+                    <FileText className="icon-sm" />
                     Buat Laporan
                   </Button>
                 </Link>
@@ -64,7 +64,7 @@ const Navbar = () => {
                       onMouseEnter={prefetchAdmin}
                       onFocus={prefetchAdmin}
                     >
-                      <LayoutDashboard className="w-4 h-4" />
+                      <LayoutDashboard className="icon-sm" />
                       Dashboard
                     </Button>
                   </Link>
@@ -75,7 +75,7 @@ const Navbar = () => {
                   onClick={signOut}
                   className="gap-2"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="icon-sm" />
                   Keluar
                 </Button>
                 <ThemeToggle />
@@ -96,13 +96,13 @@ const Navbar = () => {
             className="md:hidden p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X /> : <Menu />}
+            {mobileMenuOpen ? <X className="icon-md" /> : <Menu className="icon-md" />}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t">
+          <div className="md:hidden py-3 border-t">
             <div className="flex flex-col gap-2">
               {user && (
                 <>
@@ -114,7 +114,7 @@ const Navbar = () => {
                       onMouseEnter={prefetchMap}
                       onFocus={prefetchMap}
                     >
-                      <Map className="w-4 h-4" />
+                      <Map className="icon-sm" />
                       Peta
                     </Button>
                   </Link>
@@ -126,7 +126,7 @@ const Navbar = () => {
                       onMouseEnter={prefetchReport}
                       onFocus={prefetchReport}
                     >
-                      <FileText className="w-4 h-4" />
+                      <FileText className="icon-sm" />
                       Buat Laporan
                     </Button>
                   </Link>
@@ -139,7 +139,7 @@ const Navbar = () => {
                         onMouseEnter={prefetchAdmin}
                         onFocus={prefetchAdmin}
                       >
-                        <LayoutDashboard className="w-4 h-4" />
+                        <LayoutDashboard className="icon-sm" />
                         Dashboard
                       </Button>
                     </Link>
@@ -153,7 +153,7 @@ const Navbar = () => {
                     }}
                     className="w-full justify-start gap-2"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="icon-sm" />
                     Keluar
                   </Button>
                   <div className="flex w-full justify-start px-2 pt-2">
