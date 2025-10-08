@@ -2,7 +2,6 @@ import { useMap } from 'react-leaflet';
 import { TileLayer } from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Map, Satellite } from 'lucide-react';
 import { basemaps, type BasemapType } from './basemap-config';
 
@@ -48,25 +47,27 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
 
   return (
     <Card className="absolute top-4 right-4 z-[1000] shadow-lg">
-      <CardContent className="p-2 flex gap-2">
-        <Button
-          variant={currentBasemap === 'osm' ? 'default' : 'outline'}
-          size="sm"
+      <CardContent className="p-2 grid grid-cols-2 gap-2 w-[200px]">
+        <button
           onClick={() => switchBasemap('osm')}
-          className="flex items-center gap-2"
+          className={`relative rounded-md overflow-hidden border text-left ${currentBasemap === 'osm' ? 'ring-2 ring-primary' : ''}`}
+          aria-label="Basemap Street"
         >
-          <Map className="w-4 h-4" />
-          Street
-        </Button>
-        <Button
-          variant={currentBasemap === 'satellite' ? 'default' : 'outline'}
-          size="sm"
+          <div className="h-16 bg-[url('https://tile.openstreetmap.org/5/27/15.png')] bg-cover bg-center" />
+          <div className="absolute top-1 left-1 bg-background/80 px-1.5 py-0.5 rounded text-xs flex items-center gap-1">
+            <Map className="w-3 h-3" /> Street
+          </div>
+        </button>
+        <button
           onClick={() => switchBasemap('satellite')}
-          className="flex items-center gap-2"
+          className={`relative rounded-md overflow-hidden border text-left ${currentBasemap === 'satellite' ? 'ring-2 ring-primary' : ''}`}
+          aria-label="Basemap Satellite"
         >
-          <Satellite className="w-4 h-4" />
-          Satellite
-        </Button>
+          <div className="h-16 bg-[url('https://mt1.google.com/vt/lyrs=y&x=104&y=64&z=8')] bg-cover bg-center" />
+          <div className="absolute top-1 left-1 bg-background/80 px-1.5 py-0.5 rounded text-xs flex items-center gap-1">
+            <Satellite className="w-3 h-3" /> Satellite
+          </div>
+        </button>
       </CardContent>
     </Card>
   );

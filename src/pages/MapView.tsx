@@ -1,15 +1,22 @@
 import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Navigation, Filter as FilterIcon, Layers, Share2, Download, Loader as Loader2 } from 'lucide-react';
+import { Navigation, Loader as Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { BasemapSwitcher, BasemapType } from '@/components/map/BasemapSwitcher';
-import { FilterPanel, MapFilters } from '@/components/map/FilterPanel';
+import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
+import type { BasemapType } from '@/components/map/basemap-config';
+import { Legend } from '@/components/map/Legend';
+import { reverseGeocode } from '@/lib/geocoding';
+import { MapToolbar } from '@/components/map/MapToolbar';
+import type { MapFilters } from '@/components/map/FilterPanel';
+import { MapSearch } from '@/components/map/MapSearch';
+import { FilterPanel } from '@/components/map/FilterPanel';
+import { OverlayToggle, type MapOverlays } from '@/components/map/OverlayToggle';
 import { TimeSlider } from '@/components/map/TimeSlider';
-import { OverlayToggle, MapOverlays } from '@/components/map/OverlayToggle';
+// Overlays via sidebar are currently disabled
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
@@ -22,6 +29,7 @@ interface Report {
   description: string;
   category: string;
   status: string;
+  severity?: 'ringan' | 'sedang' | 'berat' | null;
   latitude: number;
   longitude: number;
   location_name: string | null;
@@ -30,7 +38,7 @@ interface Report {
   user_id: string;
 }
 
-const createCustomIcon = (category: string, status: string) => {
+const createCustomIcon = (category: string, status: string, severity?: Report['severity']) => {
   const colors = {
     baru: '#f59e0b',
     diproses: '#3b82f6',
@@ -38,6 +46,12 @@ const createCustomIcon = (category: string, status: string) => {
   };
 
   const color = colors[status as keyof typeof colors] || '#6b7280';
+  const sevColors: Record<NonNullable<Report['severity']>, string> = {
+    ringan: '#22c55e',
+    sedang: '#f97316',
+    berat: '#ef4444',
+  };
+  const sevBorder = severity ? sevColors[severity] : '#9ca3af';
 
   return L.divIcon({
     className: 'custom-marker',
@@ -48,7 +62,7 @@ const createCustomIcon = (category: string, status: string) => {
         height: 32px;
         border-radius: 50% 50% 50% 0;
         transform: rotate(-45deg);
-        border: 3px solid white;
+        border: 3px solid ${sevBorder};
         box-shadow: 0 3px 6px rgba(0,0,0,0.3);
         display: flex;
         align-items: center;
@@ -86,7 +100,7 @@ const MapView = () => {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(
-    urlParams.center || [-6.2088, 106.8456]
+    urlParams.center || [-7.325, 108.353] // Ciamis
   );
   const [mapZoom, setMapZoom] = useState(urlParams.zoom || 12);
   const [basemap, setBasemap] = useState<BasemapType>((urlParams.basemap as BasemapType) || 'osm');
@@ -98,8 +112,10 @@ const MapView = () => {
     dateTo: urlParams.dateTo,
   });
 
-  const [showFilters, setShowFilters] = useState(false);
-  const [showOverlays, setShowOverlays] = useState(false);
+  // Sidebar removed per request; use floating mini panels instead
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showOverlayPanel, setShowOverlayPanel] = useState(false);
   const [overlays, setOverlays] = useState<MapOverlays>({
     adminBoundaries: false,
     irrigation: false,
@@ -109,6 +125,14 @@ const MapView = () => {
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [cursorLatLng, setCursorLatLng] = useState<[number, number] | null>(null);
+  const [coordBottomOffset, setCoordBottomOffset] = useState<number>(72);
+  const [timelineRightOffset, setTimelineRightOffset] = useState<number>(96);
+  const [ctxOpen, setCtxOpen] = useState(false);
+  const [ctxPoint, setCtxPoint] = useState<{ x: number; y: number } | null>(null);
+  const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
+  const [ctxAddress, setCtxAddress] = useState<string | null>(null);
+  const [ctxLoading, setCtxLoading] = useState(false);
 
   const minDate = useMemo(() => {
     if (reports.length === 0) return new Date();
@@ -143,6 +167,110 @@ const MapView = () => {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Attach map interactions once map instance is ready
+  useEffect(() => {
+    if (!mapInstance) return;
+    const onMove = (e: L.LeafletMouseEvent) => setCursorLatLng([e.latlng.lat, e.latlng.lng]);
+    const onContext = (e: L.LeafletMouseEvent) => {
+      e.originalEvent.preventDefault();
+      setCtxOpen(true);
+      setCtxPoint({ x: e.containerPoint.x, y: e.containerPoint.y });
+      setCtxLatLng([e.latlng.lat, e.latlng.lng]);
+      setCtxAddress(null);
+      setCtxLoading(false);
+    };
+    mapInstance.on('mousemove', onMove);
+    mapInstance.on('contextmenu', onContext);
+    return () => {
+      mapInstance.off('mousemove', onMove);
+      mapInstance.off('contextmenu', onContext);
+    };
+  }, [mapInstance]);
+
+  // Position scale and coordinates stacked above legend at bottom-right
+  useEffect(() => {
+    const updateBottomStack = () => {
+      const legendEl = document.querySelector('.legend-container') as HTMLElement | null;
+      const scaleEl = document.querySelector('.leaflet-control-scale') as HTMLElement | null;
+      const brCorner = document.querySelector(
+        '.leaflet-control-container .leaflet-bottom.leaflet-right'
+      ) as HTMLElement | null;
+      const mapEl = document.querySelector('.leaflet-container') as HTMLElement | null;
+      const legendH = legendEl?.offsetHeight ?? 0;
+      const bottomPadding = 16; // tailwind bottom-4 on legend container
+      const gapScaleLegend = 8;
+      const gapCoordScale = 8;
+
+      // Reset any previously forced inline positioning on the scale (from older revisions)
+      if (scaleEl) {
+        scaleEl.style.position = '';
+        scaleEl.style.right = '';
+        scaleEl.style.bottom = '';
+      }
+
+      // Nudge the entire bottom-right Leaflet controls corner upward so the scale sits above the legend
+      if (brCorner) {
+        brCorner.style.bottom = `${bottomPadding + legendH + gapScaleLegend}px`;
+        // Ensure controls render above the legend stack
+        brCorner.style.zIndex = '1250';
+      }
+
+      // If we can measure, position the coordinate badge right above the scale's top edge
+      if (mapEl && scaleEl) {
+        const mapRect = mapEl.getBoundingClientRect();
+        const scaleRect = scaleEl.getBoundingClientRect();
+        const bottomOffset = Math.max(0, Math.round(mapRect.bottom - scaleRect.top)) + gapCoordScale;
+        setCoordBottomOffset(bottomOffset);
+      } else {
+        // Fallback to using heights if rects are not available yet
+        const scaleH = scaleEl?.offsetHeight ?? 24;
+        setCoordBottomOffset(bottomPadding + legendH + gapScaleLegend + scaleH + gapCoordScale);
+      }
+    };
+
+    updateBottomStack();
+    const t = setTimeout(updateBottomStack, 300);
+    window.addEventListener('resize', updateBottomStack);
+
+    let ro: ResizeObserver | null = null;
+    const legendEl = document.querySelector('.legend-container') as HTMLElement | null;
+    if (legendEl && 'ResizeObserver' in window) {
+      ro = new ResizeObserver(() => updateBottomStack());
+      ro.observe(legendEl);
+    }
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateBottomStack);
+      if (ro) ro.disconnect();
+    };
+  }, [mapInstance]);
+
+  // Dynamically reserve space for legend so TimeSlider won't overlap it
+  useEffect(() => {
+    const updateTimelineOffset = () => {
+      const el = document.querySelector('.legend-container') as HTMLElement | null;
+      if (el) {
+        const gap = 12; // spacing between timeline and legend
+        setTimelineRightOffset(el.offsetWidth + gap + 16); // include right-4 padding
+      }
+    };
+    updateTimelineOffset();
+    const t = setTimeout(updateTimelineOffset, 300);
+    window.addEventListener('resize', updateTimelineOffset);
+    let ro: ResizeObserver | null = null;
+    const el = document.querySelector('.legend-container') as HTMLElement | null;
+    if (el && 'ResizeObserver' in window) {
+      ro = new ResizeObserver(() => updateTimelineOffset());
+      ro.observe(el);
+    }
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateTimelineOffset);
+      if (ro) ro.disconnect();
     };
   }, []);
 
@@ -279,14 +407,19 @@ const MapView = () => {
             ref={setMapInstance}
           >
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
+            {/* Top-right basemap switcher */}
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
+            {/* Legend tagged for measurement to stack scale/coords above */}
+            <div className="legend-container absolute bottom-4 right-4 z-[1200]">
+              <Legend />
+            </div>
             {/* DrawControls removed */}
 
             {filteredReports.map((report) => (
               <Marker
                 key={report.id}
                 position={[report.latitude, report.longitude]}
-                icon={createCustomIcon(report.category, report.status)}
+                icon={createCustomIcon(report.category, report.status, report.severity)}
                 eventHandlers={{
                   click: () => {
                     setSelectedReport(report);
@@ -321,85 +454,145 @@ const MapView = () => {
             )}
           </MapContainer>
 
-          <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-            {userLocation && (
-              <Button onClick={goToUserLocation} size="sm" className="shadow-lg">
-                <Navigation className="w-4 h-4 mr-2" />
-                Lokasi Saya
-              </Button>
-            )}
+          <MapToolbar
+            compact={false}
+            showSearch={showSearchPanel}
+            onToggleSearch={() => {
+              setShowSearchPanel((v) => !v);
+              setShowFilterPanel(false);
+              setShowOverlayPanel(false);
+            }}
+            canLocate={!!userLocation}
+            onLocate={goToUserLocation}
+            onToggleFilters={() => {
+              setShowFilterPanel((v) => !v);
+              setShowSearchPanel(false);
+              setShowOverlayPanel(false);
+            }}
+            onToggleOverlays={() => {
+              setShowOverlayPanel((v) => !v);
+              setShowSearchPanel(false);
+              setShowFilterPanel(false);
+            }}
+            onShare={handleShare}
+            onExport={handleExport}
+          />
 
-            <Button
-              onClick={() => setShowFilters(!showFilters)}
-              variant={showFilters ? 'default' : 'outline'}
-              size="sm"
-              className="shadow-lg"
-            >
-              <FilterIcon className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-
-            <Button
-              onClick={() => setShowOverlays(!showOverlays)}
-              variant={showOverlays ? 'default' : 'outline'}
-              size="sm"
-              className="shadow-lg"
-            >
-              <Layers className="w-4 h-4 mr-2" />
-              Overlay
-            </Button>
-
-            <Button onClick={handleShare} variant="outline" size="sm" className="shadow-lg">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </Button>
-
-            <Button onClick={handleExport} variant="outline" size="sm" className="shadow-lg">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-          </div>
-
-          {showFilters && (
-            <div className="absolute top-4 left-4 z-[1001] mt-60">
+          {/* Floating mini panels under the toolbar (top-left) */}
+          {showSearchPanel && (
+            <div className="absolute top-24 left-4 z-[1200]">
+              <MapSearch
+                onSelect={(lat, lon, label) => {
+                  setMapCenter([lat, lon]);
+                  setMapZoom(16);
+                  setShowSearchPanel(false);
+                  toast.success('Pergi ke lokasi', { description: label });
+                }}
+                onClose={() => setShowSearchPanel(false)}
+              />
+            </div>
+          )}
+          {showFilterPanel && (
+            <div className="absolute top-24 left-4 z-[1200]">
               <FilterPanel
                 filters={filters}
                 onFilterChange={(newFilters) => {
                   setFilters(newFilters);
-                  setShowFilters(false);
                 }}
-                onClose={() => setShowFilters(false)}
+                onClose={() => setShowFilterPanel(false)}
               />
             </div>
           )}
-
-          {showOverlays && (
-            <div className="absolute top-4 right-24 z-[1001]">
+          {showOverlayPanel && (
+            <div className="absolute top-24 left-4 z-[1200]">
               <OverlayToggle
                 overlays={overlays}
                 onOverlayChange={setOverlays}
-                onClose={() => setShowOverlays(false)}
+                onClose={() => setShowOverlayPanel(false)}
               />
             </div>
           )}
 
+          {/* Floating detail card */}
           {selectedReport && (
-            <div className="absolute top-4 right-4 z-[1001]">
-              <ReportDetailDrawer
-                report={selectedReport}
-                onClose={() => setSelectedReport(null)}
-              />
+            <div className="absolute top-32 left-4 z-[1300]">
+              <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
             </div>
           )}
+
+          {/* SidePanel consolidates Search, Filter, and Overlay */}
 
           {reports.length > 0 && (
-            <div className="absolute bottom-4 left-4 right-4 z-[1000]">
-              <TimeSlider
-                minDate={minDate}
-                maxDate={maxDate}
-                currentDate={timeFilterDate}
-                onDateChange={setTimeFilterDate}
-              />
+            <div className="absolute bottom-4 left-0 right-0 z-[1000] px-4">
+              {/* On md+, align to right and add dynamic margin to avoid legend */}
+              <div className="w-full max-w-xl md:ml-auto" style={{ marginRight: timelineRightOffset }}>
+                <TimeSlider
+                  minDate={minDate}
+                  maxDate={maxDate}
+                  currentDate={timeFilterDate}
+                  onDateChange={setTimeFilterDate}
+                  compact
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Coordinates readout above scale and legend (bottom-right stack) */}
+          {cursorLatLng && (
+            <div
+              className="absolute right-4 z-[1300] bg-background/90 border rounded px-2 py-1 text-[11px] font-mono shadow pointer-events-none"
+              style={{ bottom: coordBottomOffset }}
+            >
+              {cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}
+            </div>
+          )}
+
+          {/* Scale bar via native Leaflet control */}
+          {mapInstance && (
+            <ScaleBar map={mapInstance} />
+          )}
+
+          {/* Context menu */}
+          {ctxOpen && ctxPoint && ctxLatLng && (
+            <div
+              className="absolute z-[1002] bg-background border rounded shadow-lg p-2 text-sm w-64"
+              style={{ left: ctxPoint.x, top: ctxPoint.y }}
+              onMouseLeave={() => setCtxOpen(false)}
+            >
+              <div className="font-medium mb-1">Koordinat</div>
+              <div className="font-mono text-xs mb-2">{ctxLatLng[0].toFixed(6)}, {ctxLatLng[1].toFixed(6)}</div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(`${ctxLatLng[0]}, ${ctxLatLng[1]}`);
+                    toast.success('Koordinat disalin');
+                    setCtxOpen(false);
+                  }}
+                >
+                  Salin koordinat
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    setCtxLoading(true);
+                    const res = await reverseGeocode(ctxLatLng[0], ctxLatLng[1]);
+                    setCtxLoading(false);
+                    if (res) {
+                      setCtxAddress(res.display_name);
+                    } else {
+                      toast.error('Gagal mendapatkan alamat');
+                    }
+                  }}
+                >
+                  {ctxLoading ? 'Mencari…' : 'Lihat alamat'}
+                </Button>
+              </div>
+              {ctxAddress && (
+                <div className="mt-2 text-xs text-muted-foreground">{ctxAddress}</div>
+              )}
             </div>
           )}
 
@@ -426,3 +619,20 @@ const MapView = () => {
 };
 
 export default MapView;
+
+// Small helper component to add Leaflet scale control
+const ScaleBar = ({ map }: { map: L.Map }) => {
+  useEffect(() => {
+    const control = L.control.scale({ metric: true, imperial: false, position: 'bottomright' });
+    control.addTo(map);
+    return () => {
+      // Leaflet Map has removeControl in runtime; TS types may not expose it on our import.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = map as any;
+      if (typeof m.removeControl === 'function') {
+        m.removeControl(control);
+      }
+    };
+  }, [map]);
+  return null;
+};

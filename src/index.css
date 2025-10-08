@@ -127,6 +127,25 @@ All colors MUST be HSL.
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Improve visibility of the Leaflet scale label in light/dark themes */
+.leaflet-control-scale {
+  /* Remove any default spacing to let line padding control the look */
+  padding: 2px !important;
+}
+.leaflet-control-scale-line {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  color: #111827 !important; /* slate-800 */
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  font-weight: 500 !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+}
+.leaflet-control-scale-line:not(:first-child) {
+  margin-top: 3px !important; /* tighter separation for minimal look */
+}
+
 
 
 .leaflet-popup-content-wrapper {
