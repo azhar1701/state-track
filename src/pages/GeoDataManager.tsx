@@ -134,6 +134,22 @@ export default function GeoDataManager() {
     setOpen(false);
     setForm({ code: '', name: '', category: 'lainnya', latitude: '', longitude: '', location_name: '' });
     void loadAssets();
+    // Publish/update assets as a GeoJSON FeatureCollection layer so it appears on the map
+    try {
+      const { data: allAssets } = await supabase.from('assets').select('*').order('created_at', { ascending: false });
+      const list = (allAssets ?? []) as Asset[];
+      const fc = {
+        type: 'FeatureCollection',
+        features: list.map((a) => ({
+          type: 'Feature',
+          properties: { id: a.id, code: a.code, name: a.name, category: a.category, status: a.status, location_name: a.location_name },
+          geometry: { type: 'Point', coordinates: [a.longitude, a.latitude] },
+        })),
+      };
+      await supabase.from('geo_layers').upsert({ key: 'assets', name: 'Assets', geometry_type: 'Point', data: { featureCollection: fc, crs: 'EPSG:4326' } }, { onConflict: 'key' });
+    } catch (e) {
+      console.warn('Failed to publish assets layer', e);
+    }
   };
 
   const setCategoryTyped = (v: 'all' | Asset['category']) => setCategory(v);
@@ -392,6 +408,22 @@ export default function GeoDataManager() {
                   } else {
                     toast.success(`Berhasil impor ${toInsert.length} aset`);
                     void loadAssets();
+                    // After bulk import, republish assets layer
+                    try {
+                      const { data: allAssets } = await supabase.from('assets').select('*').order('created_at', { ascending: false });
+                      const list = (allAssets ?? []) as Asset[];
+                      const fc = {
+                        type: 'FeatureCollection',
+                        features: list.map((a) => ({
+                          type: 'Feature',
+                          properties: { id: a.id, code: a.code, name: a.name, category: a.category, status: a.status, location_name: a.location_name },
+                          geometry: { type: 'Point', coordinates: [a.longitude, a.latitude] },
+                        })),
+                      };
+                      await supabase.from('geo_layers').upsert({ key: 'assets', name: 'Assets', geometry_type: 'Point', data: { featureCollection: fc, crs: 'EPSG:4326' } }, { onConflict: 'key' });
+                    } catch (e) {
+                      console.warn('Failed to publish assets layer', e);
+                    }
                   }
                 } catch (err) {
                   console.error(err);

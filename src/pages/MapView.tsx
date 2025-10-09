@@ -90,6 +90,37 @@ const createCustomIcon = (category: string, status: string, severity?: Report['s
   });
 };
 
+// Simpler icon for assets with status-based color
+const createAssetIcon = (status: 'aktif' | 'nonaktif' | 'rusak', category?: string) => {
+  const color = status === 'aktif' ? '#10b981' : status === 'rusak' ? '#ef4444' : '#9ca3af';
+  // Optional category hint via emoji
+  const emoji = category?.toLowerCase().includes('jembatan') ? '🌉' :
+    category?.toLowerCase().includes('irigasi') ? '💧' :
+    category?.toLowerCase().includes('jalan') ? '🛣️' : '📍';
+  return L.divIcon({
+    className: 'asset-marker',
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 24px;
+        height: 24px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <span style="transform: rotate(45deg); font-size: 12px;">${emoji}</span>
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -22],
+  });
+};
+
 const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
   const map = useMap();
 
@@ -200,6 +231,7 @@ const MapView = () => {
       try {
         // 1) Try admin-managed layer from Supabase first
         let data: FeatureCollection<Geometry> | null = null;
+        let srcCrsFromDb: string | undefined = undefined;
         try {
           const { data: gl, error } = await supabase
             .from('geo_layers')
@@ -207,8 +239,26 @@ const MapView = () => {
             .eq('key', 'admin_boundaries')
             .limit(1)
             .maybeSingle();
-          if (!error && gl?.data && (gl.data as { type?: string }).type === 'FeatureCollection') {
-            data = gl.data as FeatureCollection<Geometry>;
+          if (!error && gl?.data) {
+            const raw = gl.data as unknown as Record<string, unknown>;
+            // Preferred wrapper shape: { featureCollection, crs }
+            if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
+              const wrapper = raw as { featureCollection?: unknown; crs?: string };
+              if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
+                data = wrapper.featureCollection as FeatureCollection<Geometry>;
+                srcCrsFromDb = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
+              }
+            }
+            // Back-compat: direct FeatureCollection or nested value
+            if (!data) {
+              if ((raw as { type?: string }).type === 'FeatureCollection') {
+                data = raw as unknown as FeatureCollection<Geometry>;
+              } else if (raw && typeof raw === 'object') {
+                const vals = Object.values(raw);
+                const found = vals.find((v) => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection');
+                if (found) data = found as FeatureCollection<Geometry>;
+              }
+            }
           }
         } catch { /* ignore */ }
 
@@ -233,10 +283,10 @@ const MapView = () => {
 
         if (!data) throw new Error('No admin boundaries found');
 
-        // Detect CRS from GeoJSON or infer by coordinate magnitude
-        const crsName = (data as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
-
-        const needsUTM49S = !!crsName?.includes('EPSG::32749');
+        // Detect CRS from wrapper/db or embedded GeoJSON, or infer by coordinate magnitude
+        const embeddedCrsName = (data as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
+        const srcName = (srcCrsFromDb || embeddedCrsName || '').toUpperCase();
+        const needsUTM49S = srcName.includes('EPSG:32749') || srcName.includes('32749') || srcName.includes('EPSG::32749');
         const sample = (() => {
           const f = data!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
           if (!f) return null;
@@ -361,6 +411,17 @@ const MapView = () => {
           const layers = (data as Array<{ key: string; name: string; geometry_type: string | null }>).
             filter((l) => l.key !== 'admin_boundaries');
           setAvailableLayers(layers);
+          // Auto-enable assets layer on first discovery if not explicitly set
+          const hasAssets = layers.some((l) => l.key === 'assets');
+          if (hasAssets) {
+            setOverlays((prev) => {
+              const dyn = prev.dynamic || {};
+              if (typeof dyn.assets === 'undefined') {
+                return { ...prev, dynamic: { ...dyn, assets: true } };
+              }
+              return prev;
+            });
+          }
         }
       } catch (e) {
         console.warn('Failed to load layers list', e);
@@ -908,10 +969,34 @@ const MapView = () => {
                       if (t === 'Point' || t === 'MultiPoint') return { color: '#16a34a', weight: 2, opacity: 0.9 };
                       return { color: '#475569', weight: 1, opacity: 0.8, fillColor: '#cbd5e1', fillOpacity: 0.2 };
                     }}
+                    pointToLayer={(feature, latlng) => {
+                      if (key === 'assets') {
+                        const p = feature.properties as Record<string, unknown> | undefined;
+                        const status = (p?.status as string) || 'aktif';
+                        const cat = (p?.category as string) || '';
+                        return L.marker(latlng, { icon: createAssetIcon((['aktif','nonaktif','rusak'].includes(status) ? (status as 'aktif'|'nonaktif'|'rusak') : 'aktif'), cat) });
+                      }
+                      return L.circleMarker(latlng, { radius: 5, color: '#16a34a', weight: 1, fillOpacity: 0.7 });
+                    }}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties as Record<string, unknown> | undefined;
                       const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
                       layer.bindTooltip(String(title), { sticky: true });
+                      if (key === 'assets') {
+                        const code = p?.code as string | undefined;
+                        const cat = p?.category as string | undefined;
+                        const status = p?.status as string | undefined;
+                        const loc = p?.location_name as string | undefined;
+                        layer.bindPopup(`
+                          <div style="min-width:200px">
+                            <div style="font-weight:600;margin-bottom:4px">${title}</div>
+                            <div><strong>Kode:</strong> ${code ?? '-'}</div>
+                            <div><strong>Kategori:</strong> ${cat ?? '-'}</div>
+                            <div><strong>Status:</strong> ${status ?? '-'}</div>
+                            <div><strong>Lokasi:</strong> ${loc ?? '-'}</div>
+                          </div>
+                        `);
+                      }
                     }}
                   />
                 </Pane>
