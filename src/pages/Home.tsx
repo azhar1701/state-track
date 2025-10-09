@@ -9,6 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import Footer from "@/components/Footer";
+import StatusLegend from "@/components/home/StatusLegend";
+import CategoryLegend from "@/components/home/CategoryLegend";
+import RecentReports from "@/components/home/RecentReports";
+import FAQ from "@/components/home/FAQ";
+import BottomCTA from "@/components/home/BottomCTA";
 
 const Home = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -123,9 +129,9 @@ const Home = () => {
   // moved above
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+  <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Hero Section */}
-      <section className="container py-14 md:py-20">
+  <section className="container py-12 md:py-16">
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex p-3 bg-primary/10 rounded-full mb-4">
             <MapPin className="icon-lg text-primary" />
@@ -176,7 +182,7 @@ const Home = () => {
 
       {/* Stats Section */}
       <section className="container py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
           <Card className="text-center">
             <CardHeader className="pb-3">
               <CardTitle className="text-2xl font-bold text-primary">{stats.total}</CardTitle>
@@ -205,9 +211,9 @@ const Home = () => {
       </section>
 
       {/* Charts Section */}
-      <section className="container py-6">
+      <section className="container py-8">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
               <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
@@ -217,7 +223,7 @@ const Home = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
@@ -277,11 +283,11 @@ const Home = () => {
       {/* Features Section */}
       <section className="container py-10">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Fitur Unggulan</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="border-2 hover:border-primary transition-all duration-300">
+          <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Fitur Unggulan</h2>
+          <div className="grid md:grid-cols-3 gap-4 md:gap-6 items-stretch">
+            <Card className="border-2 hover:border-primary transition-all duration-300 h-full">
               <CardHeader>
-                <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-4">
+                <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-3">
                   <FileText className="icon-lg text-primary" />
                 </div>
                 <CardTitle>Laporan Mudah</CardTitle>
@@ -291,9 +297,9 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-secondary transition-all duration-300">
+            <Card className="border-2 hover:border-secondary transition-all duration-300 h-full">
               <CardHeader>
-                <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-4">
+                <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-3">
                   <MapIcon className="icon-lg text-secondary" />
                 </div>
                 <CardTitle>Peta Interaktif</CardTitle>
@@ -303,9 +309,9 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-accent transition-all duration-300">
+            <Card className="border-2 hover:border-accent transition-all duration-300 h-full">
               <CardHeader>
-                <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-4">
+                <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-3">
                   <Users className="icon-lg text-accent" />
                 </div>
                 <CardTitle>Dashboard Admin</CardTitle>
@@ -321,8 +327,8 @@ const Home = () => {
       {/* How It Works Section */}
       <section className="container py-10 mb-12">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Cara Kerja</h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Cara Kerja</h2>
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             <div className="text-center space-y-4">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold">
                 1
@@ -353,6 +359,24 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Information Blocks */}
+      <section className="container py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            <RecentReports />
+            <CategoryLegend />
+          </div>
+          <div className="space-y-6 md:space-y-8">
+            <StatusLegend />
+            <FAQ />
+          </div>
+        </div>
+      </section>
+
+      <BottomCTA />
+
+      <Footer />
     </div>
   );
 };

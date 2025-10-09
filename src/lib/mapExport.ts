@@ -1,22 +1,47 @@
 import html2canvas from 'html2canvas';
 import { Map } from 'leaflet';
 
-export const exportMapToPNG = async (map: Map, filename: string = 'map-export.png'): Promise<void> => {
+export type ExportOptions = {
+  filename?: string;
+  backgroundColor?: string;
+  includeControls?: boolean; // if false, temporarily hide Leaflet controls/our toolbar/legend
+  scale?: number; // 1 (default) to 2/3 for hi-DPI
+};
+
+const toggleControls = (map: Map, show: boolean) => {
+  const container = map.getContainer();
+  const selectors = [
+    '.leaflet-control-container',
+    '.legend-container',
+    '.map-toolbar-container',
+  ];
+  selectors.forEach((sel) => {
+    const el = container.querySelector(sel) as HTMLElement | null;
+    if (el) el.style.visibility = show ? '' : 'hidden';
+  });
+};
+
+export const exportMapToPNG = async (map: Map, options: ExportOptions = {}): Promise<void> => {
   try {
     const container = map.getContainer();
+
+    if (options.includeControls === false) toggleControls(map, false);
 
     const canvas = await html2canvas(container, {
       useCORS: true,
       allowTaint: true,
       logging: false,
-      backgroundColor: '#ffffff',
+      backgroundColor: options.backgroundColor ?? '#ffffff',
+      scale: options.scale && options.scale > 0 ? options.scale : 1,
     });
+
+    if (options.includeControls === false) toggleControls(map, true);
 
     canvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = filename;
+        link.download = options.filename || 'map-export.png';
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);

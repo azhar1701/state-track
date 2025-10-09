@@ -389,18 +389,24 @@ const AdminDashboard = () => {
 
   const exportPDF = async () => {
     try {
-      const { default: jsPDF } = await import('jspdf');
-      await import('jspdf-autotable');
-      const doc = new jsPDF({ orientation: 'landscape' });
-      // Minimal types for autoTable without bringing full type dependency
-      type AutoTableOptions = {
-        columns: { header: string; dataKey: string }[];
-        body: Array<Record<string, unknown>>;
-        styles?: { fontSize?: number };
-        headStyles?: { fillColor?: [number, number, number] };
-      };
-      type JsPDFWithAutoTable = { autoTable: (opts: AutoTableOptions) => void };
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default as (
+        doc: unknown,
+        opts: {
+          head: string[][];
+          body: (string | number | null)[][];
+          styles?: { fontSize?: number };
+          headStyles?: { fillColor?: [number, number, number] };
+          margin?: { top?: number; left?: number; right?: number };
+        }
+      ) => void;
+
       const rows = buildExportRows();
+      if (rows.length === 0) {
+        toast.info('Tidak ada data untuk diexport');
+        return;
+      }
+
       const columns = [
         { header: 'ID', dataKey: 'id' },
         { header: 'Judul', dataKey: 'title' },
@@ -411,8 +417,24 @@ const AdminDashboard = () => {
         { header: 'Lokasi', dataKey: 'location_name' },
         { header: 'Kecamatan', dataKey: 'kecamatan' },
         { header: 'Desa', dataKey: 'desa' },
-      ];
-      (doc as unknown as JsPDFWithAutoTable).autoTable({ columns, body: rows as Array<Record<string, unknown>>, styles: { fontSize: 8 }, headStyles: { fillColor: [25, 118, 210] } });
+      ] as const;
+
+      const head = [columns.map((c) => c.header)];
+      const body = rows.map((r) => columns.map((c) => (r as Record<string, unknown>)[c.dataKey] as string | number | null));
+
+      const doc = new jsPDF({ orientation: 'landscape' });
+      // Judul sederhana
+      doc.setFontSize(12);
+      doc.text('Export Laporan', 14, 16);
+
+      autoTable(doc as unknown, {
+        head,
+        body,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [25, 118, 210] },
+        margin: { top: 22, left: 12, right: 12 },
+      });
+
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
       doc.save(`reports-export-${ts}.pdf`);
       toast.success('Export PDF berhasil');

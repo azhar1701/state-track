@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       injectRegister: 'auto',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'placeholder.svg'],
@@ -37,26 +40,6 @@ export default defineConfig(({ mode }) => ({
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
-          }
-        ]
-      },
-      workbox: {
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            urlPattern: /\.(?:js|css)$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'assets-cache',
-            }
-          },
-          {
-            urlPattern: /\/data\/.*|\.geojson$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'data-cache',
-              expiration: { maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 },
-            }
           }
         ]
       }

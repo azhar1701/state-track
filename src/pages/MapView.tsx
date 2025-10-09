@@ -6,6 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Navigation, Loader as Loader2 } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
+import 'leaflet.heat';
 import 'leaflet/dist/leaflet.css';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import type { BasemapType } from '@/components/map/basemap-config';
@@ -22,7 +26,7 @@ import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
-import { format, isAfter, isBefore, startOfDay } from 'date-fns';
+import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
 
@@ -125,6 +129,8 @@ const MapView = () => {
     adminBoundaries: false,
     irrigation: false,
     floodZones: false,
+    clustering: true,
+    heatmap: false,
   });
 
   // Administrative boundaries geojson cache
@@ -135,6 +141,8 @@ const MapView = () => {
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [clusterLayer, setClusterLayer] = useState<L.MarkerClusterGroup | null>(null);
+  const [heatLayer, setHeatLayer] = useState<L.Layer | null>(null);
   const [cursorLatLng, setCursorLatLng] = useState<[number, number] | null>(null);
   const [coordBottomOffset, setCoordBottomOffset] = useState<number>(72);
   const [timelineRightOffset, setTimelineRightOffset] = useState<number>(96);
@@ -145,15 +153,14 @@ const MapView = () => {
   const [ctxLoading, setCtxLoading] = useState(false);
 
   const minDate = useMemo(() => {
-    if (reports.length === 0) return new Date();
-    const dates = reports.map((r) => new Date(r.created_at));
-    return new Date(Math.min(...dates.map((d) => d.getTime())));
-  }, [reports]);
+    // Fix the earliest selectable date to Oct 1, 2025
+    return startOfDay(new Date('2025-10-01'));
+  }, []);
 
   const maxDate = useMemo(() => {
     if (reports.length === 0) return new Date();
     const dates = reports.map((r) => new Date(r.created_at));
-    return new Date(Math.max(...dates.map((d) => d.getTime())));
+    return startOfDay(new Date(Math.max(...dates.map((d) => d.getTime()))));
   }, [reports]);
 
   useEffect(() => {
@@ -451,6 +458,7 @@ const MapView = () => {
     setLoading(false);
   };
 
+
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -481,8 +489,11 @@ const MapView = () => {
         if (isAfter(reportDate, toDate)) return false;
       }
 
-      const timeFilterStart = startOfDay(timeFilterDate);
-      if (isBefore(reportDate, timeFilterStart)) return false;
+  // 7-day lookback window: [currentDate - 6, currentDate]
+  const timeStart = startOfDay(subDays(timeFilterDate, 6));
+  const timeEnd = startOfDay(timeFilterDate);
+  if (isBefore(reportDate, timeStart)) return false;
+  if (isAfter(reportDate, timeEnd)) return false;
 
       if (drawnPolygon) {
         const point = turf.point([report.longitude, report.latitude]);
@@ -497,6 +508,58 @@ const MapView = () => {
       return true;
     });
   }, [reports, filters, drawnPolygon, timeFilterDate]);
+
+  // Build or rebuild cluster layer when toggled or data changes
+  useEffect(() => {
+    if (!mapInstance) return;
+    if (clusterLayer) {
+      mapInstance.removeLayer(clusterLayer);
+      setClusterLayer(null);
+    }
+    if (!overlays.clustering) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mcg = new (L as any).MarkerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 48,
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+    }) as L.MarkerClusterGroup;
+    filteredReports.forEach((r) => {
+      const marker = L.marker([r.latitude, r.longitude], {
+        icon: createCustomIcon(r.category, r.status, r.severity),
+      }).on('click', () => setSelectedReport(r));
+      mcg.addLayer(marker);
+    });
+    mcg.addTo(mapInstance);
+    setClusterLayer(mcg);
+    return () => {
+      if (mapInstance && mcg) {
+        mapInstance.removeLayer(mcg);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapInstance, overlays.clustering, filteredReports]);
+
+  // Build or rebuild heatmap layer when toggled or data changes
+  useEffect(() => {
+    if (!mapInstance) return;
+    if (heatLayer) {
+      mapInstance.removeLayer(heatLayer);
+      setHeatLayer(null);
+    }
+    if (!overlays.heatmap) return;
+    const pts: Array<[number, number, number]> = filteredReports.map((r) => [r.latitude, r.longitude, 0.6]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hl = (L as any).heatLayer(pts, { radius: 22, blur: 15, maxZoom: 17, minOpacity: 0.25 }) as L.Layer;
+    hl.addTo(mapInstance);
+    setHeatLayer(hl);
+    return () => {
+      if (mapInstance && hl) {
+        mapInstance.removeLayer(hl);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapInstance, overlays.heatmap, filteredReports]);
 
   const goToUserLocation = () => {
     if (userLocation) {
@@ -527,12 +590,13 @@ const MapView = () => {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (opts?: { filename?: string; includeControls?: boolean; scale?: number }) => {
     if (!mapInstance) return;
 
     try {
       toast.loading('Mengekspor peta...');
-      await exportMapToPNG(mapInstance, `map-export-${format(new Date(), 'yyyy-MM-dd')}.png`);
+      const filename = opts?.filename || `map-export-${format(new Date(), 'yyyy-MM-dd')}.png`;
+      await exportMapToPNG(mapInstance, { filename, includeControls: opts?.includeControls ?? true, scale: opts?.scale ?? 1 });
       toast.dismiss();
       toast.success('Peta berhasil diekspor!');
     } catch (error) {
@@ -634,28 +698,19 @@ const MapView = () => {
               </Pane>
             )}
 
-            {filteredReports.map((report) => (
+            {/* Render plain markers only when clustering is off */}
+            {!overlays.clustering && filteredReports.map((report) => (
               <Marker
                 key={report.id}
                 position={[report.latitude, report.longitude]}
                 icon={createCustomIcon(report.category, report.status, report.severity)}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedReport(report);
-                  },
-                }}
+                eventHandlers={{ click: () => setSelectedReport(report) }}
               >
                 <Popup>
                   <div className="p-2">
                     <h3 className="font-semibold text-sm mb-1">{report.title}</h3>
                     <p className="text-xs text-muted-foreground mb-2">{report.category}</p>
-                    <Button
-                      size="sm"
-                      onClick={() => setSelectedReport(report)}
-                      className="w-full"
-                    >
-                      Lihat Detail
-                    </Button>
+                    <Button size="sm" onClick={() => setSelectedReport(report)} className="w-full">Lihat Detail</Button>
                   </div>
                 </Popup>
               </Marker>
@@ -773,7 +828,11 @@ const MapView = () => {
                     currentDate={timeFilterDate}
                     onDateChange={setTimeFilterDate}
                     compact
+                    loop={false}
                   />
+                  <div className="mt-1 text-center text-[11px] text-muted-foreground">
+                    Rentang: {format(startOfDay(subDays(timeFilterDate, 6)), 'dd MMM yy')} – {format(startOfDay(timeFilterDate), 'dd MMM yy')}
+                  </div>
                 </div>
               </div>
             </div>

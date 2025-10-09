@@ -9,6 +9,8 @@ export interface MapOverlays {
   adminBoundaries: boolean;
   irrigation: boolean;
   floodZones: boolean;
+  clustering?: boolean;
+  heatmap?: boolean;
 }
 
 interface OverlayToggleProps {
@@ -73,6 +75,28 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose }: OverlayTog
             id="flood-zones"
             checked={localOverlays.floodZones}
             onCheckedChange={(checked) => handleToggle('floodZones', checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label htmlFor="clustering" className="text-sm">
+            Cluster Marker
+          </Label>
+          <Switch
+            id="clustering"
+            checked={Boolean(localOverlays.clustering)}
+            onCheckedChange={(checked) => handleToggle('clustering', checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label htmlFor="heatmap" className="text-sm">
+            Heatmap Kepadatan
+          </Label>
+          <Switch
+            id="heatmap"
+            checked={Boolean(localOverlays.heatmap)}
+            onCheckedChange={(checked) => handleToggle('heatmap', checked)}
           />
         </div>
       </CardContent>

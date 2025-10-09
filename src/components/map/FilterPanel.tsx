@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { X, Filter } from 'lucide-react';
-import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface MapFilters {
   category?: string;
@@ -36,11 +37,52 @@ const statusLabels = {
 };
 
 export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelProps) => {
+  const { user } = useAuth();
   const [localFilters, setLocalFilters] = useState<MapFilters>(filters);
+  const [presets, setPresets] = useState<Array<{ id: string; name: string; filters: MapFilters }>>([]);
+  const [presetName, setPresetName] = useState('');
+  const [loadingPresets, setLoadingPresets] = useState(false);
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  useEffect(() => {
+    if (!user) return;
+    const localKey = `filter_presets:${user.id}`;
+    const load = async () => {
+      try {
+        setLoadingPresets(true);
+        const { data, error } = await supabase
+          .from('filter_presets')
+          .select('id,name,filters')
+          .eq('user_id', user.id)
+          .order('name');
+        if (!error && data) {
+          const rows = (data ?? []) as Array<{ id: string; name: string; filters: MapFilters | null }>;
+          const mapped = rows.map((r) => ({ id: r.id, name: r.name, filters: r.filters ?? {} }));
+          setPresets(mapped);
+          try { localStorage.setItem(localKey, JSON.stringify(mapped)); } catch { /* ignore */ }
+          return;
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoadingPresets(false);
+      }
+      // fallback to local presets if remote fails
+      try {
+        const raw = localStorage.getItem(localKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Array<{ id: string; name: string; filters: MapFilters }>;
+          setPresets(parsed);
+        }
+      } catch {
+        // ignore local fallback errors
+      }
+    };
+    void load();
+  }, [user]);
 
   const handleApply = () => {
     onFilterChange(localFilters);
@@ -59,6 +101,41 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
     }));
   };
 
+  const savePreset = async () => {
+    if (!user) return;
+    const name = presetName.trim();
+    if (!name) return;
+    const payload = { user_id: user.id, name, filters: localFilters } as unknown as Record<string, unknown>;
+    const { data, error } = await supabase.from('filter_presets').insert(payload).select('id,name,filters').single();
+    if (!error && data) {
+      const row = data as { id: string; name: string; filters: MapFilters | null };
+      const next = { id: row.id, name: row.name, filters: row.filters ?? {} };
+      setPresets((prev) => [...prev, next]);
+  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify([...presets, next])); } catch { /* ignore */ }
+      setPresetName('');
+    } else {
+      // fallback: local only
+      const next = { id: `${Date.now()}`, name, filters: localFilters };
+      setPresets((prev) => [...prev, next]);
+  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify([...presets, next])); } catch { /* ignore */ }
+      setPresetName('');
+    }
+  };
+
+  const applyPreset = (id: string) => {
+    const p = presets.find((x) => x.id === id);
+    if (!p) return;
+    setLocalFilters(p.filters);
+    onFilterChange(p.filters);
+  };
+
+  const deletePreset = async (id: string) => {
+    if (!user) return;
+  try { await supabase.from('filter_presets').delete().eq('id', id).eq('user_id', user.id); } catch { /* ignore */ }
+    setPresets((prev) => prev.filter((x) => x.id !== id));
+  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify(presets.filter((x) => x.id !== id))); } catch { /* ignore */ }
+  };
+
   return (
     <Card className="w-80 shadow-xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -73,6 +150,31 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        {user && (
+          <div className="space-y-2">
+            <Label>Preset Tersimpan</Label>
+            {loadingPresets ? (
+              <div className="text-sm text-muted-foreground">Memuat preset…</div>
+            ) : presets.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Belum ada preset</div>
+            ) : (
+              <div className="space-y-2">
+                {presets.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2">
+                    <Button variant="outline" size="sm" onClick={() => applyPreset(p.id)} className="flex-1 text-left justify-start">
+                      {p.name}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => deletePreset(p.id)}>Hapus</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Input placeholder="Nama preset" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+              <Button onClick={savePreset}>Simpan</Button>
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           <Label>Kategori</Label>
           <Select

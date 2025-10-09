@@ -11,11 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { MapPin, Upload, Navigation, Loader as Loader2, Search } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { z } from 'zod';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } from '@/lib/geocoding';
+import { enqueueReportForSync } from '@/hooks/useOutboxSync';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
 type Category = 'jalan' | 'jembatan' | 'irigasi' | 'drainase' | 'sungai' | 'lainnya';
@@ -25,6 +27,7 @@ type ReportFormData = {
   description: string;
   category: Category;
   severity: Severity;
+  incidentDate: string; // YYYY-MM-DD
   reporterName: string;
   phone: string;
   kecamatan: string;
@@ -36,6 +39,16 @@ const reportSchema = z.object({
   description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
   category: z.enum(['jalan', 'jembatan', 'irigasi', 'drainase', 'sungai', 'lainnya']),
   severity: z.enum(['ringan', 'sedang', 'berat']),
+  incidentDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Tanggal tidak valid' })
+    .refine((v) => {
+      const d = new Date(`${v}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return d.getTime() <= today.getTime();
+    }, { message: 'Tanggal kejadian tidak boleh di masa depan' }),
   reporterName: z.string().min(3, { message: 'Nama minimal 3 karakter' }).max(120),
   phone: z.string().min(8).max(20).regex(/^\+?[0-9\s-]+$/, { message: 'Nomor telepon tidak valid' }),
   kecamatan: z.string().min(2).max(120),
@@ -129,6 +142,7 @@ const ReportForm = () => {
       description: '',
       category: 'jalan',
       severity: 'sedang',
+      incidentDate: new Date().toISOString().slice(0, 10),
       reporterName: '',
       phone: '',
       kecamatan: '',
@@ -295,28 +309,38 @@ const ReportForm = () => {
     getLocationName(lat, lng);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    // Limit to 10 photos to keep upload reasonable
     const selected = files.slice(0, 10);
-    const oversize = selected.find((f) => f.size > 5 * 1024 * 1024);
-    if (oversize) {
-      toast.error('Ukuran setiap foto maksimal 5MB');
-      return;
-    }
-    setPhotoFiles(selected);
-    // build previews
-    Promise.all(
-      selected.map(
-        (file) =>
-          new Promise<string>((resolve) => {
+    // compress each image to <= 1600px max, ~0.7 quality; cap 1.5MB if possible
+    const opts = { maxSizeMB: 1.5, maxWidthOrHeight: 1600, useWebWorker: true, initialQuality: 0.7 } as const;
+    try {
+      const compressed: File[] = [];
+      const previews: string[] = [];
+      for (let i = 0; i < selected.length; i++) {
+        const f = selected[i];
+        try {
+          const cf = await imageCompression(f, opts);
+          compressed.push(new File([cf], f.name.replace(/\.(jpg|jpeg|png|webp)$/i, '.jpg'), { type: 'image/jpeg' }));
+          previews.push(await imageCompression.getDataUrlFromFile(cf));
+        } catch {
+          // if compression fails, fallback to original
+          compressed.push(f);
+          previews.push(await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          })
-      )
-    ).then(setPhotoPreviews);
+            reader.readAsDataURL(f);
+          }));
+        }
+      }
+      setPhotoFiles(compressed);
+      setPhotoPreviews(previews);
+      toast.success(`Foto siap diunggah (${compressed.length})`);
+    } catch (err) {
+      console.error('Compression failed', err);
+      toast.error('Gagal memproses foto');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -367,6 +391,26 @@ const ReportForm = () => {
   let photoUrl: string | null = null;
   const photoUrls: string[] = [];
 
+      // If offline, queue to outbox and exit early
+      if (!navigator.onLine) {
+        await enqueueReportForSync({
+          title: formData.title,
+          description: formData.description,
+          category: formData.category as unknown as import('@/integrations/supabase/types').Database['public']['Enums']['report_category'],
+          severity: formData.severity,
+          incidentDate: formData.incidentDate,
+          reporterName: formData.reporterName,
+          phone: formData.phone,
+          kecamatan: formData.kecamatan,
+          desa: formData.desa,
+          location: { latitude: location.latitude, longitude: location.longitude, name: location.name ?? null },
+        }, photoFiles);
+        toast.message('Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.');
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+        navigate('/report/success');
+        return;
+      }
+
       if (photoFiles.length > 0) {
         setUploadPercent(10);
         for (let i = 0; i < photoFiles.length; i++) {
@@ -407,7 +451,8 @@ const ReportForm = () => {
         photo_url: photoUrl,
         // New array column for multiple photos; keep single photo_url for compatibility
         photo_urls: photoUrls.length > 0 ? photoUrls : null,
-        severity: formData.severity,
+  severity: formData.severity,
+  incident_date: formData.incidentDate,
         reporter_name: formData.reporterName,
         phone: formData.phone,
         kecamatan: formData.kecamatan,
@@ -428,6 +473,31 @@ const ReportForm = () => {
       console.error('Error submitting report:', error);
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
       let message = 'Gagal mengirim laporan. Silakan coba lagi.';
+  const errAny = error as unknown as { message?: string };
+  const text = typeof errAny?.message === 'string' ? errAny.message : '';
+      const isNetwork = text.toLowerCase().includes('failed to fetch') || text.toLowerCase().includes('network');
+      if (isNetwork) {
+        try {
+          await enqueueReportForSync({
+            title: formData.title,
+            description: formData.description,
+            category: formData.category as unknown as import('@/integrations/supabase/types').Database['public']['Enums']['report_category'],
+            severity: formData.severity,
+            incidentDate: formData.incidentDate,
+            reporterName: formData.reporterName,
+            phone: formData.phone,
+            kecamatan: formData.kecamatan,
+            desa: formData.desa,
+            location: { latitude: location!.latitude, longitude: location!.longitude, name: location!.name ?? null },
+          }, photoFiles);
+          toast.message('Koneksi terputus. Laporan disimpan offline dan akan dikirim otomatis.');
+          try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+          navigate('/report/success');
+          return;
+        } catch {
+          // fallthrough to normal error toast
+        }
+      }
       if (error && typeof error === 'object') {
         const errObj = error as Record<string, unknown>;
         const msg = typeof errObj.message === 'string' ? errObj.message : undefined;
@@ -529,6 +599,20 @@ const ReportForm = () => {
                   required
                 />
                 {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
+              </div>
+
+              {/* Tanggal Kejadian */}
+              <div className="space-y-2">
+                <Label htmlFor="incidentDate">Tanggal Kejadian *</Label>
+                <Input
+                  id="incidentDate"
+                  type="date"
+                  value={formData.incidentDate}
+                  onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
+                  required
+                />
+                {errors.incidentDate && <p className="text-sm text-red-600">{errors.incidentDate}</p>}
+                <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
               </div>
 
               {/* Kecamatan dropdown (placed before Desa) */}
