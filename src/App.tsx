@@ -2,7 +2,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 // Removed TanStack Query per request
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import CommandMenu from "@/components/CommandMenu";
@@ -18,6 +18,9 @@ const ReportForm = lazy(() => import("./pages/ReportForm"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ReportSuccess = lazy(() => import("./pages/ReportSuccess"));
+const MyReports = lazy(() => import("./pages/MyReports"));
+const HelpCenter = lazy(() => import("./pages/HelpCenter"));
+const GeoDataManager = lazy(() => import("./pages/GeoDataManager"));
 
 // TanStack Query removed
 
@@ -38,6 +41,10 @@ const AppInner = () => {
               <Route path="/report" element={<ReportForm />} />
               <Route path="/report/success" element={<ReportSuccess />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/me/reports" element={<MyReports />} />
+              <Route path="/help" element={<HelpCenter />} />
+              <Route path="/assets" element={<Navigate to="/admin?tab=geo&tab2=assets" replace />} />
+              <Route path="/admin/geo" element={<Navigate to="/admin?tab=geo" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

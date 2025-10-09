@@ -7,19 +7,20 @@ import { Button } from '@/components/ui/button';
 
 export interface MapOverlays {
   adminBoundaries: boolean;
-  irrigation: boolean;
-  floodZones: boolean;
   clustering?: boolean;
   heatmap?: boolean;
+  // dynamic layer toggles keyed by geo_layers.key
+  dynamic?: Record<string, boolean>;
 }
 
 interface OverlayToggleProps {
   overlays: MapOverlays;
   onOverlayChange: (overlays: MapOverlays) => void;
   onClose?: () => void;
+  availableLayers?: Array<{ key: string; name: string }>;
 }
 
-export const OverlayToggle = ({ overlays, onOverlayChange, onClose }: OverlayToggleProps) => {
+export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLayers }: OverlayToggleProps) => {
   const [localOverlays, setLocalOverlays] = useState<MapOverlays>(overlays);
 
   const handleToggle = (key: keyof MapOverlays, value: boolean) => {
@@ -30,6 +31,8 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose }: OverlayTog
     setLocalOverlays(newOverlays);
     onOverlayChange(newOverlays);
   };
+
+  const dyn = localOverlays.dynamic || {};
 
   return (
     <Card className="w-64 shadow-lg">
@@ -56,27 +59,28 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose }: OverlayTog
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="irrigation" className="text-sm">
-            Irigasi
-          </Label>
-          <Switch
-            id="irrigation"
-            checked={localOverlays.irrigation}
-            onCheckedChange={(checked) => handleToggle('irrigation', checked)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label htmlFor="flood-zones" className="text-sm">
-            Zona Banjir
-          </Label>
-          <Switch
-            id="flood-zones"
-            checked={localOverlays.floodZones}
-            onCheckedChange={(checked) => handleToggle('floodZones', checked)}
-          />
-        </div>
+        {availableLayers && availableLayers.length > 0 && (
+          <div className="space-y-3">
+            {availableLayers.map((l) => (
+              <div key={l.key} className="flex items-center justify-between">
+                <Label htmlFor={`dyn-${l.key}`} className="text-sm">
+                  {l.name}
+                </Label>
+                <Switch
+                  id={`dyn-${l.key}`}
+                  checked={Boolean(dyn[l.key])}
+                  onCheckedChange={(checked) => {
+                    const newDyn = { ...(localOverlays.dynamic || {}) };
+                    newDyn[l.key] = checked;
+                    const newOverlays = { ...localOverlays, dynamic: newDyn };
+                    setLocalOverlays(newOverlays);
+                    onOverlayChange(newOverlays);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <Label htmlFor="clustering" className="text-sm">

@@ -1,0 +1,286 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink } from '@/components/ui/pagination';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
+import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+
+type ReportRow = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  category: string | null;
+  status: string | null;
+  incident_date: string | null;
+  created_at: string;
+  user_id: string;
+  latitude: number;
+  longitude: number;
+  location_name: string | null;
+  photo_url: string | null;
+  photo_urls: string[] | null;
+  severity?: 'ringan' | 'sedang' | 'berat' | null;
+  resolution?: string | null;
+};
+
+const categoryLabels: Record<string, string> = {
+  jalan: 'Jalan',
+  jembatan: 'Jembatan',
+  irigasi: 'Irigasi',
+  drainase: 'Drainase',
+  sungai: 'Sungai',
+  lainnya: 'Lainnya',
+};
+
+const statusLabels: Record<string, string> = {
+  baru: 'Baru',
+  diproses: 'Diproses',
+  selesai: 'Selesai',
+};
+
+const PAGE_SIZE = 10;
+
+export default function MyReports() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<ReportRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [status, setStatus] = useState<string>('all');
+  const [category, setCategory] = useState<string>('all');
+  const [q, setQ] = useState('');
+  const [selectedReport, setSelectedReport] = useState<ReportRow | null>(null);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const where = useMemo(() => ({ status, category, q }), [status, category, q]);
+
+  const loadData = useCallback(async () => {
+    if (!user) {
+      setRows([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      let query = supabase
+        .from('reports')
+        .select(
+          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,location_name,photo_url,photo_urls,severity,resolution',
+          { count: 'exact' }
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (where.status !== 'all') query = query.eq('status', where.status);
+      if (where.category !== 'all') query = query.eq('category', where.category);
+      if (where.q) query = query.ilike('title', `%${where.q}%`);
+
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      setRows((data ?? []) as ReportRow[]);
+      setTotal(count ?? 0);
+    } catch (e: unknown) {
+      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message) : undefined;
+      setError(msg ?? 'Gagal memuat laporan');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, page, where.status, where.category, where.q]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const resetFilters = () => {
+    setStatus('all');
+    setCategory('all');
+    setQ('');
+    setPage(1);
+  };
+
+  const refetch = () => { void loadData(); };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold">Laporan Saya</h1>
+        <Button variant="outline" size="sm" onClick={refetch}>
+          <RefreshCw className="w-4 h-4 mr-2" /> Muat Ulang
+        </Button>
+      </div>
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua status</SelectItem>
+                {Object.entries(statusLabels).map(([val, label]) => (
+                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Kategori</Label>
+            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua kategori</SelectItem>
+                {Object.entries(categoryLabels).map(([val, label]) => (
+                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label>Cari Judul</Label>
+            <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Ketik judul laporan..." />
+          </div>
+          <div className="md:col-span-4 flex gap-2 justify-end">
+            <Button variant="outline" onClick={resetFilters}>Reset</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Laporan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+          ) : rows.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Belum ada laporan.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Judul</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tanggal Kejadian</TableHead>
+                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="max-w-[20rem]">
+                        <div className="font-medium line-clamp-2">{r.title ?? 'Tanpa judul'}</div>
+                        {r.description && <div className="text-xs text-muted-foreground line-clamp-1">{r.description}</div>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{categoryLabels[r.category ?? ''] ?? r.category ?? '-'}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge>{statusLabels[r.status ?? ''] ?? r.status ?? '-'}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <CalendarDays className="w-4 h-4" />
+                          {r.incident_date ? new Date(r.incident_date).toLocaleDateString() : '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <CalendarDays className="w-4 h-4" />
+                          {new Date(r.created_at).toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" onClick={() => setSelectedReport(r)}>
+                          <MapPin className="w-4 h-4 mr-2" /> Detail
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {pageCount > 1 && (
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  {Array.from({ length: pageCount }).map((_, i) => {
+                    const p = i + 1;
+                    return (
+                      <PaginationItem key={p}>
+                        <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setPage(p); }}>{p}</PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Drawer detail report */}
+      <Dialog open={!!selectedReport} onOpenChange={(open) => setSelectedReport(open ? selectedReport : null)}>
+        <DialogContent className="sm:max-w-[42rem] p-0 border-none bg-transparent shadow-none">
+          {selectedReport && (
+            <ReportDetailDrawer
+              report={{
+                id: selectedReport.id,
+                title: selectedReport.title || 'Tanpa judul',
+                description: selectedReport.description || '',
+                category: selectedReport.category || 'lainnya',
+                status: selectedReport.status || 'baru',
+                severity: selectedReport.severity ?? null,
+                resolution: selectedReport.resolution ?? null,
+                latitude: selectedReport.latitude,
+                longitude: selectedReport.longitude,
+                location_name: selectedReport.location_name,
+                photo_url: selectedReport.photo_url,
+                photo_urls: selectedReport.photo_urls,
+                created_at: selectedReport.created_at,
+                user_id: selectedReport.user_id,
+              }}
+              onClose={() => {
+                setSelectedReport(null);
+                refetch();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

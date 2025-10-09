@@ -127,16 +127,20 @@ const MapView = () => {
   const [showOverlayPanel, setShowOverlayPanel] = useState(false);
   const [overlays, setOverlays] = useState<MapOverlays>({
     adminBoundaries: false,
-    irrigation: false,
-    floodZones: false,
     clustering: true,
     heatmap: false,
+    dynamic: {},
   });
 
   // Administrative boundaries geojson cache
   const [adminGeoJson, setAdminGeoJson] = useState<FeatureCollection<Geometry> | null>(null);
   const [kecamatanLines, setKecamatanLines] = useState<FeatureCollection<Geometry> | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  // Additional overlays
+  // Dynamic overlays from geo_layers
+  const [availableLayers, setAvailableLayers] = useState<Array<{ key: string; name: string; geometry_type: string | null }>>([]);
+  const [dynamicData, setDynamicData] = useState<Record<string, FeatureCollection<Geometry> | null>>({});
+  const [dynamicLoading, setDynamicLoading] = useState<Record<string, boolean>>({});
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
@@ -194,26 +198,40 @@ const MapView = () => {
       if (adminGeoJson || adminLoading) return;
       setAdminLoading(true);
       try {
-        // Try common filenames
-        const candidates = [
-          '/data/ciamis_kecamatan.geojson',
-          '/data/adm_ciamis.geojson',
-        ];
-
+        // 1) Try admin-managed layer from Supabase first
         let data: FeatureCollection<Geometry> | null = null;
-        for (const url of candidates) {
-          try {
-            const r = await fetch(url, { cache: 'force-cache' });
-            if (r.ok) {
-              data = (await r.json()) as FeatureCollection<Geometry>;
-              break;
+        try {
+          const { data: gl, error } = await supabase
+            .from('geo_layers')
+            .select('data')
+            .eq('key', 'admin_boundaries')
+            .limit(1)
+            .maybeSingle();
+          if (!error && gl?.data && (gl.data as { type?: string }).type === 'FeatureCollection') {
+            data = gl.data as FeatureCollection<Geometry>;
+          }
+        } catch { /* ignore */ }
+
+        // 2) Fallback to public files
+        if (!data) {
+          const candidates = [
+            '/data/ciamis_kecamatan.geojson',
+            '/data/adm_ciamis.geojson',
+          ];
+          for (const url of candidates) {
+            try {
+              const r = await fetch(url, { cache: 'force-cache' });
+              if (r.ok) {
+                data = (await r.json()) as FeatureCollection<Geometry>;
+                break;
+              }
+            } catch {
+              // try next
             }
-          } catch {
-            // try next
           }
         }
 
-        if (!data) throw new Error('No admin boundaries file found');
+        if (!data) throw new Error('No admin boundaries found');
 
         // Detect CRS from GeoJSON or infer by coordinate magnitude
         const crsName = (data as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
@@ -329,6 +347,152 @@ const MapView = () => {
     };
     loadAdminBoundaries();
   }, [overlays.adminBoundaries, adminGeoJson, adminLoading]);
+
+  // Load list of available geo_layers to display as toggles
+  useEffect(() => {
+    const loadList = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('geo_layers')
+          .select('key,name,geometry_type')
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          // Exclude admin_boundaries as it has a dedicated toggle
+          const layers = (data as Array<{ key: string; name: string; geometry_type: string | null }>).
+            filter((l) => l.key !== 'admin_boundaries');
+          setAvailableLayers(layers);
+        }
+      } catch (e) {
+        console.warn('Failed to load layers list', e);
+      }
+    };
+    void loadList();
+  }, []);
+
+  // Lazy-load any toggled dynamic layer data and cache it
+  useEffect(() => {
+    const loadToggled = async () => {
+      const dyn = overlays.dynamic || {};
+      const keysToLoad = Object.entries(dyn)
+        .filter(([, on]) => on)
+        .map(([k]) => k);
+      for (const key of keysToLoad) {
+        if (dynamicData[key] || dynamicLoading[key]) continue;
+        setDynamicLoading((s) => ({ ...s, [key]: true }));
+        try {
+          const { data: gl, error } = await supabase
+            .from('geo_layers')
+            .select('data')
+            .eq('key', key)
+            .limit(1)
+            .maybeSingle();
+          if (!error && gl?.data) {
+            // Accept FeatureCollection or attempt to find one inside nested objects
+            let fc: FeatureCollection<Geometry> | null = null;
+            let srcCrs: string | undefined = undefined;
+            const raw = gl.data as unknown as Record<string, unknown>;
+            // Preferred shape from GeoDataManager: { featureCollection, crs }
+            if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
+              const wrapper = raw as { featureCollection?: unknown; crs?: string };
+              if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
+                fc = wrapper.featureCollection as FeatureCollection<Geometry>;
+                srcCrs = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
+              }
+            }
+            // Back-compat: accept direct FC or nested object values
+            if (!fc) {
+              if ((raw as { type?: string }).type === 'FeatureCollection') {
+                fc = raw as unknown as FeatureCollection<Geometry>;
+              } else if (raw && typeof raw === 'object') {
+                const vals = Object.values(raw);
+                const found = vals.find((v) => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection');
+                if (found) fc = found as FeatureCollection<Geometry>;
+              }
+            }
+
+            if (fc) {
+              // EPSG defs we support
+              proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+              proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
+              proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
+
+              // Decide source CRS: prefer stored srcCrs, fallback to embedded fc.crs.name, then heuristic
+              const embeddedCrsName = (fc as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
+              const src = (srcCrs || embeddedCrsName || '').toUpperCase();
+              const isEPSG4326 = src.includes('EPSG:4326');
+              const isEPSG3857 = src.includes('EPSG:3857') || src.includes('EPSG:900913');
+              const isEPSG32749 = src.includes('EPSG:32749');
+              const sample = (() => {
+                const f = fc!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
+                if (!f) return null;
+                const g = f.geometry as unknown as { coordinates?: unknown };
+                const peek = (coords: unknown): [number, number] | null => {
+                  if (!Array.isArray(coords)) return null;
+                  if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                    return [coords[0] as number, coords[1] as number];
+                  }
+                  for (const c of coords as unknown[]) {
+                    const p = peek(c);
+                    if (p) return p;
+                  }
+                  return null;
+                };
+                return peek(g.coordinates);
+              })();
+              const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
+
+              let resultFC = fc as FeatureCollection<Geometry>;
+              // Determine transform only when needed
+              const needTransform = isEPSG3857 || isEPSG32749 || (!isEPSG4326 && looksProjected);
+              if (needTransform) {
+                const from = isEPSG3857 ? 'EPSG:3857' : (isEPSG32749 ? 'EPSG:32749' : 'EPSG:32749');
+                const transformCoord = (pt: number[]): [number, number] => {
+                  const [x, y] = pt;
+                  const [lon, lat] = proj4(from, 'EPSG:4326', [x, y]);
+                  return [lon, lat];
+                };
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const reprojectGeometry = (geom: any): any => {
+                  if (!geom) return geom;
+                  const t = geom.type;
+                  const coords = geom.coordinates;
+                  const mapCoords = (arr: unknown): unknown => {
+                    if (!Array.isArray(arr)) return arr;
+                    if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
+                    return (arr as unknown[]).map((a) => mapCoords(a));
+                  };
+                  if (t === 'GeometryCollection') {
+                    return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
+                  }
+                  return { type: t, coordinates: mapCoords(coords) };
+                };
+                resultFC = {
+                  type: 'FeatureCollection',
+                  features: fc.features.map((f) => ({
+                    type: 'Feature',
+                    properties: f.properties || {},
+                    geometry: reprojectGeometry(f.geometry),
+                  })) as unknown as Feature<Geometry>[],
+                } as FeatureCollection<Geometry>;
+              }
+
+              setDynamicData((s) => ({ ...s, [key]: resultFC }));
+            } else {
+              toast.error(`Gagal memuat layer: ${key}`, { description: 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.' });
+            }
+          } else {
+            toast.error(`Gagal memuat layer: ${key}`);
+          }
+        } catch (e) {
+          console.warn('Failed to load layer', key, e);
+          toast.error(`Gagal memuat layer: ${key}`);
+        } finally {
+          setDynamicLoading((s) => ({ ...s, [key]: false }));
+        }
+      }
+    };
+    void loadToggled();
+  }, [overlays.dynamic, dynamicData, dynamicLoading]);
 
   // Attach map interactions once map instance is ready
   useEffect(() => {
@@ -628,7 +792,25 @@ const MapView = () => {
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
             {/* Legend tagged for measurement to stack scale/coords above */}
             <div className="legend-container absolute bottom-4 right-4 z-[1200]">
-              <Legend />
+              <Legend overlays={[
+                ...(overlays.adminBoundaries ? [{ type: 'line', label: 'Batas Administratif', color: '#6b7280', dashArray: '4 3' } as const] : []),
+                // Common Indonesian symbology suggestions
+                ...(
+                  Object.entries(overlays.dynamic || {}).some(([k, on]) => k === 'irrigation' && on)
+                    ? [{ type: 'line', label: 'Jaringan Irigasi', color: '#0ea5e9' } as const]
+                    : []
+                ),
+                ...(
+                  Object.entries(overlays.dynamic || {}).some(([k, on]) => k === 'flood_zones' && on)
+                    ? [{ type: 'fill', label: 'Zona Rawan Banjir', color: '#ef4444', fillColor: '#f87171' } as const]
+                    : []
+                ),
+                ...(
+                  Object.entries(overlays.dynamic || {}).some(([k, on]) => on && (k.toLowerCase().includes('sungai') || k.toLowerCase().includes('river')))
+                    ? [{ type: 'line', label: 'Sungai', color: '#38bdf8' } as const]
+                    : []
+                ),
+              ]} />
             </div>
             {/* DrawControls removed */}
 
@@ -697,6 +879,44 @@ const MapView = () => {
                 />
               </Pane>
             )}
+
+            {/* Render any toggled dynamic layers */}
+            {Object.entries(overlays.dynamic || {}).map(([key, on]) => (
+              on && dynamicData[key] ? (
+                <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
+                  <RLGeoJSON
+                    key={`geojson-${key}`}
+                    data={dynamicData[key]!}
+                    style={(feat) => {
+                      const t = feat?.geometry?.type;
+                      // If key hints irrigation
+                      if (key.toLowerCase().includes('irigasi') || key.toLowerCase().includes('irrigation')) {
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#0ea5e9', weight: 3, opacity: 0.9 };
+                        return { color: '#0ea5e9', weight: 1.5, opacity: 0.8, fillColor: '#38bdf8', fillOpacity: 0.15 };
+                      }
+                      // If key hints flood zones / hazard
+                      if (key.toLowerCase().includes('banjir') || key.toLowerCase().includes('flood')) {
+                        return { color: '#ef4444', weight: 1, opacity: 0.7, fillColor: '#f87171', fillOpacity: 0.2 };
+                      }
+                      // If key hints rivers
+                      if (key.toLowerCase().includes('sungai') || key.toLowerCase().includes('river')) {
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#38bdf8', weight: 2.5, opacity: 0.95 };
+                        return { color: '#38bdf8', weight: 1.5, opacity: 0.85, fillColor: '#7dd3fc', fillOpacity: 0.18 };
+                      }
+                      // Defaults by geometry
+                      if (t === 'LineString' || t === 'MultiLineString') return { color: '#334155', weight: 2, opacity: 0.9 };
+                      if (t === 'Point' || t === 'MultiPoint') return { color: '#16a34a', weight: 2, opacity: 0.9 };
+                      return { color: '#475569', weight: 1, opacity: 0.8, fillColor: '#cbd5e1', fillOpacity: 0.2 };
+                    }}
+                    onEachFeature={(feature, layer) => {
+                      const p = feature.properties as Record<string, unknown> | undefined;
+                      const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
+                      layer.bindTooltip(String(title), { sticky: true });
+                    }}
+                  />
+                </Pane>
+              ) : null
+            ))}
 
             {/* Render plain markers only when clustering is off */}
             {!overlays.clustering && filteredReports.map((report) => (
@@ -795,6 +1015,7 @@ const MapView = () => {
               <OverlayToggle
                 overlays={overlays}
                 onOverlayChange={setOverlays}
+                availableLayers={availableLayers.map(({ key, name }) => ({ key, name }))}
                 onClose={() => setShowOverlayPanel(false)}
               />
             </div>
@@ -911,6 +1132,12 @@ const MapView = () => {
           {adminLoading && overlays.adminBoundaries && (
             <div className="absolute left-4 top-24 z-[1300]">
               <Card className="px-3 py-2 text-sm">Memuat batas administratif…</Card>
+            </div>
+          )}
+          {/* Other layer loaders */}
+          {Object.entries(dynamicLoading).some(([k, v]) => (overlays.dynamic?.[k] && v)) && (
+            <div className="absolute left-4 top-36 z-[1300]">
+              <Card className="px-3 py-2 text-sm">Memuat layer geospasial…</Card>
             </div>
           )}
         </div>

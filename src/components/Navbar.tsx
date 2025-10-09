@@ -1,20 +1,30 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { MapPin, Menu, X, Map, FileText, LayoutDashboard, LogOut } from "lucide-react";
+import { MapPin, Menu, X, Map, FileText, LayoutDashboard, LogOut, Bell } from "lucide-react";
 import { useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useNotifications } from "@/hooks/useNotifications";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { items: notifs, unreadCount, markAsRead, markAllAsRead } = useNotifications(10);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    // Treat nested routes as active (e.g., /admin?tab=geo or /map/...) for clearer UX
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
   // Prefetch heavy routes on hover/focus for faster navigation
   const prefetchMap = () => import("@/pages/MapView");
   const prefetchReport = () => import("@/pages/ReportForm");
   const prefetchAdmin = () => import("@/pages/AdminDashboard");
+  const prefetchMyReports = () => import("@/pages/MyReports");
+  const prefetchHelp = () => import("@/pages/HelpCenter");
+  // const prefetchAssets = () => import("@/pages/Assets");
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,12 +38,13 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
             {user && (
               <>
+                {/* Primary nav: Map, My Reports, Report */}
                 <Link to="/map">
                   <Button
-                    variant={isActive("/map") ? "default" : "ghost"}
+                    variant={isActive("/map") ? "secondary" : "ghost"}
                     size="sm"
                     className="gap-2"
                     onMouseEnter={prefetchMap}
@@ -41,6 +52,18 @@ const Navbar = () => {
                   >
                     <Map className="icon-sm" />
                     Peta
+                  </Button>
+                </Link>
+                <Link to="/me/reports">
+                  <Button
+                    variant={isActive("/me/reports") ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    onMouseEnter={prefetchMyReports}
+                    onFocus={prefetchMyReports}
+                  >
+                    <FileText className="icon-sm" />
+                    Laporan Saya
                   </Button>
                 </Link>
                 <Link to="/report">
@@ -55,10 +78,12 @@ const Navbar = () => {
                     Buat Laporan
                   </Button>
                 </Link>
-                {isAdmin && (
+
+                {/* Context nav: Admin Dashboard or Help Center (non-admin) */}
+                {isAdmin ? (
                   <Link to="/admin">
                     <Button
-                      variant={isActive("/admin") ? "accent" : "ghost"}
+                      variant={isActive("/admin") ? "secondary" : "ghost"}
                       size="sm"
                       className="gap-2"
                       onMouseEnter={prefetchAdmin}
@@ -68,7 +93,74 @@ const Navbar = () => {
                       Dashboard
                     </Button>
                   </Link>
+                ) : (
+                  <Link to="/help">
+                    <Button
+                      variant={isActive("/help") ? "secondary" : "ghost"}
+                      size="sm"
+                      className="gap-2"
+                      onMouseEnter={prefetchHelp}
+                      onFocus={prefetchHelp}
+                    >
+                      <FileText className="icon-sm" />
+                      Help Center
+                    </Button>
+                  </Link>
                 )}
+
+                {/* Notifications */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="relative p-2 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring">
+                      <Bell className="icon-sm" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] leading-none px-1 py-0.5 rounded">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuLabel className="flex items-center justify-between">
+                      <span>Notifikasi</span>
+                      {unreadCount > 0 && (
+                        <button className="text-xs text-primary hover:underline" onClick={(e) => { e.preventDefault(); void markAllAsRead(); }}>
+                          Tandai semua dibaca
+                        </button>
+                      )}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {notifs.length === 0 ? (
+                      <div className="px-3 py-6 text-sm text-muted-foreground">Belum ada notifikasi</div>
+                    ) : (
+                      notifs.map((n) => (
+                        <DropdownMenuItem
+                          key={n.id}
+                          className="flex items-start gap-2"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            if (n.report_id) {
+                              navigate(`/map?report=${n.report_id}`);
+                            }
+                            void markAsRead(n.id);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">{n.title}</div>
+                            {n.body && <div className="text-xs text-muted-foreground leading-snug">{n.body}</div>}
+                            <div className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                          </div>
+                          {!n.read_at && (
+                            <button className="text-xs text-primary hover:underline" onClick={(e) => { e.preventDefault(); void markAsRead(n.id); }}>
+                              Tandai dibaca
+                            </button>
+                          )}
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {/* Session & theme */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -106,9 +198,10 @@ const Navbar = () => {
             <div className="flex flex-col gap-2">
               {user && (
                 <>
+                  {/* Primary nav */}
                   <Link to="/map" onClick={() => setMobileMenuOpen(false)}>
                     <Button
-                      variant={isActive("/map") ? "default" : "ghost"}
+                      variant={isActive("/map") ? "secondary" : "ghost"}
                       size="sm"
                       className="w-full justify-start gap-2"
                       onMouseEnter={prefetchMap}
@@ -116,6 +209,18 @@ const Navbar = () => {
                     >
                       <Map className="icon-sm" />
                       Peta
+                    </Button>
+                  </Link>
+                  <Link to="/me/reports" onClick={() => setMobileMenuOpen(false)}>
+                    <Button
+                      variant={isActive("/me/reports") ? "secondary" : "ghost"}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onMouseEnter={prefetchMyReports}
+                      onFocus={prefetchMyReports}
+                    >
+                      <FileText className="icon-sm" />
+                      Laporan Saya
                     </Button>
                   </Link>
                   <Link to="/report" onClick={() => setMobileMenuOpen(false)}>
@@ -130,10 +235,12 @@ const Navbar = () => {
                       Buat Laporan
                     </Button>
                   </Link>
-                  {isAdmin && (
+
+                  {/* Context nav */}
+                  {isAdmin ? (
                     <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
                       <Button
-                        variant={isActive("/admin") ? "accent" : "ghost"}
+                        variant={isActive("/admin") ? "secondary" : "ghost"}
                         size="sm"
                         className="w-full justify-start gap-2"
                         onMouseEnter={prefetchAdmin}
@@ -141,6 +248,33 @@ const Navbar = () => {
                       >
                         <LayoutDashboard className="icon-sm" />
                         Dashboard
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to="/help" onClick={() => setMobileMenuOpen(false)}>
+                      <Button
+                        variant={isActive("/help") ? "secondary" : "ghost"}
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onMouseEnter={prefetchHelp}
+                        onFocus={prefetchHelp}
+                      >
+                        <FileText className="icon-sm" />
+                        Help Center
+                      </Button>
+                    </Link>
+                  )}
+                  {!isAdmin && (
+                    <Link to="/help" onClick={() => setMobileMenuOpen(false)}>
+                      <Button
+                        variant={isActive("/help") ? "secondary" : "ghost"}
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onMouseEnter={prefetchHelp}
+                        onFocus={prefetchHelp}
+                      >
+                        <FileText className="icon-sm" />
+                        Help Center
                       </Button>
                     </Link>
                   )}

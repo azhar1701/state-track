@@ -106,20 +106,33 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
     const name = presetName.trim();
     if (!name) return;
     const payload = { user_id: user.id, name, filters: localFilters } as unknown as Record<string, unknown>;
-    const { data, error } = await supabase.from('filter_presets').insert(payload).select('id,name,filters').single();
+    // Upsert to avoid duplicate names per user
+    const { data, error } = await supabase
+      .from('filter_presets')
+      .upsert(payload, { onConflict: 'user_id,name' })
+      .select('id,name,filters')
+      .single();
     if (!error && data) {
       const row = data as { id: string; name: string; filters: MapFilters | null };
       const next = { id: row.id, name: row.name, filters: row.filters ?? {} };
-      setPresets((prev) => [...prev, next]);
-  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify([...presets, next])); } catch { /* ignore */ }
+      setPresets((prev) => {
+        const exists = prev.some((p) => p.name === next.name);
+        const updated = exists ? prev.map((p) => (p.name === next.name ? next : p)) : [...prev, next];
+        try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify(updated)); } catch { /* ignore */ }
+        return updated;
+      });
       setPresetName('');
-    } else {
-      // fallback: local only
-      const next = { id: `${Date.now()}`, name, filters: localFilters };
-      setPresets((prev) => [...prev, next]);
-  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify([...presets, next])); } catch { /* ignore */ }
-      setPresetName('');
+      return;
     }
+    // fallback: local only
+    const next = { id: `${Date.now()}`, name, filters: localFilters };
+    setPresets((prev) => {
+      const exists = prev.some((p) => p.name === next.name);
+      const updated = exists ? prev.map((p) => (p.name === next.name ? next : p)) : [...prev, next];
+      try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify(updated)); } catch { /* ignore */ }
+      return updated;
+    });
+    setPresetName('');
   };
 
   const applyPreset = (id: string) => {

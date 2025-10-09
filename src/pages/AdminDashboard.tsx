@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, Component, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -74,9 +74,17 @@ interface FullReport {
   photo_urls?: string[] | null;
 }
 
+const GeoDataManagerLazy = lazy(() => import("@/pages/GeoDataManager"));
+const HelpCenterLazy = lazy(() => import("@/pages/HelpCenter"));
+
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTabParam = (searchParams.get('tab') || 'reports').toLowerCase();
+  const [activeTab, setActiveTab] = useState<'reports' | 'geo' | 'help'>(
+    initialTabParam === 'geo' ? 'geo' : initialTabParam === 'help' ? 'help' : 'reports'
+  );
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -144,23 +152,40 @@ const AdminDashboard = () => {
     }
   };
 
+  // sync tab to URL query param
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const next = tab === 'geo' ? 'geo' : tab === 'help' ? 'help' : 'reports';
+    if (next !== activeTab) setActiveTab(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const onChangeTab = (tab: 'reports' | 'geo' | 'help') => {
+    setActiveTab(tab);
+    setSearchParams((prev) => {
+      const sp = new URLSearchParams(prev);
+      if (tab === 'reports') sp.delete('tab'); else sp.set('tab', tab);
+      return sp;
+    }, { replace: true });
+  };
+
   useEffect(() => {
     if (!authLoading && !isAdmin) {
       toast.error("Akses ditolak");
       navigate("/");
       return;
     }
-    if (user && isAdmin) {
+    if (user && isAdmin && activeTab === 'reports') {
       fetchStats();
       fetchReports();
       fetchChartData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, navigate, activeTab]);
 
   // Realtime updates for reports
   useEffect(() => {
-    if (!user || !isAdmin) return;
+    if (!user || !isAdmin || activeTab !== 'reports') return;
     const channel = supabase
       .channel('reports-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
@@ -174,7 +199,7 @@ const AdminDashboard = () => {
       channel.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy, page, pageSize]);
+  }, [user, isAdmin, activeTab, statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy, page, pageSize]);
 
   // debounce search input
   useEffect(() => {
@@ -184,27 +209,27 @@ const AdminDashboard = () => {
 
   // refetch when filters or sort or debounced search change
   useEffect(() => {
-    if (user && isAdmin) {
+    if (user && isAdmin && activeTab === 'reports') {
       setPage(1); // reset to first page when filters change
       fetchReports();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy]);
+  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy, activeTab]);
 
   useEffect(() => {
-    if (user && isAdmin) {
+    if (user && isAdmin && activeTab === 'reports') {
       fetchChartData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartDays]);
+  }, [chartDays, activeTab]);
 
   // Refetch charts when filters change to keep them in sync with the table
   useEffect(() => {
-    if (user && isAdmin) {
+    if (user && isAdmin && activeTab === 'reports') {
       fetchChartData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch]);
+  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch, activeTab]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -701,7 +726,7 @@ const AdminDashboard = () => {
     setUpdatingId(null);
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -714,11 +739,20 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-6">
       <div className="container">
-        <div className="mb-6">
+        <div className="mb-4">
           <h1 className="text-3xl font-bold mb-1">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola semua laporan infrastruktur</p>
+          <p className="text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
         </div>
 
+        {/* Admin Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => onChangeTab(v as 'reports' | 'geo' | 'help')}>
+          <TabsList className="w-full md:w-auto grid grid-cols-3 mb-6">
+            <TabsTrigger value="reports">Laporan</TabsTrigger>
+            <TabsTrigger value="geo">Geo Data</TabsTrigger>
+            <TabsTrigger value="help">Help Center</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="reports" className="mt-0">
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card>
@@ -758,7 +792,10 @@ const AdminDashboard = () => {
             </CardHeader>
           </Card>
         </div>
-
+        {loading ? (
+          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan…</div>
+        ) : (
+        <>
         {/* Charts */}
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
@@ -824,6 +861,8 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+        </>
+        )}
 
         {/* Filters */}
         <Card className="mb-5">
@@ -1076,6 +1115,21 @@ const AdminDashboard = () => {
             </DrawerErrorBoundary>
           </DrawerContent>
         </Drawer>
+          </TabsContent>
+
+          <TabsContent value="geo" className="mt-0">
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Geo Data Manager…</div>}>
+              <GeoDataManagerLazy />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="help" className="mt-0">
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center…</div>}>
+              <HelpCenterLazy />
+            </Suspense>
+          </TabsContent>
+
+        </Tabs>
       </div>
     </div>
   );
