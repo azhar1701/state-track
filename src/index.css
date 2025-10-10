@@ -218,3 +218,14 @@ All colors MUST be HSL.
   background: transparent;
   border: none;
 }
+
+/* Remove black focus box when clicking layers/markers */
+.leaflet-interactive,
+.leaflet-interactive:focus,
+.leaflet-container .leaflet-pane *:focus,
+.leaflet-marker-icon:focus,
+.custom-marker:focus,
+.asset-marker:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

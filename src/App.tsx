@@ -43,7 +43,7 @@ const AppInner = () => {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/me/reports" element={<MyReports />} />
               <Route path="/help" element={<HelpCenter />} />
-              <Route path="/assets" element={<Navigate to="/admin?tab=geo&tab2=assets" replace />} />
+              <Route path="/assets" element={<Navigate to="/admin?tab=geo" replace />} />
               <Route path="/admin/geo" element={<Navigate to="/admin?tab=geo" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
