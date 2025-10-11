@@ -132,6 +132,22 @@ const AdminDashboard = () => {
     return <span className={`px-2 py-1 rounded text-xs ${cls}`}>{status}</span>;
   };
 
+  // Fallback location display helper: prefer location_name, else use "desa, kecamatan"
+  const shortLocation = (r: Report | null | undefined) => {
+    if (!r) return '';
+    if (r.location_name && r.location_name.trim().length > 0) return r.location_name;
+    const parts = [r.desa, r.kecamatan].filter(Boolean) as string[];
+    return parts.join(', ');
+  };
+
+  // Small helper to preview long text with ellipsis
+  const previewText = (text?: string | null, max = 80) => {
+    if (!text) return '';
+    const s = text.trim();
+    if (s.length <= max) return s;
+    return s.slice(0, Math.max(0, max - 1)) + '…';
+  };
+
   const formatDate = (iso?: string | null) => {
     try {
       if (!iso) return '-';
@@ -236,7 +252,7 @@ const AdminDashboard = () => {
     try {
       let query = supabase
         .from('reports')
-        .select("id,title,category,status,created_at,location_name,severity,kecamatan,desa,resolution", { count: 'exact' });
+        .select("id,title,category,status,created_at,severity,kecamatan,desa,resolution", { count: 'exact' });
 
       if (statusFilter !== 'semua') {
         query = query.eq('status', statusFilter);
@@ -288,8 +304,94 @@ const AdminDashboard = () => {
         return next;
       });
     } catch (err) {
-      console.error(err);
-      toast.error('Gagal memuat laporan');
+      const msg = (err as { message?: string; code?: string })?.message || String(err);
+      console.error('[fetchReports] Extended select failed, trying fallback:', msg, err);
+      // Fallback: select only essential columns in case some columns don't exist yet (migrations not applied)
+      try {
+        let fb = supabase
+          .from('reports')
+          .select('id,title,category,status,created_at,desa,kecamatan', { count: 'exact' });
+
+        if (statusFilter !== 'semua') {
+          fb = fb.eq('status', statusFilter);
+        }
+        // Skip severityFilter in fallback if it's not "semua"
+        // because the column may not exist; we degrade gracefully
+        if (categoryFilter !== 'semua') {
+          fb = fb.eq('category', categoryFilter);
+        }
+        if (debouncedSearch) {
+          fb = fb.ilike('title', `%${debouncedSearch}%`);
+        }
+
+        if (sortBy === 'created_at_desc') {
+          fb = fb.order('created_at', { ascending: false });
+        } else if (sortBy === 'category_asc') {
+          fb = fb.order('category', { ascending: true }).order('created_at', { ascending: false });
+        } else {
+          fb = fb.order('created_at', { ascending: false });
+        }
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error, count } = await fb.range(from, to);
+  if (error) throw error;
+
+        const result = (data || []) as Report[];
+        setReports(result);
+        setTotalFiltered(count || 0);
+        setSelectedIds((prev) => {
+          const next = new Set<string>();
+          const ids = new Set(result.map((r) => r.id));
+          prev.forEach((id) => { if (ids.has(id)) next.add(id); });
+          return next;
+        });
+        // success via fallback; skip error toast
+      } catch (fbErr) {
+        const fbMsg = (fbErr as { message?: string; code?: string })?.message || String(fbErr);
+        console.error('[fetchReports] Fallback select failed, trying minimal fallback:', fbMsg, fbErr);
+        // Minimal fallback: include basic fields, then compute count via head-only query
+        try {
+          let minq = supabase
+            .from('reports')
+            .select('id,title,category,status,created_at,desa,kecamatan');
+          minq = minq.order('created_at', { ascending: false });
+          // Apply safe filters (skip severity because column might not exist)
+          if (statusFilter !== 'semua') minq = minq.eq('status', statusFilter);
+          if (categoryFilter !== 'semua') minq = minq.eq('category', categoryFilter);
+          if (debouncedSearch) minq = minq.ilike('title', `%${debouncedSearch}%`);
+          const from = (page - 1) * pageSize;
+          const to = from + pageSize - 1;
+          const { data, error } = await minq.range(from, to);
+          if (error) throw error;
+          const result = (data || []) as Report[];
+          setReports(result);
+          // Try to compute accurate count with head-only query on id
+          try {
+            let countQ = supabase
+              .from('reports')
+              .select('id', { count: 'exact', head: true });
+            if (statusFilter !== 'semua') countQ = countQ.eq('status', statusFilter);
+            if (categoryFilter !== 'semua') countQ = countQ.eq('category', categoryFilter);
+            if (debouncedSearch) countQ = countQ.ilike('title', `%${debouncedSearch}%`);
+            const { count: c, error: cntErr } = await countQ;
+            if (!cntErr && typeof c === 'number') setTotalFiltered(c);
+            else setTotalFiltered(result.length < pageSize ? from + result.length : from + pageSize + 1);
+          } catch {
+            setTotalFiltered(result.length < pageSize ? from + result.length : from + pageSize + 1);
+          }
+          setSelectedIds((prev) => {
+            const next = new Set<string>();
+            const ids = new Set(result.map((r) => r.id));
+            prev.forEach((id) => { if (ids.has(id)) next.add(id); });
+            return next;
+          });
+        } catch (minErr) {
+          const minMsg = (minErr as { message?: string; code?: string })?.message || String(minErr);
+          console.error('[fetchReports] Minimal fallback failed:', minMsg, minErr);
+          toast.error('Gagal memuat laporan', { description: minMsg });
+        }
+      }
     }
     setLoading(false);
   };
@@ -391,7 +493,8 @@ const AdminDashboard = () => {
       severity: r.severity || '',
       status: r.status,
       created_at: formatDateTime(r.created_at),
-      location_name: r.location_name || '',
+      resolution: r.resolution || '',
+      location_name: shortLocation(r) || '',
       kecamatan: r.kecamatan || '',
       desa: r.desa || '',
     }));
@@ -439,6 +542,7 @@ const AdminDashboard = () => {
         { header: 'Severity', dataKey: 'severity' },
         { header: 'Status', dataKey: 'status' },
         { header: 'Tanggal', dataKey: 'created_at' },
+        { header: 'Respon', dataKey: 'resolution' },
         { header: 'Lokasi', dataKey: 'location_name' },
         { header: 'Kecamatan', dataKey: 'kecamatan' },
         { header: 'Desa', dataKey: 'desa' },
@@ -992,7 +1096,7 @@ const AdminDashboard = () => {
                       <TableHead>Kategori</TableHead>
                       <TableHead>Severity</TableHead>
                       <TableHead>Lokasi</TableHead>
-                      <TableHead>Wilayah</TableHead>
+                      <TableHead>Respon</TableHead>
                       <TableHead>Tanggal</TableHead>
                       <TableHead className="text-right">Status</TableHead>
                     </TableRow>
@@ -1017,11 +1121,13 @@ const AdminDashboard = () => {
                         </TableCell>
                         <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
                         <TableCell>
-                          {report.location_name ? `📍 ${report.location_name}` : <span className="text-muted-foreground">-</span>}
+                          {shortLocation(report)
+                            ? `📍 ${shortLocation(report)}`
+                            : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell>
-                          {(report.kecamatan || report.desa)
-                            ? [report.desa, report.kecamatan].filter(Boolean).join(', ')
+                          {report.resolution && report.resolution.trim().length > 0
+                            ? <span title={report.resolution}>{previewText(report.resolution, 100)}</span>
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell>{formatDate(report.created_at)}</TableCell>
@@ -1233,7 +1339,13 @@ const AdminDetail = lazy(async () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <div>
                     <div className="text-xs text-muted-foreground">Lokasi</div>
-                    <div>{selectedReport.location_name || '-'}</div>
+                    <div>{(() => {
+                      if (!selectedReport) return '-';
+                      const byName = (selectedReport.location_name || '').trim();
+                      if (byName) return byName;
+                      const parts = [selectedReport.desa, selectedReport.kecamatan].filter(Boolean) as string[];
+                      return parts.length > 0 ? parts.join(', ') : '-';
+                    })()}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Wilayah</div>
