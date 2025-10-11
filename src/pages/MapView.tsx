@@ -450,18 +450,14 @@ const MapView = () => {
           if (!error && gl?.data) {
             // Accept FeatureCollection or attempt to find one inside nested objects
             let fc: FeatureCollection<Geometry> | null = null;
-            let ui: { titleField?: string; popupFields?: Array<{ field: string; label?: string }> } | undefined = undefined;
             let srcCrs: string | undefined = undefined;
             const raw = gl.data as unknown as Record<string, unknown>;
             // Preferred shape from GeoDataManager: { featureCollection, crs }
             if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
-              const wrapper = raw as { featureCollection?: unknown; crs?: string; ui?: unknown };
+              const wrapper = raw as { featureCollection?: unknown; crs?: string };
               if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
                 fc = wrapper.featureCollection as FeatureCollection<Geometry>;
                 srcCrs = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
-              }
-              if (wrapper.ui && typeof wrapper.ui === 'object') {
-                ui = wrapper.ui as { titleField?: string; popupFields?: Array<{ field: string; label?: string }> };
               }
             }
             // Back-compat: accept direct FC or nested object values
@@ -541,10 +537,7 @@ const MapView = () => {
                 } as FeatureCollection<Geometry>;
               }
 
-              // Attach ui config alongside FC in memory by piggybacking on FeatureCollection properties → keep separate map
-              const fcWithUi = resultFC as FeatureCollection<Geometry> & { __ui?: typeof ui };
-              fcWithUi.__ui = ui;
-              setDynamicData((s) => ({ ...s, [key]: fcWithUi }));
+              setDynamicData((s) => ({ ...s, [key]: resultFC }));
             } else {
               toast.error(`Gagal memuat layer: ${key}`, { description: 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.' });
             }
@@ -987,10 +980,7 @@ const MapView = () => {
                     }}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties as Record<string, unknown> | undefined;
-                      const fcAny = dynamicData[key] as (FeatureCollection<Geometry> & { __ui?: { titleField?: string; popupFields?: Array<{ field: string; label?: string }> } }) | null;
-                      const cfg = fcAny?.__ui;
-                      const titleFromCfg = cfg?.titleField && p ? (p[cfg.titleField] as string | undefined) : undefined;
-                      const title = titleFromCfg || (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
+                      const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
                       layer.bindTooltip(String(title), { sticky: true });
                       if (key === 'assets') {
                         const code = p?.code as string | undefined;
@@ -1006,19 +996,14 @@ const MapView = () => {
                             <div><strong>Keterangan:</strong> ${ket ?? '-'}</div>
                           </div>
                         `);
-                      } else if (cfg && Array.isArray(cfg.popupFields) && cfg.popupFields.length > 0 && p) {
-                        const rows = cfg.popupFields
-                          .filter((f) => f.field && Object.prototype.hasOwnProperty.call(p, f.field))
-                          .map((f) => {
-                            const label = f.label || f.field;
-                            const val = p[f.field];
-                            return `<div><strong>${label}:</strong> ${val ?? '-'}</div>`;
-                          })
-                          .join('');
+                      } else if (p) {
+                        // Generic popup showing first few properties
+                        const entries = Object.entries(p).slice(0, 8);
+                        const rows = entries.map(([k, v]) => `<div><strong>${k}:</strong> ${v as string ?? '-'}</div>`).join('');
                         const html = `
                           <div style="min-width:220px">
                             <div style="font-weight:600;margin-bottom:4px">${title}</div>
-                            ${rows || '<div class="text-muted-foreground">(Tidak ada atribut yang dipilih)</div>'}
+                            ${rows}
                           </div>
                         `;
                         layer.bindPopup(html);

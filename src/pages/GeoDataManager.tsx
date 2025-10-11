@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, Component, ReactNode } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,28 +12,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import UnifiedImporter from '@/components/import/UnifiedImporter';
 import type { ImportMode } from '@/components/import/UnifiedImporter';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+// removed ArrowUp/ArrowDown as popup configurator is removed
 
-// Local error boundary to prevent the whole page from crashing when dialog content fails
-class LocalErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(err: unknown) { console.error('[Popup Configurator] render error:', err); }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="space-y-2 text-sm">
-          <div className="text-red-600">Gagal merender konfigurator popup.</div>
-          <div className="text-muted-foreground">Tutup dialog lalu buka lagi. Jika tetap terjadi, coba bersihkan konfigurasi UI layer.</div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+// Popup configurator removed per request
 
 // Small inline editable helpers
 function InlineEditableText({ value, onSave }: { value: string; onSave: (v: string) => void | Promise<void> }) {
@@ -90,27 +71,7 @@ export default function GeoDataManager() {
   const [layerSearch, setLayerSearch] = useState('');
   const [layerSort, setLayerSort] = useState<'created_at_desc'|'name_asc'>('created_at_desc');
   const [missingAdminLayer, setMissingAdminLayer] = useState(false);
-  const [popupOpen, setPopupOpen] = useState(false);
-  const [popupLayer, setPopupLayer] = useState<GeoLayerRow | null>(null);
-  const [popupLoading, setPopupLoading] = useState(false);
-  const [availableProps, setAvailableProps] = useState<string[]>([]);
-  const [popupTitleField, setPopupTitleField] = useState<string | ''>('');
-  const [popupFields, setPopupFields] = useState<Array<{ field: string; label?: string }>>([]);
-  const [sampleProps, setSampleProps] = useState<Record<string, unknown> | null>(null);
-  // Render-time safety: sanitize popup fields and sample props
-  const safeAvailableProps = Array.isArray(availableProps) ? availableProps.filter((p): p is string => typeof p === 'string') : [];
-  const safeTitleField = (typeof popupTitleField === 'string' && safeAvailableProps.includes(popupTitleField)) ? popupTitleField : '';
-  const safePopupFields: Array<{ field: string; label?: string }> = (Array.isArray(popupFields) ? popupFields : [])
-    .filter((f) => !!f && typeof f === 'object')
-    // coerce into the target shape with runtime checks
-    .map((f: unknown) => {
-      const obj = f as { field?: unknown; label?: unknown };
-      const field = typeof obj.field === 'string' ? obj.field : '';
-      const label = obj.label != null ? String(obj.label) : undefined;
-      return { field, label } as { field: string; label?: string };
-    })
-    .filter((f) => f.field && safeAvailableProps.includes(f.field));
-  const safeSampleProps: Record<string, unknown> | null = (sampleProps && typeof sampleProps === 'object' && !Array.isArray(sampleProps)) ? sampleProps : null;
+  // Popup configurator state removed
 
   // Assets tab state & logic (ported from Assets.tsx)
   type Asset = {
@@ -221,7 +182,7 @@ export default function GeoDataManager() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Old handleUpload removed; using UnifiedImporter callbacks instead
+  // Using UnifiedImporter callbacks; popup configurator removed
 
   const delById = async (row: GeoLayerRow) => {
     const { error } = await supabase.from('geo_layers').delete().eq('id', row.id);
@@ -236,167 +197,7 @@ export default function GeoDataManager() {
     void load();
   };
 
-  const openPopupConfigurator = async (row: GeoLayerRow) => {
-    setPopupLayer(row);
-    setPopupOpen(true);
-    setPopupLoading(true);
-    try {
-      const res = await supabase
-        .from('geo_layers')
-        .select('data')
-        .eq('id', row.id)
-        .maybeSingle();
-      const { error } = res;
-      let data = res.data;
-      if (error) throw error;
-      // Fallback: fetch by key if id-based query returned no data
-      if (!data || typeof data.data === 'undefined' || data.data === null) {
-        const byKey = await supabase
-          .from('geo_layers')
-          .select('data')
-          .eq('key', row.key)
-          .limit(1)
-          .maybeSingle();
-        if (!byKey.error && byKey.data) {
-          data = byKey.data as typeof data;
-        }
-      }
-      const dbVal = (data?.data as unknown);
-      // Allow JSON stored as string
-      let raw: unknown = dbVal;
-      if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch { raw = {}; }
-      }
-      // Accept wrapper { featureCollection, crs, ui? }
-      let fc: { type?: string; features?: Array<{ properties?: Record<string, unknown> }> } | null = null;
-      let ui: { titleField?: string; popupFields?: Array<{ field: string; label?: string }> } | null = null;
-      if (raw && typeof raw === 'object') {
-        if ('featureCollection' in (raw as Record<string, unknown>)) {
-          const w = raw as { featureCollection?: unknown; ui?: unknown };
-          if (w.featureCollection && (w.featureCollection as { type?: string }).type === 'FeatureCollection') {
-            fc = w.featureCollection as { type?: string; features?: Array<{ properties?: Record<string, unknown> }> };
-          }
-          if (w.ui && typeof w.ui === 'object') {
-            ui = w.ui as { titleField?: string; popupFields?: Array<{ field: string; label?: string }> };
-          }
-        } else if ((raw as { type?: string }).type === 'FeatureCollection') {
-          fc = raw as unknown as { type?: string; features?: Array<{ properties?: Record<string, unknown> }> };
-        } else {
-          const vals = Object.values(raw as Record<string, unknown>);
-          const found = vals.find((v) => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection');
-          if (found) fc = found as unknown as { type?: string; features?: Array<{ properties?: Record<string, unknown> }> };
-        }
-      }
-      const names = new Set<string>();
-      const feats = Array.isArray(fc?.features) ? fc!.features.slice(0, 20) : [];
-      feats.forEach((f) => Object.keys((f?.properties as Record<string, unknown> | undefined) || {}).forEach((k) => names.add(k)));
-      // capture one sample feature properties for preview
-      const firstProps = (Array.isArray(fc?.features) && fc!.features.length > 0) ? (fc!.features[0].properties || null) : null;
-      setSampleProps(firstProps as Record<string, unknown> | null);
-      const propsArr = Array.from(names);
-      setAvailableProps(propsArr);
-      // normalize title to '' if not available in properties
-      const initialTitle = ui?.titleField || '';
-      let titleField = (initialTitle && propsArr.includes(initialTitle)) ? initialTitle : '';
-      const pfRaw = Array.isArray(ui?.popupFields) ? (ui!.popupFields as Array<unknown>) : [];
-      let pfParsed = pfRaw
-        .map((x) => (x && typeof x === 'object' ? x as { field?: unknown; label?: unknown } : { field: undefined, label: undefined }))
-        .filter((x) => typeof x.field === 'string' && (x.field as string).length > 0)
-        .map((x) => ({ field: String(x.field), label: x.label != null ? String(x.label) : undefined }));
-      // Clamp to available props to avoid Select mismatch errors
-      pfParsed = pfParsed.map((f) => ({ field: propsArr.includes(f.field) ? f.field : '', label: f.label }));
-      // If no UI config provided, suggest sensible defaults based on layer key
-      if ((!ui || pfParsed.length === 0) && row?.key) {
-        const pick = (...candidates: string[]) => candidates.find((c) => c && propsArr.includes(c)) || '';
-        const keyLower = row.key.toLowerCase();
-        if (row.key === 'admin_boundaries') {
-          const desa = pick('DESA_1','DESA','name','NAMOBJ');
-          const kec = pick('KECAMATAN','Kecamatan');
-          titleField = desa || kec || titleField;
-          pfParsed = [
-            desa ? { field: desa, label: 'Desa' as string } : null,
-            kec ? { field: kec, label: 'Kecamatan' as string } : null,
-          ].filter(Boolean) as Array<{ field: string; label: string }>;
-        } else if (keyLower.includes('sungai') || keyLower.includes('river')) {
-          const nama = pick('NAMOBJ','name','NAMA');
-          const kec = pick('KECAMATAN','Kecamatan');
-          titleField = nama || titleField;
-          pfParsed = [
-            nama ? { field: nama, label: 'Nama' as string } : null,
-            kec ? { field: kec, label: 'Kecamatan' as string } : null,
-          ].filter(Boolean) as Array<{ field: string; label: string }>;
-        }
-      }
-      setPopupTitleField(titleField);
-      setPopupFields(pfParsed);
-    } catch (e) {
-      console.warn('Failed to load layer data for popup config', e);
-      setAvailableProps([]);
-      setPopupTitleField('');
-      setPopupFields([]);
-      setSampleProps(null);
-      toast.error('Gagal memuat data layer untuk konfigurasi');
-    } finally {
-      setPopupLoading(false);
-    }
-  };
-
-  const savePopupConfigurator = async () => {
-    if (!popupLayer) return;
-    try {
-      setPopupLoading(true);
-      const { data, error } = await supabase
-        .from('geo_layers')
-        .select('data')
-        .eq('id', popupLayer.id)
-        .maybeSingle();
-      if (error) throw error;
-      // Parse stored data which could be an object, a stringified JSON, or a direct FeatureCollection
-      let raw: unknown = (data?.data as unknown) || {};
-      if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch { raw = {}; }
-      }
-      // Normalize saved popup fields: filter empties and clamp to available props
-      const propsSet = new Set(availableProps);
-      const cleanedFields = (popupFields || [])
-        .filter((f) => f && typeof f.field === 'string' && f.field.length > 0)
-        .map((f) => ({ field: propsSet.has(f.field) ? f.field : '', label: f.label || undefined }))
-        .filter((f) => f.field !== '');
-      const newUi = { titleField: (popupTitleField && propsSet.has(popupTitleField)) ? popupTitleField : undefined, popupFields: cleanedFields };
-
-      // Build new data preserving existing featureCollection/crs if present
-      let newData: Record<string, unknown> = {};
-      if (raw && typeof raw === 'object') {
-        const obj = raw as Record<string, unknown>;
-        // If already in preferred wrapper shape, merge into it
-        if ('featureCollection' in obj || 'crs' in obj || 'ui' in obj) {
-          newData = { ...obj, ui: newUi };
-        } else if ((obj as { type?: string }).type === 'FeatureCollection') {
-          // Wrap legacy direct FC
-          newData = { featureCollection: obj, crs: 'EPSG:4326', ui: newUi };
-        } else {
-          // Unknown object shape: keep original keys and just add/overwrite ui
-          newData = { ...obj, ui: newUi };
-        }
-      } else {
-        // raw was not an object (null/array/string) → write as wrapper with whatever we can
-        newData = { ui: newUi };
-      }
-
-      const { error: upErr } = await supabase
-        .from('geo_layers')
-        .update({ data: newData })
-        .eq('id', popupLayer.id);
-      if (upErr) throw upErr;
-      toast.success('Konfigurasi popup disimpan');
-      setPopupOpen(false);
-    } catch (e) {
-      console.warn('Failed saving popup config', e);
-      toast.error('Gagal menyimpan konfigurasi');
-    } finally {
-      setPopupLoading(false);
-    }
-  };
+  // Popup configurator handlers removed
 
   if (!user || !isAdmin) return (
     <div className="container mx-auto px-4 py-6">
@@ -616,7 +417,6 @@ export default function GeoDataManager() {
                     <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => void openPopupConfigurator(r)}>Atur Popup</Button>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="destructive">Hapus</Button>
@@ -810,134 +610,7 @@ export default function GeoDataManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Popup configurator dialog */}
-      <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Atur Popup Layer {popupLayer?.name ? `“${popupLayer.name}”` : ''}</DialogTitle>
-          </DialogHeader>
-          <LocalErrorBoundary>
-          <div className="space-y-4">
-            {popupLoading ? (
-              <div className="text-sm text-muted-foreground">Memuat…</div>
-            ) : (
-              <>
-                 <div>
-                  <Label>Field Judul (opsional)</Label>
-                  <Select value={safeTitleField} onValueChange={(v) => setPopupTitleField(v)}>
-                    <SelectTrigger><SelectValue placeholder="Pilih field judul" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">(kosong)</SelectItem>
-                      {safeAvailableProps.map((n) => (<SelectItem key={n} value={n}>{n}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Field Popup</Label>
-                    <Button size="sm" variant="outline" onClick={() => setPopupFields((f) => [...f, { field: '' }])}>Tambah Field</Button>
-                  </div>
-                  <div className="space-y-2">
-                    {(Array.isArray(popupFields) ? popupFields : []).length === 0 && (
-                      <div className="text-sm text-muted-foreground">Belum ada field. Tambahkan untuk menampilkan atribut di popup.</div>
-                    )}
-                    {(Array.isArray(popupFields) ? popupFields : []).map((pf, idx) => {
-                      const fieldVal = pf && typeof pf === 'object' && typeof (pf as { field?: unknown }).field === 'string' ? (pf as { field: string }).field : '';
-                      const labelVal = pf && typeof pf === 'object' && typeof (pf as { label?: unknown }).label === 'string' ? (pf as { label: string }).label : '';
-                      return (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center">
-                        <div className="md:col-span-3">
-                          <Select value={fieldVal} onValueChange={(v) => setPopupFields((arr) => {
-                            const base = Array.isArray(arr) ? [...arr] : [] as Array<{ field: string; label?: string }>;
-                            base[idx] = { field: v, label: labelVal };
-                            return base;
-                          })}>
-                            <SelectTrigger><SelectValue placeholder="Pilih field" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="">(pilih)</SelectItem>
-                              {safeAvailableProps.map((n) => (<SelectItem key={n} value={n}>{n}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="md:col-span-3">
-                          <Input placeholder="Label (opsional)" value={labelVal} onChange={(e) => setPopupFields((arr) => {
-                            const base = Array.isArray(arr) ? [...arr] : [] as Array<{ field: string; label?: string }>;
-                            base[idx] = { field: fieldVal, label: e.target.value };
-                            return base;
-                          })} />
-                        </div>
-                        <div className="md:col-span-1 flex items-center justify-end gap-2">
-                          <Button size="icon" variant="outline" disabled={idx === 0} onClick={() => setPopupFields((arr) => {
-                            if (!Array.isArray(arr) || idx === 0) return arr as typeof arr;
-                            const next = [...arr];
-                            const tmp = next[idx - 1];
-                            next[idx - 1] = next[idx];
-                            next[idx] = tmp;
-                            return next;
-                          })} aria-label="Pindah ke atas">
-                            <ArrowUp className="w-4 h-4" />
-                          </Button>
-                          <Button size="icon" variant="outline" disabled={idx === (Array.isArray(popupFields) ? popupFields.length - 1 : 0)} onClick={() => setPopupFields((arr) => {
-                            if (!Array.isArray(arr) || idx === arr.length - 1) return arr as typeof arr;
-                            const next = [...arr];
-                            const tmp = next[idx + 1];
-                            next[idx + 1] = next[idx];
-                            next[idx] = tmp;
-                            return next;
-                          })} aria-label="Pindah ke bawah">
-                            <ArrowDown className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setPopupFields((arr) => (Array.isArray(arr) ? arr.filter((_, i) => i !== idx) : []))}>Hapus</Button>
-                        </div>
-                      </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                {/* Live preview */}
-                <div className="rounded-md border p-3 bg-muted/30">
-                  <div className="text-sm font-medium mb-2">Pratinjau Popup</div>
-                  {safeSampleProps ? (
-                    <div className="text-sm space-y-1">
-                      <div className="font-semibold">{(() => {
-                        const t = safeTitleField && safeSampleProps ? (safeSampleProps[safeTitleField] as unknown) : undefined;
-                        return (t != null && t !== '') ? String(t) : (String(popupLayer?.name || ''));
-                      })()}</div>
-                      {safePopupFields.length > 0 ? (
-                        <div className="space-y-0.5">
-                          {safePopupFields.map((f, i) => {
-                            const label = f.label || f.field || `Field ${i+1}`;
-                            const val = f.field ? safeSampleProps[f.field] : undefined;
-                            return (
-                              <div key={i}><strong>{label}:</strong> {val == null || val === '' ? '-' : String(val)}</div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-muted-foreground">(Tidak ada atribut yang dipilih)</div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground">Data contoh tidak tersedia untuk pratinjau</div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-2 pt-2">
-                  <Button variant="outline" onClick={() => { setPopupTitleField(''); setPopupFields([]); }}>Bersihkan konfigurasi</Button>
-                  <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setPopupOpen(false)}>Batal</Button>
-                  <Button onClick={() => {
-                    // filter out empty fields before saving (local state only)
-                    setPopupFields((prev) => prev.filter((f) => f.field && String(f.field).length > 0));
-                    void savePopupConfigurator();
-                  }} disabled={popupLoading}>Simpan</Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          </LocalErrorBoundary>
-        </DialogContent>
-      </Dialog>
+      {/* Popup configurator removed */}
     </div>
   );
 }
