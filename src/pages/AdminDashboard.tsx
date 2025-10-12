@@ -500,18 +500,55 @@ const AdminDashboard = () => {
     }));
   };
 
-  const exportExcel = async () => {
+  const exportCSV = async () => {
     try {
-      const XLSX = await import('xlsx');
-      const ws = XLSX.utils.json_to_sheet(buildExportRows());
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Reports');
+      const rows = buildExportRows();
+      if (rows.length === 0) {
+        toast.info('Tidak ada data untuk diexport');
+        return;
+      }
+      const columns = [
+        { header: 'ID', key: 'id' },
+        { header: 'Judul', key: 'title' },
+        { header: 'Kategori', key: 'category' },
+        { header: 'Severity', key: 'severity' },
+        { header: 'Status', key: 'status' },
+        { header: 'Tanggal', key: 'created_at' },
+        { header: 'Respon', key: 'resolution' },
+        { header: 'Lokasi', key: 'location_name' },
+        { header: 'Kecamatan', key: 'kecamatan' },
+        { header: 'Desa', key: 'desa' },
+      ] as const;
+
+      const escape = (val: unknown) => {
+        if (val == null) return '';
+        const s = String(val);
+        // Quote if contains comma, quote, newline; escape quotes by doubling
+        if (/[",\n\r]/.test(s)) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+
+      const headerLine = columns.map(c => escape(c.header)).join(',');
+  type Row = ReturnType<typeof buildExportRows>[number];
+  const bodyLines = rows.map((r: Row) => columns.map(c => escape((r as Record<string, unknown>)[c.key])).join(','));
+      const csv = [headerLine, ...bodyLines].join('\r\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      XLSX.writeFile(wb, `reports-export-${ts}.xlsx`);
-      toast.success('Export Excel berhasil');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reports-export-${ts}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Export CSV berhasil');
     } catch (err) {
       console.error(err);
-      toast.error('Gagal export ke Excel');
+      toast.error('Gagal export ke CSV');
     }
   };
 
@@ -1037,7 +1074,7 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between gap-3">
               <CardTitle>Semua Laporan</CardTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={exportExcel}>Export Excel</Button>
+                <Button variant="outline" onClick={exportCSV}>Export CSV</Button>
                 <Button variant="outline" onClick={exportPDF}>Export PDF</Button>
               </div>
             </div>

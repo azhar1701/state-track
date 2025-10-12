@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":timezone(Asia/Jakarta)"
+  ],
+  "rangeStrategy": "bump",
+  "schedule": ["after 03:00 before 07:00 every weekend"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^vite($|-)", "^@vitejs/", "^vite-plugin-"],
+      "groupName": "vite and plugins"
+    },
+    {
+      "matchPackagePatterns": ["^eslint($|-)", "^@eslint/", "^typescript$", "^@types/", "^typescript-eslint"],
+      "groupName": "eslint/types packages"
+    },
+    {
+      "matchPackagePatterns": ["^tailwindcss$", "^@tailwindcss/", "^postcss$", "^autoprefixer$"],
+      "groupName": "tailwind/postcss"
+    }
+  ]
+}
