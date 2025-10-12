@@ -29,11 +29,28 @@ export default function RecentReports() {
   useEffect(() => {
     const load = async () => {
       if (!isSupabaseConfigured) { setItems([]); return; }
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('reports')
         .select('id,title,status,severity,location_name,created_at')
         .order('created_at', { ascending: false })
         .limit(5);
+      if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('column') && error.message.toLowerCase().includes('does not exist')) {
+        // Retry without location_name if column missing
+        const retry = await supabase
+          .from('reports')
+          .select('id,title,status,severity,created_at')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        data = retry.data as typeof data;
+        error = retry.error as typeof error;
+        if (!error && data) {
+          type PartialRecent = Omit<RecentItem, 'location_name'>;
+          const list = data as unknown as PartialRecent[];
+          const mapped: RecentItem[] = list.map((d) => ({ ...d, location_name: null }));
+          setItems(mapped);
+          return;
+        }
+      }
       if (error) { setError('Gagal memuat'); setItems([]); return; }
       setItems((data || []) as RecentItem[]);
     };

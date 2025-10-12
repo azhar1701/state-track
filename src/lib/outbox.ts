@@ -83,3 +83,17 @@ export async function registerBackgroundSync(tag = 'submit-reports') {
   }
   return false;
 }
+
+// Manually trigger outbox sync from UI: try to register background sync and
+// then dispatch an 'online' event which our hook listens to.
+export async function triggerOutboxSync() {
+  try {
+    await registerBackgroundSync();
+  } catch { /* ignore */ }
+  try {
+    window.dispatchEvent(new Event('online'));
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -274,7 +274,7 @@ const ReportForm = () => {
   useEffect(() => {
     const parsed = reportSchema.safeParse(formData);
     if (parsed.success) {
-      setErrors((prev) => ({ ...prev, title: undefined, description: undefined, category: undefined, severity: undefined, damageLevel: undefined, reporterName: undefined, phone: undefined, kecamatan: undefined, desa: undefined }));
+      setErrors((prev) => ({ ...prev, title: undefined, description: undefined, category: undefined, severity: undefined, reporterName: undefined, phone: undefined, kecamatan: undefined, desa: undefined }));
     } else {
       const next: Partial<Record<keyof ReportFormData, string>> = {};
       for (const issue of parsed.error.issues) {
@@ -439,25 +439,34 @@ const ReportForm = () => {
       }
 
       setUploadPercent((p) => (p !== null && p < 80 ? 80 : p));
-      const { data: inserted, error: insertError } = await supabase.from('reports').insert({
+      const basePayload = {
         user_id: user!.id,
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        status: 'baru',
+        status: 'baru' as const,
         latitude: location.latitude,
         longitude: location.longitude,
-        location_name: location.name || null,
         photo_url: photoUrl,
         // New array column for multiple photos; keep single photo_url for compatibility
         photo_urls: photoUrls.length > 0 ? photoUrls : null,
-  severity: formData.severity,
-  incident_date: formData.incidentDate,
+        severity: formData.severity,
+        incident_date: formData.incidentDate,
         reporter_name: formData.reporterName,
         phone: formData.phone,
         kecamatan: formData.kecamatan,
         desa: formData.desa,
-      }).select('id').single();
+      };
+      const fullPayload = { ...basePayload, location_name: location.name || null } as typeof basePayload & { location_name?: string | null };
+      let { data: inserted, error: insertError } = await supabase.from('reports').insert(fullPayload).select('id').single();
+      if (insertError && typeof insertError.message === 'string' && insertError.message.toLowerCase().includes('column') && insertError.message.toLowerCase().includes('does not exist')) {
+        // Retry without optional columns that may not exist in some environments
+        const minimal = { ...basePayload };
+        const retry = await supabase.from('reports').insert(minimal).select('id').single();
+        inserted = retry.data as typeof inserted;
+        insertError = retry.error as typeof insertError;
+      }
+      
 
       if (insertError) throw insertError;
 

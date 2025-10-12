@@ -22,15 +22,14 @@ async function uploadPhotos(userId: string, photos: OutboxReport['photos']) {
 async function submitSingle(out: OutboxReport, userId: string) {
   const photoUrls = out.photos.length > 0 ? await uploadPhotos(userId, out.photos) : [];
   const payload = out.payload as ReportOutboxPayload;
-  const { error } = await supabase.from('reports').insert({
+  const basePayload = {
     user_id: userId,
     title: payload.title,
     description: payload.description,
-  category: payload.category,
-    status: 'baru',
+    category: payload.category,
+    status: 'baru' as const,
     latitude: payload.location.latitude,
     longitude: payload.location.longitude,
-    location_name: payload.location.name || null,
     photo_url: photoUrls[0] || null,
     photo_urls: photoUrls.length ? photoUrls : null,
     severity: payload.severity,
@@ -39,7 +38,15 @@ async function submitSingle(out: OutboxReport, userId: string) {
     phone: payload.phone,
     kecamatan: payload.kecamatan,
     desa: payload.desa,
-  });
+  };
+  const fullPayload = { ...basePayload, location_name: payload.location.name || null } as typeof basePayload & { location_name?: string | null };
+  let { error } = await supabase.from('reports').insert(fullPayload);
+  if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('column') && error.message.toLowerCase().includes('does not exist')) {
+    // Retry without optional columns missing in some deployments
+    const minimal = { ...basePayload };
+    const retry = await supabase.from('reports').insert(minimal);
+    error = retry.error as typeof error;
+  }
   if (error) throw error;
 }
 

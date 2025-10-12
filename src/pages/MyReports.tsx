@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { triggerOutboxSync } from '@/lib/outbox';
+import { toast } from 'sonner';
 
 type ReportRow = {
   id: string;
@@ -60,6 +62,7 @@ export default function MyReports() {
   const [category, setCategory] = useState<string>('all');
   const [q, setQ] = useState('');
   const [selectedReport, setSelectedReport] = useState<ReportRow | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const where = useMemo(() => ({ status, category, q }), [status, category, q]);
@@ -74,6 +77,7 @@ export default function MyReports() {
     setLoading(true);
     setError(null);
     try {
+      // Primary query with extended columns
       let query = supabase
         .from('reports')
         .select(
@@ -91,8 +95,60 @@ export default function MyReports() {
       const to = from + PAGE_SIZE - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
-      if (error) throw error;
+      let { data, error, count } = await query;
+      if (error) {
+        // If column not found (e.g., location_name), retry without it and other optional fields
+        const lower = (error.message || '').toLowerCase();
+        if (lower.includes('column') && lower.includes('does not exist')) {
+          let fb = supabase
+            .from('reports')
+            .select('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url', { count: 'exact' })
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          if (where.status !== 'all') fb = fb.eq('status', where.status);
+          if (where.category !== 'all') fb = fb.eq('category', where.category);
+          if (where.q) fb = fb.ilike('title', `%${where.q}%`);
+          fb = fb.range(from, to);
+          const retry = await fb;
+          data = retry.data as unknown[] | null;
+          error = retry.error as unknown as Error | null;
+          count = retry.count ?? 0;
+          if (error) throw error;
+          // Map to ReportRow with safe defaults for missing fields
+          type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
+            id: string;
+            created_at: string;
+            user_id: string;
+            latitude: number | string;
+            longitude: number | string;
+          };
+          const mapped = (data || []).map((r) => {
+            const rr = r as PartialRow;
+            const row: ReportRow = {
+              id: rr.id,
+              title: (rr.title as string) ?? null,
+              description: (rr.description as string) ?? null,
+              category: (rr.category as string) ?? null,
+              status: (rr.status as string) ?? null,
+              incident_date: (rr.incident_date as string) ?? null,
+              created_at: rr.created_at,
+              user_id: rr.user_id,
+              latitude: typeof rr.latitude === 'string' ? Number(rr.latitude) : (rr.latitude as number),
+              longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
+              location_name: null,
+              photo_url: (rr.photo_url as string) ?? null,
+              photo_urls: null,
+              severity: null,
+              resolution: null,
+            };
+            return row;
+          });
+          setRows(mapped);
+          setTotal(count ?? 0);
+          return;
+        }
+        throw error;
+      }
       setRows((data ?? []) as ReportRow[]);
       setTotal(count ?? 0);
     } catch (e: unknown) {
@@ -107,6 +163,20 @@ export default function MyReports() {
     void loadData();
   }, [loadData]);
 
+  // Realtime sync for user's reports
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('myreports-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` },
+        () => { void loadData(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, loadData]);
+
   const resetFilters = () => {
     setStatus('all');
     setCategory('all');
@@ -120,9 +190,28 @@ export default function MyReports() {
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Laporan Saya</h1>
-        <Button variant="outline" size="sm" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Muat Ulang
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={refetch}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Muat Ulang
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={syncing}
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                const ok = await triggerOutboxSync();
+                toast.message(ok ? 'Sinkronisasi dimulai' : 'Sinkronisasi dipicu');
+                setTimeout(() => { void loadData(); }, 1200);
+              } finally {
+                setSyncing(false);
+              }
+            }}
+          >
+            {syncing ? 'Menyinkronkan…' : 'Sinkronkan'}
+          </Button>
+        </div>
       </div>
 
       <Card className="mb-4">
