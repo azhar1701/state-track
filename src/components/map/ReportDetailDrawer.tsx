@@ -44,7 +44,7 @@ const statusColors = {
   baru: 'bg-amber-500 text-white',
   diproses: 'bg-blue-500 text-white',
   selesai: 'bg-green-600 text-white',
-};
+} as const;
 
 const categoryLabels = {
   jalan: 'Jalan',
@@ -131,12 +131,14 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
             <Badge variant="outline" className="px-2 py-0 h-5">
               {statusColors[report.status as keyof typeof statusColors] ? (
                 <span className={`inline-block w-2 h-2 rounded-full mr-1 align-middle ${statusColors[report.status as keyof typeof statusColors].split(' ')[0]}`}></span>
-              ) : null}
+              ) : (
+                <span className="inline-block w-2 h-2 rounded-full mr-1 align-middle bg-slate-500"></span>
+              )}
               {report.status}
             </Badge>
             <span>•</span>
             <Badge variant="secondary" className="px-2 py-0 h-5">
-              {categoryLabels[report.category as keyof typeof categoryLabels]}
+              {categoryLabels[report.category as keyof typeof categoryLabels] ?? report.category}
             </Badge>
           </div>
         </div>

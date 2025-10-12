@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { triggerOutboxSync } from '@/lib/outbox';
-import { toast } from 'sonner';
+// Sync button removed per request
 
 type ReportRow = {
   id: string;
@@ -62,7 +61,6 @@ export default function MyReports() {
   const [category, setCategory] = useState<string>('all');
   const [q, setQ] = useState('');
   const [selectedReport, setSelectedReport] = useState<ReportRow | null>(null);
-  const [syncing, setSyncing] = useState(false);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const where = useMemo(() => ({ status, category, q }), [status, category, q]);
@@ -207,23 +205,6 @@ export default function MyReports() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={refetch}>
             <RefreshCw className="w-4 h-4 mr-2" /> Muat Ulang
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            disabled={syncing}
-            onClick={async () => {
-              setSyncing(true);
-              try {
-                const ok = await triggerOutboxSync();
-                toast.message(ok ? 'Sinkronisasi dimulai' : 'Sinkronisasi dipicu');
-                setTimeout(() => { void loadData(); }, 1200);
-              } finally {
-                setSyncing(false);
-              }
-            }}
-          >
-            {syncing ? 'Menyinkronkan…' : 'Sinkronkan'}
           </Button>
         </div>
       </div>

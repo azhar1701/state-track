@@ -47,6 +47,14 @@ export type Database = {
           photo_url: string | null
           // Added locally: array of photo URLs for multi-photo support
           photo_urls?: string[] | null
+          // New fields from migrations
+          incident_date: string | null
+          severity: Database["public"]["Enums"]["report_severity"] | null
+          reporter_name: string | null
+          phone: string | null
+          kecamatan: string | null
+          desa: string | null
+          resolution: string | null
           status: Database["public"]["Enums"]["report_status"]
           title: string
           updated_at: string
@@ -62,6 +70,13 @@ export type Database = {
           longitude: number
           photo_url?: string | null
           photo_urls?: string[] | null
+          incident_date?: string | null
+          severity?: Database["public"]["Enums"]["report_severity"] | null
+          reporter_name?: string | null
+          phone?: string | null
+          kecamatan?: string | null
+          desa?: string | null
+          resolution?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           title: string
           updated_at?: string
@@ -77,12 +92,99 @@ export type Database = {
           longitude?: number
           photo_url?: string | null
           photo_urls?: string[] | null
+          incident_date?: string | null
+          severity?: Database["public"]["Enums"]["report_severity"] | null
+          reporter_name?: string | null
+          phone?: string | null
+          kecamatan?: string | null
+          desa?: string | null
+          resolution?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      kecamatan: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          id?: string
+          name: string
+        }
+        Update: {
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      desa: {
+        Row: {
+          id: string
+          kecamatan_id: string | null
+          name: string
+        }
+        Insert: {
+          id?: string
+          kecamatan_id?: string | null
+          name: string
+        }
+        Update: {
+          id?: string
+          kecamatan_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "desa_kecamatan_id_fkey" | string
+            columns: ["kecamatan_id"]
+            referencedRelation: "kecamatan"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      report_logs: {
+        Row: {
+          id: string
+          report_id: string
+          action: 'status_update' | 'bulk_status_update' | 'edit'
+          before: Record<string, unknown> | null
+          after: Record<string, unknown> | null
+          actor_id: string | null
+          actor_email: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          action: 'status_update' | 'bulk_status_update' | 'edit'
+          before?: Record<string, unknown> | null
+          after?: Record<string, unknown> | null
+          actor_id?: string | null
+          actor_email?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          report_id?: string
+          action?: 'status_update' | 'bulk_status_update' | 'edit'
+          before?: Record<string, unknown> | null
+          after?: Record<string, unknown> | null
+          actor_id?: string | null
+          actor_email?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_logs_report_id_fkey" | string
+            columns: ["report_id"]
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_roles: {
         Row: {
@@ -128,6 +230,7 @@ export type Database = {
         | "sungai"
         | "lainnya"
       report_status: "baru" | "diproses" | "selesai"
+      report_severity: "ringan" | "sedang" | "berat"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -256,15 +359,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      report_category: [
-        "jalan",
-        "jembatan",
-        "lampu",
-        "drainase",
-        "taman",
-        "lainnya",
-      ],
+      report_category: ["jalan", "jembatan", "irigasi", "drainase", "sungai", "lainnya"],
       report_status: ["baru", "diproses", "selesai"],
+      report_severity: ["ringan", "sedang", "berat"],
     },
   },
 } as const

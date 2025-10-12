@@ -95,3 +95,38 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Local setup and environment
+
+Create `.env.local` at project root (copy from `.env.local.example`) and fill:
+
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_PUBLISHABLE_KEY
+- VITE_ADMIN_EMAILS (optional; fallback allowlist for admin)
+- VITE_MAPBOX_TOKEN (optional; only for the example Mapbox form under `components/report`)
+
+Then install dependencies and run the app.
+
+## Database migrations checklist (Supabase)
+
+Apply migrations in `supabase/migrations` using Supabase SQL editor or CLI. Ensure the following exist:
+
+- Tables: `reports`, `profiles`, `user_roles`, `report_logs`, `kecamatan`, `desa`
+- Enums: `report_status` (baru|diproses|selesai), `report_category` (jalan|jembatan|irigasi|drainase|sungai|lainnya), `report_severity` (ringan|sedang|berat)
+- Columns on `reports`: `incident_date`, `photo_urls` (jsonb), `severity`, `reporter_name`, `phone`, `kecamatan`, `desa`, `resolution`
+- Storage bucket: `report-photos` (public) with policies from initial migration
+
+Optional seeds for wilayah Ciamis tersedia di folder `supabase/seed/ciamis` dan skrip `scripts/seed-ciamis.mjs`.
+
+## Offline & Outbox
+
+Jika koneksi internet tidak tersedia saat submit laporan, data akan disimpan ke Outbox (IndexedDB) dan dikirim otomatis saat online. Service Worker juga mendaftarkan Background Sync dengan tag `submit-reports` bila browser mendukung.
+
+## Testing
+
+Proyek ini menggunakan Vitest untuk unit test ringan.
+
+- Jalankan semua test: `npm run test`
+- Mode watch: `npm run test:watch`
+
+Catatan: Test environment menggunakan `jsdom` dan polyfill IndexedDB via `fake-indexeddb` untuk menguji Outbox.
