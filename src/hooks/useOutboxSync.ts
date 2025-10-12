@@ -41,7 +41,15 @@ async function submitSingle(out: OutboxReport, userId: string) {
   };
   const fullPayload = { ...basePayload, location_name: payload.location.name || null } as typeof basePayload & { location_name?: string | null };
   let { error } = await supabase.from('reports').insert(fullPayload);
-  if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('column') && error.message.toLowerCase().includes('does not exist')) {
+  if (
+    error &&
+    typeof error.message === 'string' &&
+    (
+      error.message.toLowerCase().includes('column') && error.message.toLowerCase().includes('does not exist') ||
+      error.message.toLowerCase().includes('schema cache') ||
+      error.message.toLowerCase().includes('could not find')
+    )
+  ) {
     // Retry without optional columns missing in some deployments
     const minimal = { ...basePayload };
     const retry = await supabase.from('reports').insert(minimal);

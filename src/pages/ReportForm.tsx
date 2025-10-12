@@ -459,7 +459,15 @@ const ReportForm = () => {
       };
       const fullPayload = { ...basePayload, location_name: location.name || null } as typeof basePayload & { location_name?: string | null };
       let { data: inserted, error: insertError } = await supabase.from('reports').insert(fullPayload).select('id').single();
-      if (insertError && typeof insertError.message === 'string' && insertError.message.toLowerCase().includes('column') && insertError.message.toLowerCase().includes('does not exist')) {
+      if (
+        insertError &&
+        typeof insertError.message === 'string' &&
+        (
+          insertError.message.toLowerCase().includes('column') && insertError.message.toLowerCase().includes('does not exist') ||
+          insertError.message.toLowerCase().includes('schema cache') ||
+          insertError.message.toLowerCase().includes('could not find')
+        )
+      ) {
         // Retry without optional columns that may not exist in some environments
         const minimal = { ...basePayload };
         const retry = await supabase.from('reports').insert(minimal).select('id').single();

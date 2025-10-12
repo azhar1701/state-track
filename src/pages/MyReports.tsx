@@ -99,7 +99,11 @@ export default function MyReports() {
       if (error) {
         // If column not found (e.g., location_name), retry without it and other optional fields
         const lower = (error.message || '').toLowerCase();
-        if (lower.includes('column') && lower.includes('does not exist')) {
+        const missingColumn =
+          (lower.includes('column') && lower.includes('does not exist')) ||
+          lower.includes('schema cache') ||
+          lower.includes('could not find');
+        if (missingColumn) {
           let fb = supabase
             .from('reports')
             .select('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url', { count: 'exact' })
