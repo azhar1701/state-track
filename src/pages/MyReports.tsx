@@ -104,19 +104,29 @@ export default function MyReports() {
           lower.includes('schema cache') ||
           lower.includes('could not find');
         if (missingColumn) {
-          let fb = supabase
-            .from('reports')
-            .select('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url', { count: 'exact' })
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-          if (where.status !== 'all') fb = fb.eq('status', where.status);
-          if (where.category !== 'all') fb = fb.eq('category', where.category);
-          if (where.q) fb = fb.ilike('title', `%${where.q}%`);
-          fb = fb.range(from, to);
-          const retry = await fb;
-          data = retry.data as unknown[] | null;
-          error = retry.error as unknown as Error | null;
-          count = retry.count ?? 0;
+          // Fallback A: drop risky fields like location_name, but keep photo_urls, severity, resolution
+          const trySelect = async (sel: string) => {
+            let q = supabase
+              .from('reports')
+              .select(sel, { count: 'exact' })
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .range(from, to);
+            if (where.status !== 'all') q = q.eq('status', where.status);
+            if (where.category !== 'all') q = q.eq('category', where.category);
+            if (where.q) q = q.ilike('title', `%${where.q}%`);
+            return await q;
+          };
+
+          const selKeepPhotos = 'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution';
+          let attempt = await trySelect(selKeepPhotos);
+          if (attempt.error) {
+            // Fallback B: minimal if even photo_urls not available
+            attempt = await trySelect('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url');
+          }
+          data = attempt.data as unknown[] | null;
+          error = attempt.error as unknown as Error | null;
+          count = attempt.count ?? 0;
           if (error) throw error;
           // Map to ReportRow with safe defaults for missing fields
           type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
@@ -141,9 +151,9 @@ export default function MyReports() {
               longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
               location_name: null,
               photo_url: (rr.photo_url as string) ?? null,
-              photo_urls: null,
-              severity: null,
-              resolution: null,
+              photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
+              severity: (rr.severity as ReportRow['severity']) ?? null,
+              resolution: (rr.resolution as string | null | undefined) ?? null,
             };
             return row;
           });
