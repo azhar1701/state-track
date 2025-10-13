@@ -389,7 +389,7 @@ const MapView = () => {
       } catch (err) {
         console.error('Failed to load admin boundaries', err);
         toast.error('Gagal memuat batas administratif', {
-          description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson',
+          description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson atau /public/data/adm_ciamis.geojson',
         });
       } finally {
         setAdminLoading(false);
@@ -397,6 +397,26 @@ const MapView = () => {
     };
     loadAdminBoundaries();
   }, [overlays.adminBoundaries, adminGeoJson, adminLoading]);
+
+  // When boundaries are first loaded and toggled on, fit the map to their extent for visibility
+  useEffect(() => {
+    if (!mapInstance) return;
+    if (!overlays.adminBoundaries) return;
+    if (!adminGeoJson) return;
+    try {
+      const tmp = L.geoJSON(adminGeoJson);
+      const b = tmp.getBounds();
+      if (b.isValid()) {
+        mapInstance.fitBounds(b.pad(0.05));
+      }
+      // Clean up temporary layer
+      tmp.remove();
+    } catch (e) {
+      // ignore
+    }
+    // run only on first availability of adminGeoJson while overlay is on
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapInstance, overlays.adminBoundaries, !!adminGeoJson]);
 
   // Load list of available geo_layers to display as toggles
   useEffect(() => {
