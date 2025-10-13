@@ -13,7 +13,7 @@ import 'leaflet.heat';
 import 'leaflet/dist/leaflet.css';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import type { BasemapType } from '@/components/map/basemap-config';
-import { Legend } from '@/components/map/Legend';
+import { Legend, type LegendOverlayItem } from '@/components/map/Legend';
 import { reverseGeocode } from '@/lib/geocoding';
 import { MapToolbar } from '@/components/map/MapToolbar';
 import type { MapFilters } from '@/components/map/FilterPanel';
@@ -186,6 +186,53 @@ const MapView = () => {
   const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
   const [ctxAddress, setCtxAddress] = useState<string | null>(null);
   const [ctxLoading, setCtxLoading] = useState(false);
+
+  // Build dynamic legend items based on active overlays and layer types
+  const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
+    const items: LegendOverlayItem[] = [];
+    if (overlays.adminBoundaries) {
+      items.push({ type: 'line', label: 'Batas Administratif', color: '#6b7280', dashArray: '4 3' });
+    }
+    const dyn = overlays.dynamic || {};
+    const activeDyn = Object.entries(dyn).filter(([, on]) => on).map(([k]) => k);
+    const getName = (key: string) => availableLayers.find((l) => l.key === key)?.name || key;
+    for (const key of activeDyn) {
+      const lower = key.toLowerCase();
+      // Heuristic based on key
+      if (lower.includes('sungai') || lower.includes('river')) {
+        items.push({ type: 'line', label: 'Sungai', color: '#38bdf8' });
+        continue;
+      }
+      if (lower.includes('irigasi') || lower.includes('irrigation')) {
+        items.push({ type: 'line', label: 'Jaringan Irigasi', color: '#0ea5e9' });
+        continue;
+      }
+      if (lower.includes('banjir') || lower.includes('flood')) {
+        items.push({ type: 'fill', label: 'Zona Rawan Banjir', color: '#ef4444', fillColor: '#f87171' });
+        continue;
+      }
+      if (lower.includes('sawah') || lower.includes('paddy')) {
+        items.push({ type: 'fill', label: 'Sawah', color: '#16a34a', fillColor: '#86efac' });
+        continue;
+      }
+      if (lower === 'assets') {
+        items.push({ type: 'point', label: 'Aset', color: '#16a34a' });
+        continue;
+      }
+      // Fall back to geometry type from DB or data sample
+      const gt = availableLayers.find((l) => l.key === key)?.geometry_type
+        || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
+        || '';
+      if (/LineString/i.test(String(gt))) {
+        items.push({ type: 'line', label: getName(key), color: '#334155' });
+      } else if (/Point/i.test(String(gt))) {
+        items.push({ type: 'point', label: getName(key), color: '#16a34a' });
+      } else {
+        items.push({ type: 'fill', label: getName(key), color: '#475569', fillColor: '#cbd5e1' });
+      }
+    }
+    return items;
+  }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData]);
 
   const minDate = useMemo(() => {
     // Fix the earliest selectable date to Oct 1, 2025
@@ -873,25 +920,7 @@ const MapView = () => {
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
             {/* Legend tagged for measurement to stack scale/coords above */}
             <div className="legend-container absolute bottom-4 right-4 z-[1200]">
-              <Legend overlays={[
-                ...(overlays.adminBoundaries ? [{ type: 'line', label: 'Batas Administratif', color: '#6b7280', dashArray: '4 3' } as const] : []),
-                // Common Indonesian symbology suggestions
-                ...(
-                  Object.entries(overlays.dynamic || {}).some(([k, on]) => k === 'irrigation' && on)
-                    ? [{ type: 'line', label: 'Jaringan Irigasi', color: '#0ea5e9' } as const]
-                    : []
-                ),
-                ...(
-                  Object.entries(overlays.dynamic || {}).some(([k, on]) => k === 'flood_zones' && on)
-                    ? [{ type: 'fill', label: 'Zona Rawan Banjir', color: '#ef4444', fillColor: '#f87171' } as const]
-                    : []
-                ),
-                ...(
-                  Object.entries(overlays.dynamic || {}).some(([k, on]) => on && (k.toLowerCase().includes('sungai') || k.toLowerCase().includes('river')))
-                    ? [{ type: 'line', label: 'Sungai', color: '#38bdf8' } as const]
-                    : []
-                ),
-              ]} />
+              <Legend overlays={legendOverlays} />
             </div>
             {/* DrawControls removed */}
 
@@ -983,6 +1012,11 @@ const MapView = () => {
                       if (key.toLowerCase().includes('sungai') || key.toLowerCase().includes('river')) {
                         if (t === 'LineString' || t === 'MultiLineString') return { color: '#38bdf8', weight: 2.5, opacity: 0.95 };
                         return { color: '#38bdf8', weight: 1.5, opacity: 0.85, fillColor: '#7dd3fc', fillOpacity: 0.18 };
+                      }
+                      // If key hints paddy fields (sawah)
+                      if (key.toLowerCase().includes('sawah') || key.toLowerCase().includes('paddy')) {
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#16a34a', weight: 2, opacity: 0.9 };
+                        return { color: '#16a34a', weight: 1, opacity: 0.9, fillColor: '#86efac', fillOpacity: 0.25 };
                       }
                       // Defaults by geometry
                       if (t === 'LineString' || t === 'MultiLineString') return { color: '#334155', weight: 2, opacity: 0.9 };
