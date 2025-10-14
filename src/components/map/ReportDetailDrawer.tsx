@@ -117,14 +117,15 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
       role="dialog"
       aria-label="Detail laporan"
       className="
+        flex flex-col
         w-full sm:w-[24rem] md:w-[28rem] lg:w-[32rem]
-        max-w-[min(100vw-2rem,40rem)]
-        max-h-[min(80vh,calc(100vh-120px))]
-        overflow-auto shadow-lg border
+        max-w-[min(100vw-1.5rem,40rem)]
+        max-h-[min(90vh,calc(100vh-80px))]
+        overflow-hidden shadow-lg border
         bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80
       "
     >
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="space-y-1.5 flex-1 pr-2">
           <CardTitle className="text-base md:text-lg leading-tight break-words">{report.title}</CardTitle>
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
@@ -146,25 +147,29 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
           <X className="w-4 h-4" />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1 overflow-y-auto pr-1">
         {photos.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {photos.slice(0, 6).map((src, i) => (
-              <img
-                key={src + i}
-                src={src}
-                alt={`${report.title} ${i + 1}`}
-                className="h-24 w-full object-cover rounded border cursor-zoom-in"
-                loading="lazy"
-                onClick={() => { setActiveIndex(i); setLightboxOpen(true); }}
-              />
-            ))}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Dokumentasi</h4>
+            <ul className="space-y-1">
+              {photos.map((src, i) => (
+                <li key={src + i}>
+                  <button
+                    type="button"
+                    className="text-sm text-primary underline-offset-2 hover:underline focus:underline focus:outline-none"
+                    onClick={() => { setActiveIndex(i); setLightboxOpen(true); }}
+                  >
+                    Lihat dokumentasi {i + 1}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
         <div className="space-y-1">
           <h4 className="font-medium text-sm">Deskripsi</h4>
-          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{report.description}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">{report.description}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -235,16 +240,16 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
       </CardContent>
       {photos.length > 0 && (
         <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-          <DialogContent className="sm:max-w-[90vw] p-0">
-            <DialogHeader className="px-4 pt-4 pb-2">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl sm:max-w-[90vw] md:max-w-4xl lg:max-w-3xl xl:max-w-5xl p-0 overflow-hidden">
+            <DialogHeader className="px-4 pt-4 pb-2 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               <DialogTitle>Dokumentasi</DialogTitle>
               <DialogDescription>Klik di luar gambar untuk menutup.</DialogDescription>
             </DialogHeader>
-            <div className="w-full flex items-center justify-center p-2">
+            <div className="w-full flex items-center justify-center p-2 overflow-auto">
               <img
                 src={photos[activeIndex]}
                 alt={`${report.title} ${activeIndex + 1}`}
-                className="max-h-[80vh] w-auto object-contain rounded"
+                className="max-h-[72vh] max-w-full w-auto object-contain rounded shadow-md"
               />
             </div>
             {photos.length > 1 && (

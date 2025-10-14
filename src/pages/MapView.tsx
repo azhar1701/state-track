@@ -624,7 +624,6 @@ const MapView = () => {
                   })) as unknown as Feature<Geometry>[],
                 } as FeatureCollection<Geometry>;
               }
-
               setDynamicData((s) => ({ ...s, [key]: resultFC }));
             } else {
               toast.error(`Gagal memuat layer: ${key}`, { description: 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.' });
@@ -1051,7 +1050,7 @@ const MapView = () => {
                         const p = feature.properties as Record<string, unknown> | undefined;
                         const status = (p?.status as string) || 'aktif';
                         const cat = (p?.category as string) || '';
-                        return L.marker(latlng, { icon: createAssetIcon((['aktif','nonaktif','rusak'].includes(status) ? (status as 'aktif'|'nonaktif'|'rusak') : 'aktif'), cat) });
+                        return L.marker(latlng, { icon: createAssetIcon((['aktif', 'nonaktif', 'rusak'].includes(status) ? (status as 'aktif' | 'nonaktif' | 'rusak') : 'aktif'), cat) });
                       }
                       const sty = dynamicStyle[key]?.point;
                       return L.circleMarker(latlng, {
@@ -1065,7 +1064,9 @@ const MapView = () => {
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties as Record<string, unknown> | undefined;
                       const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
-                      layer.bindTooltip(String(title), { sticky: true });
+                      if (title) {
+                        layer.bindTooltip(String(title), { sticky: true });
+                      }
                       if (key === 'assets') {
                         const code = p?.code as string | undefined;
                         const cat = p?.category as string | undefined;

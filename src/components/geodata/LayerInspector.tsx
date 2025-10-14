@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { FeatureCollection, Geometry } from 'geojson';
+import { LayerAttributeTable } from './LayerAttributeTable';
 
 type LayerInspectorProps = {
   open: boolean;
@@ -37,11 +38,14 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
     polygon?: { color?: string; weight?: number; opacity?: number; fillColor?: string; fillOpacity?: number };
   };
   const [style, setStyle] = useState<Symbology>({});
+  const [featureCollection, setFeatureCollection] = useState<FeatureCollection<Geometry> | null>(null);
 
   useEffect(() => {
     const load = async () => {
       if (!open || !layerKey) return;
       setLoading(true);
+      setFeatureCollection(null);
+      setStats(null);
       try {
         const { data, error } = await supabase
           .from('geo_layers')
@@ -82,7 +86,6 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           polygon: norm(s.polygon) as Symbology['polygon'],
         };
         setStyle(next);
-
         // Build simple stats
         const fc = (() => {
           const d = normalizedData as unknown as Record<string, unknown>;
@@ -98,6 +101,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           }
           return null;
         })();
+        setFeatureCollection(fc);
 
         if (fc) {
           const featureCount = fc.features?.length || 0;
@@ -156,6 +160,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
         .eq('id', row.id);
       if (error) return toast.error('Gagal menyimpan style');
       toast.success('Style disimpan');
+      setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
     } catch (e) {
       toast.error('Gagal menyimpan style');
     }
@@ -188,8 +193,9 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           </DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="ringkasan" className="w-full">
-              <TabsList className="w-full justify-start h-9">
+              <TabsList className="w-full justify-start h-9 overflow-x-auto">
                 <TabsTrigger value="ringkasan" className="text-xs">Ringkasan</TabsTrigger>
+                <TabsTrigger value="atribut" className="text-xs">Atribut</TabsTrigger>
                 <TabsTrigger value="metadata" className="text-xs">Metadata</TabsTrigger>
                 <TabsTrigger value="style" className="text-xs">Style</TabsTrigger>
               </TabsList>
@@ -219,6 +225,9 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
                     </div>
                   )}
                 </div>
+              </TabsContent>
+              <TabsContent value="atribut" className="mt-2">
+                <LayerAttributeTable featureCollection={featureCollection} />
               </TabsContent>
               <TabsContent value="metadata" className="mt-2">
                 <div className="space-y-2 text-sm">
