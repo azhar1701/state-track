@@ -363,11 +363,11 @@ const Home = () => {
       {/* Information Blocks */}
       <section className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+          <div className="lg:col-span-2 flex flex-col gap-6 md:gap-8">
             <RecentReports />
             <CategoryLegend />
           </div>
-          <div className="space-y-6 md:space-y-8">
+          <div className="flex flex-col gap-6 md:gap-8">
             <StatusLegend />
             <FAQ />
           </div>

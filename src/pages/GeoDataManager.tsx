@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import UnifiedImporter from '@/components/import/UnifiedImporter';
 import type { ImportMode } from '@/components/import/UnifiedImporter';
 import LayerInspector from '@/components/geodata/LayerInspector';
+import { Loader2 } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 // removed ArrowUp/ArrowDown as popup configurator is removed
 
 // Popup configurator removed per request
@@ -87,6 +92,45 @@ export default function GeoDataManager() {
     created_at: string;
   };
 
+  type UserManagementRow = {
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    created_at: string;
+    role: 'admin' | 'user';
+  };
+
+  type MapPreferences = {
+    centerLat: string;
+    centerLng: string;
+    zoom: string;
+    basemap: 'osm' | 'satellite' | 'terrain' | 'dark';
+    showAdminBoundaries: boolean;
+    showAssets: boolean;
+  };
+
+  type GeoLayerSettings = {
+    enforceCRS: boolean;
+    defaultCRS: string;
+    autoPublishToMap: boolean;
+    maxUploadSizeMb: number;
+    requireMetadata: boolean;
+  };
+
+  type NotificationSettings = {
+    email: boolean;
+    push: boolean;
+    dailyDigest: boolean;
+  };
+
+  type SecuritySettings = {
+    requireMFA: boolean;
+    sessionTimeoutMinutes: number;
+    ipAllowlist: string;
+  };
+
+  type ReportLogEntry = Database['public']['Tables']['report_logs']['Row'];
+
   // Asset geometry helpers moved into UnifiedImporter
 
   const [assetRows, setAssetRows] = useState<Asset[]>([]);
@@ -102,6 +146,57 @@ export default function GeoDataManager() {
   const [form, setForm] = useState<{ code: string; name: string; category: Asset['category']; latitude: string; longitude: string; keterangan: string }>(
     { code: '', name: '', category: 'lainnya', latitude: '', longitude: '', keterangan: '' }
   );
+  const [activeTab, setActiveTab] = useState<'geodata' | 'settings'>('geodata');
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
+
+  const MAP_PREFS_STORAGE_KEY = 'admin:mapPreferences';
+  const GEO_LAYER_STORAGE_KEY = 'admin:geoLayerSettings';
+  const NOTIFICATION_STORAGE_KEY = 'admin:notificationSettings';
+  const SECURITY_STORAGE_KEY = 'admin:securitySettings';
+
+  const [users, setUsers] = useState<UserManagementRow[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userRoleUpdating, setUserRoleUpdating] = useState<string | null>(null);
+
+  const [mapPreferences, setMapPreferences] = useState<MapPreferences>({
+    centerLat: '-7.325',
+    centerLng: '108.353',
+    zoom: '12',
+    basemap: 'osm',
+    showAdminBoundaries: true,
+    showAssets: true,
+  });
+  const [mapPrefSaving, setMapPrefSaving] = useState(false);
+
+  const [geoLayerSettings, setGeoLayerSettings] = useState<GeoLayerSettings>({
+    enforceCRS: true,
+    defaultCRS: 'EPSG:4326',
+    autoPublishToMap: true,
+    maxUploadSizeMb: 50,
+    requireMetadata: true,
+  });
+  const [geoLayerSaving, setGeoLayerSaving] = useState(false);
+
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    email: true,
+    push: false,
+    dailyDigest: true,
+  });
+  const [notificationSaving, setNotificationSaving] = useState(false);
+
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+    requireMFA: false,
+    sessionTimeoutMinutes: 30,
+    ipAllowlist: '',
+  });
+  const [securitySaving, setSecuritySaving] = useState(false);
+
+  const [auditLogs, setAuditLogs] = useState<ReportLogEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const [backupInProgress, setBackupInProgress] = useState(false);
+  const [restoreInProgress, setRestoreInProgress] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadAssets = useCallback(async () => {
     setAssetLoading(true);
@@ -116,6 +211,46 @@ export default function GeoDataManager() {
   }, [q, category, status]);
 
   useEffect(() => { void loadAssets(); }, [loadAssets]);
+
+  useEffect(() => {
+    try {
+      const storedMapPrefs = localStorage.getItem(MAP_PREFS_STORAGE_KEY);
+      if (storedMapPrefs) {
+        const parsed = JSON.parse(storedMapPrefs) as Partial<MapPreferences>;
+        setMapPreferences((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (error) {
+      console.warn('Failed to load map preferences from storage', error);
+    }
+    try {
+      const storedGeoLayer = localStorage.getItem(GEO_LAYER_STORAGE_KEY);
+      if (storedGeoLayer) {
+        const parsed = JSON.parse(storedGeoLayer) as Partial<GeoLayerSettings>;
+        setGeoLayerSettings((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (error) {
+      console.warn('Failed to load geo layer settings from storage', error);
+    }
+    try {
+      const storedNotif = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+      if (storedNotif) {
+        const parsed = JSON.parse(storedNotif) as Partial<NotificationSettings>;
+        setNotificationSettings((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (error) {
+      console.warn('Failed to load notification settings from storage', error);
+    }
+    try {
+      const storedSecurity = localStorage.getItem(SECURITY_STORAGE_KEY);
+      if (storedSecurity) {
+        const parsed = JSON.parse(storedSecurity) as Partial<SecuritySettings>;
+        setSecuritySettings((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (error) {
+      console.warn('Failed to load security settings from storage', error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createAsset = async () => {
     const lat = parseFloat(form.latitude);
@@ -190,14 +325,219 @@ export default function GeoDataManager() {
   const delById = async (row: GeoLayerRow) => {
     const { error } = await supabase.from('geo_layers').delete().eq('id', row.id);
     if (error) {
-      // fallback by key in case id mismatch occurred
       const byKey = await supabase.from('geo_layers').delete().eq('key', row.key);
       if (byKey.error) {
-        return toast.error('Gagal menghapus layer');
+        toast.error('Gagal menghapus layer');
+        return;
       }
     }
     toast.success('Layer dihapus');
     void load();
+  };
+
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id,full_name,phone,created_at')
+        .order('created_at', { ascending: false });
+      if (profilesError) throw profilesError;
+      const { data: roles, error: rolesError } = await supabase.from('user_roles').select('user_id,role');
+      if (rolesError) throw rolesError;
+      const adminIds = new Set((roles ?? []).filter((role) => role.role === 'admin').map((role) => role.user_id));
+      const list: UserManagementRow[] = (profiles ?? []).map((profile) => ({
+        id: profile.id,
+        full_name: profile.full_name,
+        phone: profile.phone,
+        created_at: profile.created_at,
+        role: adminIds.has(profile.id) ? 'admin' : 'user',
+      }));
+      setUsers(list);
+    } catch (error) {
+      console.error('Failed to load users', error);
+      toast.error('Gagal memuat pengguna');
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  const loadAuditLogs = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('report_logs')
+        .select('id,report_id,action,actor_email,created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      setAuditLogs(data ?? []);
+    } catch (error) {
+      console.error('Failed to load audit logs', error);
+      toast.error('Gagal memuat catatan audit');
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'settings') return;
+    if (!settingsInitialized) {
+      setSettingsInitialized(true);
+      void loadUsers();
+      void loadAuditLogs();
+      return;
+    }
+    void loadUsers();
+    void loadAuditLogs();
+  }, [activeTab, settingsInitialized, loadUsers, loadAuditLogs]);
+
+  const handleRoleChange = async (userId: string, makeAdmin: boolean) => {
+    setUserRoleUpdating(userId);
+    try {
+      if (makeAdmin) {
+        const { error } = await supabase.from('user_roles').upsert({ user_id: userId, role: 'admin' }, { onConflict: 'user_id,role' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'admin');
+        if (error) throw error;
+      }
+      toast.success('Role pengguna diperbarui');
+      void loadUsers();
+    } catch (error) {
+      console.error('Failed to update user role', error);
+      toast.error('Gagal memperbarui role pengguna');
+    } finally {
+      setUserRoleUpdating(null);
+    }
+  };
+
+  const saveMapPreferences = async () => {
+    setMapPrefSaving(true);
+    try {
+      localStorage.setItem(MAP_PREFS_STORAGE_KEY, JSON.stringify(mapPreferences));
+      toast.success('Preferensi peta disimpan');
+    } catch (error) {
+      console.error('Failed to save map preferences', error);
+      toast.error('Gagal menyimpan preferensi peta');
+    } finally {
+      setMapPrefSaving(false);
+    }
+  };
+
+  const saveGeoLayerSettings = async () => {
+    setGeoLayerSaving(true);
+    try {
+      localStorage.setItem(GEO_LAYER_STORAGE_KEY, JSON.stringify(geoLayerSettings));
+      toast.success('Pengaturan geo layer disimpan');
+    } catch (error) {
+      console.error('Failed to save geo layer settings', error);
+      toast.error('Gagal menyimpan pengaturan geo layer');
+    } finally {
+      setGeoLayerSaving(false);
+    }
+  };
+
+  const saveNotificationSettings = async () => {
+    setNotificationSaving(true);
+    try {
+      localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificationSettings));
+      toast.success('Pengaturan notifikasi disimpan');
+    } catch (error) {
+      console.error('Failed to save notification settings', error);
+      toast.error('Gagal menyimpan pengaturan notifikasi');
+    } finally {
+      setNotificationSaving(false);
+    }
+  };
+
+  const saveSecuritySettings = async () => {
+    setSecuritySaving(true);
+    try {
+      localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(securitySettings));
+      toast.success('Pengaturan keamanan disimpan');
+    } catch (error) {
+      console.error('Failed to save security settings', error);
+      toast.error('Gagal menyimpan pengaturan keamanan');
+    } finally {
+      setSecuritySaving(false);
+    }
+  };
+
+  const handleBackupGeoLayers = async () => {
+    setBackupInProgress(true);
+    try {
+      const { data, error } = await supabase.from('geo_layers').select('key,name,geometry_type,data,created_at');
+      if (error) throw error;
+      const payload = {
+        exported_at: new Date().toISOString(),
+        layers: (data ?? []).map((layer) => ({
+          key: layer.key,
+          name: layer.name,
+          geometry_type: layer.geometry_type,
+          data: layer.data,
+          created_at: layer.created_at,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `geo-layers-backup-${Date.now()}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success('Backup geo layer berhasil dibuat');
+    } catch (error) {
+      console.error('Failed to backup geo layers', error);
+      toast.error('Gagal membuat backup geo layer');
+    } finally {
+      setBackupInProgress(false);
+    }
+  };
+
+  const handleTriggerRestore = () => {
+    if (restoreInProgress) return;
+    restoreInputRef.current?.click();
+  };
+
+  const handleRestoreFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setRestoreInProgress(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as { layers?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
+      const layersArray = Array.isArray(parsed) ? parsed : parsed.layers;
+      if (!Array.isArray(layersArray)) throw new Error('Format file backup tidak valid');
+      const sanitized = layersArray
+        .map((layer) => {
+          const item = layer as { key?: string; name?: string; geometry_type?: string | null; data?: unknown };
+          if (!item.key || !item.name) return null;
+          return {
+            key: item.key,
+            name: item.name,
+            geometry_type: item.geometry_type ?? null,
+            data: item.data ?? null,
+          };
+        })
+        .filter(Boolean) as Array<{ key: string; name: string; geometry_type: string | null; data: unknown }>;
+      if (sanitized.length === 0) throw new Error('Tidak ada layer yang valid untuk dipulihkan');
+      const chunkSize = 20;
+      for (let i = 0; i < sanitized.length; i += chunkSize) {
+        const slice = sanitized.slice(i, i + chunkSize);
+        const { error } = await supabase.from('geo_layers').upsert(slice, { onConflict: 'key' });
+        if (error) throw error;
+      }
+      toast.success('Pemulihan geo layer selesai');
+      void load();
+    } catch (error) {
+      console.error('Failed to restore geo layers', error);
+      const description = error instanceof Error ? error.message : undefined;
+      toast.error('Gagal memulihkan geo layer', { description });
+    } finally {
+      setRestoreInProgress(false);
+      if (event.target) event.target.value = '';
+    }
   };
 
   // Popup configurator handlers removed
@@ -364,14 +704,14 @@ export default function GeoDataManager() {
           )}
           <div className="flex flex-col md:flex-row gap-3 items-center mb-3">
             <div className="w-full md:w-64">
-              <Input placeholder="Cari layer…" value={layerSearch} onChange={(e) => setLayerSearch(e.target.value)} />
+              <Input placeholder="Cari layer" value={layerSearch} onChange={(e) => setLayerSearch(e.target.value)} />
             </div>
             <div>
               <Select value={layerSort} onValueChange={(v) => setLayerSort(v as typeof layerSort)}>
                 <SelectTrigger className="w-[200px]"><SelectValue placeholder="Urutkan" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                  <SelectItem value="name_asc">Nama (A→Z)</SelectItem>
+                  <SelectItem value="name_asc">Nama (AÔåÆZ)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -447,7 +787,7 @@ export default function GeoDataManager() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus layer “{r.name}”?</AlertDialogTitle>
+                                <AlertDialogTitle>Hapus layer ÔÇ£{r.name}ÔÇØ?</AlertDialogTitle>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Batal</AlertDialogCancel>
@@ -461,7 +801,7 @@ export default function GeoDataManager() {
                 ))}
                 {rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{loading ? 'Memuat…' : 'Belum ada layer'}</TableCell>
+                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{loading ? 'MemuatÔÇª' : 'Belum ada layer'}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -576,7 +916,7 @@ export default function GeoDataManager() {
                 ))}
                 {assetRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{assetLoading ? 'Memuat…' : 'Tidak ada aset'}</TableCell>
+                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{assetLoading ? 'MemuatÔÇª' : 'Tidak ada aset'}</TableCell>
                   </TableRow>
                 )}
               </TableBody>

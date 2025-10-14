@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { FeatureCollection, Geometry } from 'geojson';
 import { LayerAttributeTable } from './LayerAttributeTable';
+import { Loader2 } from 'lucide-react';
 
 type LayerInspectorProps = {
   open: boolean;
@@ -39,6 +40,8 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
   };
   const [style, setStyle] = useState<Symbology>({});
   const [featureCollection, setFeatureCollection] = useState<FeatureCollection<Geometry> | null>(null);
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [savingStyle, setSavingStyle] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -124,6 +127,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
 
   const saveMeta = async () => {
     if (!row) return;
+    setSavingMeta(true);
     try {
       // merge meta into data.meta without altering other fields
       const raw = (row.data ?? {}) as Record<string, unknown>;
@@ -138,31 +142,63 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
         description: meta.description || null,
       } as Record<string, unknown>;
       const nextData = { ...raw, meta: nextMeta } as Record<string, unknown>;
+      const updatePayload = { data: nextData } as Record<string, unknown>;
       const { error } = await supabase
         .from('geo_layers')
-        .update({ data: nextData })
+        .update(updatePayload)
         .eq('id', row.id);
-      if (error) return toast.error('Gagal menyimpan metadata');
+      if (error) {
+        console.warn('[LayerInspector] saveMeta failed by id', error);
+        const fallback = await supabase
+          .from('geo_layers')
+          .update(updatePayload)
+          .eq('key', row.key);
+        if (fallback.error) {
+          console.error('[LayerInspector] saveMeta fallback failed', fallback.error);
+          toast.error('Gagal menyimpan metadata', { description: fallback.error.message });
+          return;
+        }
+      }
+      setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
       toast.success('Metadata disimpan');
     } catch (e) {
+      console.error('[LayerInspector] saveMeta exception', e);
       toast.error('Gagal menyimpan metadata');
+    } finally {
+      setSavingMeta(false);
     }
   };
 
   const saveStyle = async () => {
     if (!row) return;
+    setSavingStyle(true);
     try {
       const raw = (row.data ?? {}) as Record<string, unknown>;
       const nextData = { ...raw, style } as Record<string, unknown>;
-      const { error } = await supabase
-        .from('geo_layers')
-        .update({ data: nextData })
-        .eq('id', row.id);
-      if (error) return toast.error('Gagal menyimpan style');
+      const updatePayload = { data: nextData } as Record<string, unknown>;
+      const updateById = async () => supabase.from('geo_layers').update(updatePayload).eq('id', row.id);
+      const updateByKey = async () => supabase.from('geo_layers').update(updatePayload).eq('key', row.key);
+
+      const { error } = await updateById();
+      if (error) {
+        console.warn('[LayerInspector] saveStyle failed by id', error);
+        const fallback = await updateByKey();
+        if (fallback.error) {
+          console.error('[LayerInspector] saveStyle fallback failed', fallback.error);
+          const retry = await updateByKey();
+          if (retry.error) {
+            toast.error('Gagal menyimpan style', { description: retry.error.message });
+            return;
+          }
+        }
+      }
       toast.success('Style disimpan');
       setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
     } catch (e) {
+      console.error('[LayerInspector] saveStyle exception', e);
       toast.error('Gagal menyimpan style');
+    } finally {
+      setSavingStyle(false);
     }
   };
 
@@ -253,7 +289,20 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     <Button size="sm" variant="outline" onClick={downloadGeoJSON}>Unduh GeoJSON</Button>
-                    <Button size="sm" onClick={saveMeta}>Simpan Metadata</Button>
+                    <Button
+                      size="sm"
+                      onClick={() => void saveMeta()}
+                      disabled={savingMeta || savingStyle}
+                    >
+                      {savingMeta ? (
+                        <span className="flex items-center gap-2 text-xs font-medium">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Menyimpan...
+                        </span>
+                      ) : (
+                        'Simpan Metadata'
+                      )}
+                    </Button>
                   </div>
                 </div>
               </TabsContent>
@@ -342,7 +391,20 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
                     </AccordionItem>
                   </Accordion>
                   <div className="flex justify-end pt-2">
-                    <Button size="sm" onClick={saveStyle}>Simpan Style</Button>
+                    <Button
+                      size="sm"
+                      onClick={() => void saveStyle()}
+                      disabled={savingStyle || savingMeta}
+                    >
+                      {savingStyle ? (
+                        <span className="flex items-center gap-2 text-xs font-medium">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Menyimpan...
+                        </span>
+                      ) : (
+                        'Simpan Style'
+                      )}
+                    </Button>
                   </div>
                 </div>
               </TabsContent>

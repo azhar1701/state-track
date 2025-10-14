@@ -205,25 +205,48 @@ const MapView = () => {
     const getName = (key: string) => availableLayers.find((l) => l.key === key)?.name || key;
     for (const key of activeDyn) {
       const lower = key.toLowerCase();
+      const style = dynamicStyle[key];
+      const pointColor = style?.point?.fillColor ?? style?.point?.color;
+      const lineColor = style?.line?.color;
+      const lineDash = style?.line?.dashArray;
+      const polygonStroke = style?.polygon?.color ?? lineColor;
+      const polygonFill = style?.polygon?.fillColor;
       // Heuristic based on key
       if (lower.includes('sungai') || lower.includes('river')) {
-        items.push({ type: 'line', label: 'Sungai', color: '#38bdf8' });
+        const defaultColor = '#38bdf8';
+        items.push({ type: 'line', label: 'Sungai', color: lineColor ?? defaultColor, dashArray: lineDash });
         continue;
       }
       if (lower.includes('irigasi') || lower.includes('irrigation')) {
-        items.push({ type: 'line', label: 'Jaringan Irigasi', color: '#0ea5e9' });
+        const defaultColor = '#0ea5e9';
+        items.push({ type: 'line', label: 'Jaringan Irigasi', color: lineColor ?? defaultColor, dashArray: lineDash });
         continue;
       }
       if (lower.includes('banjir') || lower.includes('flood')) {
-        items.push({ type: 'fill', label: 'Zona Rawan Banjir', color: '#ef4444', fillColor: '#f87171' });
+        const defaultStroke = '#ef4444';
+        const defaultFill = '#f87171';
+        items.push({
+          type: 'fill',
+          label: 'Zona Rawan Banjir',
+          color: polygonStroke ?? defaultStroke,
+          fillColor: polygonFill ?? defaultFill,
+        });
         continue;
       }
       if (lower.includes('sawah') || lower.includes('paddy')) {
-        items.push({ type: 'fill', label: 'Sawah', color: '#16a34a', fillColor: '#86efac' });
+        const defaultStroke = '#16a34a';
+        const defaultFill = '#86efac';
+        items.push({
+          type: 'fill',
+          label: 'Sawah',
+          color: polygonStroke ?? defaultStroke,
+          fillColor: polygonFill ?? defaultFill,
+        });
         continue;
       }
       if (lower === 'assets') {
-        items.push({ type: 'point', label: 'Aset', color: '#16a34a' });
+        const defaultColor = '#16a34a';
+        items.push({ type: 'point', label: 'Aset', color: pointColor ?? defaultColor });
         continue;
       }
       // Fall back to geometry type from DB or data sample
@@ -231,15 +254,24 @@ const MapView = () => {
         || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
         || '';
       if (/LineString/i.test(String(gt))) {
-        items.push({ type: 'line', label: getName(key), color: '#334155' });
+        const defaultColor = '#334155';
+        items.push({ type: 'line', label: getName(key), color: lineColor ?? defaultColor, dashArray: lineDash });
       } else if (/Point/i.test(String(gt))) {
-        items.push({ type: 'point', label: getName(key), color: '#16a34a' });
+        const defaultColor = '#16a34a';
+        items.push({ type: 'point', label: getName(key), color: pointColor ?? defaultColor });
       } else {
-        items.push({ type: 'fill', label: getName(key), color: '#475569', fillColor: '#cbd5e1' });
+        const defaultStroke = '#475569';
+        const defaultFill = '#cbd5e1';
+        items.push({
+          type: 'fill',
+          label: getName(key),
+          color: polygonStroke ?? defaultStroke,
+          fillColor: polygonFill ?? defaultFill,
+        });
       }
     }
     return items;
-  }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData]);
+  }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData, dynamicStyle]);
 
   const minDate = useMemo(() => {
     // Fix the earliest selectable date to Oct 1, 2025
