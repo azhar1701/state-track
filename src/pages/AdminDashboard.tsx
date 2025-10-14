@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -202,9 +203,14 @@ const AdminDashboard = () => {
       resolution: raw.resolution ?? null,
     });
 
-    const applyFiltersAndSort = (builder: any, options?: { includeSeverity?: boolean }) => {
-      const { includeSeverity = true } = options ?? {};
-      let query = builder;
+    const buildQuery = (
+      columns: string,
+      options?: { includeSeverity?: boolean; withCount?: boolean }
+    ) => {
+      const { includeSeverity = true, withCount = true } = options ?? {};
+      let query = supabase
+        .from('reports')
+        .select(columns, withCount ? { count: 'exact' } : undefined);
       if (statusFilter !== 'semua') query = query.eq('status', statusFilter);
       if (includeSeverity && severityFilter !== 'semua') query = query.eq('severity', severityFilter);
       if (categoryFilter !== 'semua') query = query.eq('category', categoryFilter);
@@ -220,21 +226,13 @@ const AdminDashboard = () => {
       return query;
     };
 
-    const runPagedQuery = async (query: any, allowSeveritySort: boolean) => {
+    const runPagedQuery = async (
+      query: ReturnType<typeof buildQuery>,
+      allowSeveritySort: boolean
+    ) => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      let response: { data: unknown; error: unknown; count?: number | null };
-
-      if (query && typeof query.range === 'function') {
-        response = await query.range(from, to);
-      } else if (query && typeof query.limit === 'function') {
-        // Builder without range (unlikely in real client)
-        const limited = query.limit(pageSize);
-        response = await limited.range ? await limited.range(from, to) : await limited;
-      } else {
-        // Fallback for stubbed client returning a Promise
-        response = await query;
-      }
+      const response = await query.range(from, to);
 
       const { data, error, count } = response;
       if (error) {
@@ -285,28 +283,19 @@ const AdminDashboard = () => {
 
     setLoading(true);
     try {
-      const primaryQuery = applyFiltersAndSort(
-        supabase.from('reports').select(REPORT_LIST_COLUMNS, { count: 'exact' }),
-        { includeSeverity: true }
-      );
+      const primaryQuery = buildQuery(REPORT_LIST_COLUMNS, { includeSeverity: true, withCount: true });
       const { items, total } = await runPagedQuery(primaryQuery, true);
       applyResult(items, total);
     } catch (primaryError) {
       console.warn('[AdminDashboard] Extended reports query failed, trying fallback', primaryError);
       try {
-        const fallbackQuery = applyFiltersAndSort(
-          supabase.from('reports').select(REPORT_FALLBACK_COLUMNS, { count: 'exact' }),
-          { includeSeverity: false }
-        );
+        const fallbackQuery = buildQuery(REPORT_FALLBACK_COLUMNS, { includeSeverity: false, withCount: true });
         const { items, total } = await runPagedQuery(fallbackQuery, false);
         applyResult(items, total);
       } catch (fallbackError) {
         console.warn('[AdminDashboard] Fallback reports query failed, trying minimal', fallbackError);
         try {
-          const minimalQuery = applyFiltersAndSort(
-            supabase.from('reports').select(REPORT_MINIMAL_COLUMNS),
-            { includeSeverity: false }
-          );
+          const minimalQuery = buildQuery(REPORT_MINIMAL_COLUMNS, { includeSeverity: false, withCount: false });
           const { items } = await runPagedQuery(minimalQuery, false);
           applyResult(items, items.length);
           toast.warning('Beberapa kolom laporan tidak tersedia. Tampilkan data dasar saja.');
