@@ -78,7 +78,8 @@ const REPORT_MINIMAL_COLUMNS =
 const REPORT_STATUSES: readonly ReportStatus[] = ['baru', 'diproses', 'selesai'];
 const REPORT_SEVERITIES: readonly ReportSeverity[] = ['ringan', 'sedang', 'berat'];
 const SORT_OPTIONS: readonly SortOption[] = ['created_at_desc', 'severity_desc', 'category_asc'];
-const ADMIN_TABS = ['reports', 'geo', 'help'] as const;
+const ADMIN_TABS = ['reports', 'geo', 'help', 'settings'] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
 
 const isReportStatus = (value: string): value is ReportStatus =>
   REPORT_STATUSES.includes(value as ReportStatus);
@@ -97,15 +98,15 @@ const isAdminTab = (value: string): value is (typeof ADMIN_TABS)[number] =>
 
 const GeoDataManagerLazy = lazy(() => import("@/pages/GeoDataManager"));
 const HelpCenterLazy = lazy(() => import("@/pages/HelpCenter"));
+const AdminSettingsLazy = lazy(() => import("@/components/admin/AdminSettings"));
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTabParam = (searchParams.get('tab') || 'reports').toLowerCase();
-  const [activeTab, setActiveTab] = useState<'reports' | 'geo' | 'help'>(
-    initialTabParam === 'geo' ? 'geo' : initialTabParam === 'help' ? 'help' : 'reports'
-  );
+  const initialTab: AdminTab = isAdminTab(initialTabParam) ? initialTabParam : 'reports';
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -805,12 +806,12 @@ const AdminDashboard = () => {
 
   // sync tab to URL query param
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    const next = tab === 'geo' ? 'geo' : tab === 'help' ? 'help' : 'reports';
+    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    const next: AdminTab = isAdminTab(tabParam) ? tabParam : 'reports';
     if (next !== activeTab) setActiveTab(next);
   }, [activeTab, searchParams]);
 
-  const onChangeTab = (tab: 'reports' | 'geo' | 'help') => {
+  const onChangeTab = (tab: AdminTab) => {
     setActiveTab(tab);
     setSearchParams((prev) => {
       const sp = new URLSearchParams(prev);
@@ -937,10 +938,11 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full md:w-auto grid grid-cols-3 mb-6">
+          <TabsList className="w-full md:w-auto grid grid-cols-4 mb-6">
             <TabsTrigger value="reports">Laporan</TabsTrigger>
             <TabsTrigger value="geo">Geo Data</TabsTrigger>
             <TabsTrigger value="help">Help Center</TabsTrigger>
+            <TabsTrigger value="settings">Pengaturan</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reports" className="mt-0">
@@ -1360,6 +1362,12 @@ const AdminDashboard = () => {
           <TabsContent value="help" className="mt-0">
             <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
               <HelpCenterLazy />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-0">
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Pengaturan...</div>}>
+              <AdminSettingsLazy />
             </Suspense>
           </TabsContent>
 
