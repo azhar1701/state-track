@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { LayerPreview } from '@/components/map/LayerPreview';
 import type { FeatureCollection, Geometry } from 'geojson';
 
 type LayerInspectorProps = {
@@ -55,9 +54,18 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           return;
         }
         const r = data as LayerRow;
-        setRow(r);
+        let normalizedData: unknown = r.data;
+        if (typeof normalizedData === 'string') {
+          try {
+            normalizedData = JSON.parse(normalizedData) as unknown;
+          } catch (err) {
+            console.warn('[LayerInspector] Failed to parse layer data JSON', err);
+          }
+        }
+        const mergedRow: LayerRow = { ...r, data: normalizedData };
+        setRow(mergedRow);
         // read meta nested inside data.meta if exists
-        const raw = (r.data ?? {}) as { meta?: Record<string, unknown>; style?: Record<string, unknown> };
+        const raw = (normalizedData ?? {}) as { meta?: Record<string, unknown>; style?: Record<string, unknown> };
         const m = raw?.meta || {};
         setMeta({
           source: typeof m.source === 'string' ? m.source : undefined,
@@ -77,7 +85,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
 
         // Build simple stats
         const fc = (() => {
-          const d = r.data as unknown as Record<string, unknown>;
+          const d = normalizedData as unknown as Record<string, unknown>;
           if (d && typeof d === 'object' && 'featureCollection' in d) {
             const w = d as { featureCollection?: unknown };
             if (w.featureCollection && (w.featureCollection as { type?: string }).type === 'FeatureCollection') return w.featureCollection as FeatureCollection<Geometry>;
@@ -168,8 +176,6 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
     }
   };
 
-  const fcWrapper = useMemo(() => row?.data ?? null, [row]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl p-3 sm:p-4">
@@ -181,14 +187,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
             )}
           </DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {/* Preview */}
-          <div className="md:col-span-3 rounded border bg-muted/20">
-            <LayerPreview data={fcWrapper} height={300} />
-          </div>
-          {/* Right: Tabs */}
-          <div className="md:col-span-2">
-            <Tabs defaultValue="ringkasan" className="w-full">
+        <Tabs defaultValue="ringkasan" className="w-full">
               <TabsList className="w-full justify-start h-9">
                 <TabsTrigger value="ringkasan" className="text-xs">Ringkasan</TabsTrigger>
                 <TabsTrigger value="metadata" className="text-xs">Metadata</TabsTrigger>
@@ -338,9 +337,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
                   </div>
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

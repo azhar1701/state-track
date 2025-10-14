@@ -17,6 +17,14 @@ proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0
 proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
 
 const coerceFeatureCollection = (raw: unknown): { fc: FeatureCollection<Geometry> | null; crs?: string } => {
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return coerceFeatureCollection(parsed);
+    } catch {
+      return { fc: null };
+    }
+  }
   // Preferred: wrapper { featureCollection, crs }
   if (raw && typeof raw === 'object' && 'featureCollection' in (raw as Record<string, unknown>)) {
     const wrapper = raw as { featureCollection?: unknown; crs?: string };
@@ -115,6 +123,18 @@ export const LayerPreview = ({ data, height = 320, className }: LayerPreviewProp
     } catch {
       // ignore
     }
+  }, [map, processed]);
+
+  useEffect(() => {
+    if (!map) return;
+    const timeout = window.setTimeout(() => {
+      try {
+        map.invalidateSize();
+      } catch {
+        // ignore
+      }
+    }, 100);
+    return () => window.clearTimeout(timeout);
   }, [map, processed]);
 
   return (

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, Component, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,44 +36,63 @@ import {
 import { Suspense, lazy } from "react";
 import { toast } from "sonner";
 import { FileText, Clock, CheckCircle, Loader2 } from "lucide-react";
-// export libs will be loaded dynamically in handlers to keep initial bundle small
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 
-interface Report {
-  id: string;
-  title: string;
-  category: string;
-  status: string;
-  created_at: string;
-  location_name: string | null;
-  severity?: 'ringan' | 'sedang' | 'berat' | null;
-  kecamatan?: string | null;
-  desa?: string | null;
-  resolution?: string | null;
-}
+type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
+type ReportStatus = Database["public"]["Enums"]["report_status"];
+type ReportSeverity = Database["public"]["Enums"]["report_severity"];
+type ReportCategory = Database["public"]["Enums"]["report_category"];
 
-interface ReportLog {
-  id: string;
-  report_id: string;
-  action: 'status_update' | 'bulk_status_update' | 'edit';
-  before: Record<string, unknown> | null;
-  after: Record<string, unknown> | null;
-  actor_id: string | null;
-  actor_email: string | null;
-  created_at: string;
-}
+type ReportListItem = Pick<
+  ReportRow,
+  "id" | "title" | "category" | "status" | "created_at" | "location_name" | "severity" | "kecamatan" | "desa" | "resolution"
+>;
 
-// Extra fields for detail view
-interface FullReport {
-  description?: string | null;
-  reporter_name?: string | null;
-  phone?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  photo_url?: string | null;
-  photo_urls?: string[] | null;
-}
+type ReportDetail = Pick<
+  ReportRow,
+  "description" | "reporter_name" | "phone" | "latitude" | "longitude" | "photo_url" | "photo_urls"
+>;
+
+type ReportLogEntry = Database["public"]["Tables"]["report_logs"]["Row"];
+
+type StatusFilter = "semua" | ReportStatus;
+type SeverityFilter = "semua" | ReportSeverity;
+type CategoryFilter = "semua" | ReportCategory;
+type SortOption = "created_at_desc" | "severity_desc" | "category_asc";
+
+const REPORT_LIST_COLUMNS =
+  "id,title,category,status,created_at,location_name,severity,kecamatan,desa,resolution";
+const REPORT_DETAIL_COLUMNS =
+  "description,reporter_name,phone,latitude,longitude,photo_url,photo_urls";
+const SEVERITY_WEIGHT: Record<ReportSeverity, number> = {
+  ringan: 1,
+  sedang: 2,
+  berat: 3,
+};
+const REPORT_FALLBACK_COLUMNS =
+  "id,title,category,status,created_at,severity,resolution,kecamatan,desa";
+const REPORT_MINIMAL_COLUMNS =
+  "id,title,status,created_at,severity,resolution";
+const REPORT_STATUSES: readonly ReportStatus[] = ['baru', 'diproses', 'selesai'];
+const REPORT_SEVERITIES: readonly ReportSeverity[] = ['ringan', 'sedang', 'berat'];
+const SORT_OPTIONS: readonly SortOption[] = ['created_at_desc', 'severity_desc', 'category_asc'];
+const ADMIN_TABS = ['reports', 'geo', 'help'] as const;
+
+const isReportStatus = (value: string): value is ReportStatus =>
+  REPORT_STATUSES.includes(value as ReportStatus);
+
+const isStatusFilter = (value: string): value is StatusFilter =>
+  value === 'semua' || isReportStatus(value);
+
+const isSeverityFilter = (value: string): value is SeverityFilter =>
+  value === 'semua' || REPORT_SEVERITIES.includes(value as ReportSeverity);
+
+const isSortOption = (value: string): value is SortOption =>
+  SORT_OPTIONS.includes(value as SortOption);
+
+const isAdminTab = (value: string): value is (typeof ADMIN_TABS)[number] =>
+  ADMIN_TABS.includes(value as (typeof ADMIN_TABS)[number]);
 
 const GeoDataManagerLazy = lazy(() => import("@/pages/GeoDataManager"));
 const HelpCenterLazy = lazy(() => import("@/pages/HelpCenter"));
@@ -85,27 +105,27 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<'reports' | 'geo' | 'help'>(
     initialTabParam === 'geo' ? 'geo' : initialTabParam === 'help' ? 'help' : 'reports'
   );
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'semua' | 'baru' | 'diproses' | 'selesai'>('semua');
-  const [severityFilter, setSeverityFilter] = useState<'semua' | 'ringan' | 'sedang' | 'berat'>('semua');
-  const [categoryFilter, setCategoryFilter] = useState<string>('semua');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('semua');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('semua');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'created_at_desc' | 'severity_desc' | 'category_asc'>('created_at_desc');
+  const [sortBy, setSortBy] = useState<SortOption>('created_at_desc');
   const [stats, setStats] = useState({ total: 0, baru: 0, diproses: 0, selesai: 0 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalFiltered, setTotalFiltered] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkStatus, setBulkStatus] = useState<"" | "baru" | "diproses" | "selesai">("");
+  const [bulkStatus, setBulkStatus] = useState<ReportStatus | ''>('');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportListItem | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editSeverity, setEditSeverity] = useState<'' | 'ringan' | 'sedang' | 'berat'>('');
+  const [editSeverity, setEditSeverity] = useState<ReportSeverity | ''>('');
   const [editResolution, setEditResolution] = useState('');
   const [saving, setSaving] = useState(false);
   const maxResolutionLen = 5000;
@@ -113,18 +133,18 @@ const AdminDashboard = () => {
   const [chartDaily, setChartDaily] = useState<Array<{ date: string; count: number }>>([]);
   const [chartByCategory, setChartByCategory] = useState<Array<{ name: string; count: number }>>([]);
   const [chartLoading, setChartLoading] = useState(false);
-  const [logs, setLogs] = useState<ReportLog[]>([]);
+  const [logs, setLogs] = useState<ReportLogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [fullReport, setFullReport] = useState<FullReport | null>(null);
+  const [fullReport, setFullReport] = useState<ReportDetail | null>(null);
 
-  const renderSeverityBadge = (sev?: 'ringan' | 'sedang' | 'berat' | null) => {
+  const renderSeverityBadge = (sev?: ReportSeverity | null) => {
     if (!sev) return <span className="text-muted-foreground">-</span>;
     const variant = sev === 'berat' ? 'destructive' : sev === 'sedang' ? 'secondary' : 'outline';
     return <Badge variant={variant}>{sev}</Badge>;
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: ReportStatus) => {
     const cls =
       status === 'selesai' ? 'bg-green-600 text-white' :
       status === 'diproses' ? 'bg-blue-600 text-white' :
@@ -133,7 +153,7 @@ const AdminDashboard = () => {
   };
 
   // Fallback location display helper: prefer location_name, else use "desa, kecamatan"
-  const shortLocation = (r: Report | null | undefined) => {
+  const shortLocation = (r: ReportListItem | null | undefined) => {
     if (!r) return '';
     if (r.location_name && r.location_name.trim().length > 0) return r.location_name;
     const parts = [r.desa, r.kecamatan].filter(Boolean) as string[];
@@ -145,7 +165,7 @@ const AdminDashboard = () => {
     if (!text) return '';
     const s = text.trim();
     if (s.length <= max) return s;
-    return s.slice(0, Math.max(0, max - 1)) + '…';
+    return `${s.slice(0, Math.max(0, max - 3))}...`;
   };
 
   const formatDate = (iso?: string | null) => {
@@ -168,233 +188,151 @@ const AdminDashboard = () => {
     }
   };
 
-  // sync tab to URL query param
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    const next = tab === 'geo' ? 'geo' : tab === 'help' ? 'help' : 'reports';
-    if (next !== activeTab) setActiveTab(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  const fetchReports = useCallback(async () => {
+    const normalizeReport = (raw: Partial<ReportListItem>): ReportListItem => ({
+      id: raw.id ?? '',
+      title: raw.title ?? '',
+      category: (raw.category as ReportCategory | undefined) ?? 'lainnya',
+      status: (raw.status as ReportStatus | undefined) ?? 'baru',
+      created_at: raw.created_at ?? '',
+      location_name: raw.location_name ?? null,
+      severity: (raw.severity as ReportSeverity | null | undefined) ?? null,
+      kecamatan: raw.kecamatan ?? null,
+      desa: raw.desa ?? null,
+      resolution: raw.resolution ?? null,
+    });
 
-  const onChangeTab = (tab: 'reports' | 'geo' | 'help') => {
-    setActiveTab(tab);
-    setSearchParams((prev) => {
-      const sp = new URLSearchParams(prev);
-      if (tab === 'reports') sp.delete('tab'); else sp.set('tab', tab);
-      return sp;
-    }, { replace: true });
-  };
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      toast.error("Akses ditolak");
-      navigate("/");
-      return;
-    }
-    if (user && isAdmin && activeTab === 'reports') {
-      fetchStats();
-      fetchReports();
-      fetchChartData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading, navigate, activeTab]);
-
-  // Realtime updates for reports
-  useEffect(() => {
-    if (!user || !isAdmin || activeTab !== 'reports') return;
-    const channel = supabase
-      .channel('reports-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-        // refresh both list and stats; keep current filters
-        fetchReports();
-        fetchStats();
-        fetchChartData();
-      })
-      .subscribe();
-    return () => {
-      channel.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, activeTab, statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy, page, pageSize]);
-
-  // debounce search input
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  // refetch when filters or sort or debounced search change
-  useEffect(() => {
-    if (user && isAdmin && activeTab === 'reports') {
-      setPage(1); // reset to first page when filters change
-      fetchReports();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch, sortBy, activeTab]);
-
-  useEffect(() => {
-    if (user && isAdmin && activeTab === 'reports') {
-      fetchChartData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartDays, activeTab]);
-
-  // Refetch charts when filters change to keep them in sync with the table
-  useEffect(() => {
-    if (user && isAdmin && activeTab === 'reports') {
-      fetchChartData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, categoryFilter, debouncedSearch, activeTab]);
-
-  const fetchReports = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('reports')
-        .select("id,title,category,status,created_at,severity,kecamatan,desa,resolution", { count: 'exact' });
-
-      if (statusFilter !== 'semua') {
-        query = query.eq('status', statusFilter);
-      }
-      if (severityFilter !== 'semua') {
-        query = query.eq('severity', severityFilter);
-      }
-      if (categoryFilter !== 'semua') {
-        query = query.eq('category', categoryFilter);
-      }
-      if (debouncedSearch) {
-        query = query.ilike('title', `%${debouncedSearch}%`);
-      }
+    const applyFiltersAndSort = (builder: any, options?: { includeSeverity?: boolean }) => {
+      const { includeSeverity = true } = options ?? {};
+      let query = builder;
+      if (statusFilter !== 'semua') query = query.eq('status', statusFilter);
+      if (includeSeverity && severityFilter !== 'semua') query = query.eq('severity', severityFilter);
+      if (categoryFilter !== 'semua') query = query.eq('category', categoryFilter);
+      if (debouncedSearch) query = query.ilike('title', `%${debouncedSearch}%`);
 
       if (sortBy === 'created_at_desc') {
         query = query.order('created_at', { ascending: false });
       } else if (sortBy === 'category_asc') {
         query = query.order('category', { ascending: true }).order('created_at', { ascending: false });
       } else {
-        // severity_desc: still order by created_at for determinism, then client-sort
         query = query.order('created_at', { ascending: false });
       }
+      return query;
+    };
 
+    const runPagedQuery = async (query: any, allowSeveritySort: boolean) => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error, count } = await query.range(from, to);
-      if (error) throw error;
+      let response: { data: unknown; error: unknown; count?: number | null };
 
-      let result = (data || []) as Report[];
-
-      if (sortBy === 'severity_desc') {
-        const weight: Record<NonNullable<Report['severity']>, number> = {
-          ringan: 1,
-          sedang: 2,
-          berat: 3,
-        } as const;
-        result = [...result].sort((a, b) => (weight[b.severity || 'ringan'] || 0) - (weight[a.severity || 'ringan'] || 0));
+      if (query && typeof query.range === 'function') {
+        response = await query.range(from, to);
+      } else if (query && typeof query.limit === 'function') {
+        // Builder without range (unlikely in real client)
+        const limited = query.limit(pageSize);
+        response = await limited.range ? await limited.range(from, to) : await limited;
+      } else {
+        // Fallback for stubbed client returning a Promise
+        response = await query;
       }
 
-      setReports(result);
-      setTotalFiltered(count || 0);
-      // cleanup selection if items are no longer visible
+      const { data, error, count } = response;
+      if (error) {
+        const err = error as { message?: string };
+        throw new Error(err?.message || String(error));
+      }
+
+      let result = Array.isArray(data) ? data.map((item) => normalizeReport(item as Partial<ReportListItem>)) : [];
+
+      if (allowSeveritySort && sortBy === 'severity_desc') {
+        result = [...result].sort((a, b) => {
+          const weightB = b.severity ? SEVERITY_WEIGHT[b.severity] : 0;
+          const weightA = a.severity ? SEVERITY_WEIGHT[a.severity] : 0;
+          if (weightB !== weightA) return weightB - weightA;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      }
+
+      return {
+        items: result,
+        total: typeof count === 'number' ? count : result.length,
+      };
+    };
+
+    const applyResult = (items: ReportListItem[], total: number) => {
+      setReports(items);
+      setTotalFiltered(total);
       setSelectedIds((prev) => {
         const next = new Set<string>();
-        const ids = new Set(result.map((r) => r.id));
+        const visible = new Set(items.map((r) => r.id));
         prev.forEach((id) => {
-          if (ids.has(id)) next.add(id);
+          if (visible.has(id)) next.add(id);
         });
         return next;
       });
-    } catch (err) {
-      const msg = (err as { message?: string; code?: string })?.message || String(err);
-      console.error('[fetchReports] Extended select failed, trying fallback:', msg, err);
-      // Fallback: select only essential columns in case some columns don't exist yet (migrations not applied)
-      try {
-        let fb = supabase
-          .from('reports')
-          .select('id,title,category,status,created_at,desa,kecamatan', { count: 'exact' });
-
-        if (statusFilter !== 'semua') {
-          fb = fb.eq('status', statusFilter);
-        }
-        // Skip severityFilter in fallback if it's not "semua"
-        // because the column may not exist; we degrade gracefully
-        if (categoryFilter !== 'semua') {
-          fb = fb.eq('category', categoryFilter);
-        }
-        if (debouncedSearch) {
-          fb = fb.ilike('title', `%${debouncedSearch}%`);
-        }
-
-        if (sortBy === 'created_at_desc') {
-          fb = fb.order('created_at', { ascending: false });
-        } else if (sortBy === 'category_asc') {
-          fb = fb.order('category', { ascending: true }).order('created_at', { ascending: false });
-        } else {
-          fb = fb.order('created_at', { ascending: false });
-        }
-
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-        const { data, error, count } = await fb.range(from, to);
-  if (error) throw error;
-
-        const result = (data || []) as Report[];
-        setReports(result);
-        setTotalFiltered(count || 0);
-        setSelectedIds((prev) => {
-          const next = new Set<string>();
-          const ids = new Set(result.map((r) => r.id));
-          prev.forEach((id) => { if (ids.has(id)) next.add(id); });
-          return next;
-        });
-        // success via fallback; skip error toast
-      } catch (fbErr) {
-        const fbMsg = (fbErr as { message?: string; code?: string })?.message || String(fbErr);
-        console.error('[fetchReports] Fallback select failed, trying minimal fallback:', fbMsg, fbErr);
-        // Minimal fallback: include basic fields, then compute count via head-only query
-        try {
-          let minq = supabase
-            .from('reports')
-            .select('id,title,category,status,created_at,desa,kecamatan');
-          minq = minq.order('created_at', { ascending: false });
-          // Apply safe filters (skip severity because column might not exist)
-          if (statusFilter !== 'semua') minq = minq.eq('status', statusFilter);
-          if (categoryFilter !== 'semua') minq = minq.eq('category', categoryFilter);
-          if (debouncedSearch) minq = minq.ilike('title', `%${debouncedSearch}%`);
-          const from = (page - 1) * pageSize;
-          const to = from + pageSize - 1;
-          const { data, error } = await minq.range(from, to);
-          if (error) throw error;
-          const result = (data || []) as Report[];
-          setReports(result);
-          // Try to compute accurate count with head-only query on id
-          try {
-            let countQ = supabase
-              .from('reports')
-              .select('id', { count: 'exact', head: true });
-            if (statusFilter !== 'semua') countQ = countQ.eq('status', statusFilter);
-            if (categoryFilter !== 'semua') countQ = countQ.eq('category', categoryFilter);
-            if (debouncedSearch) countQ = countQ.ilike('title', `%${debouncedSearch}%`);
-            const { count: c, error: cntErr } = await countQ;
-            if (!cntErr && typeof c === 'number') setTotalFiltered(c);
-            else setTotalFiltered(result.length < pageSize ? from + result.length : from + pageSize + 1);
-          } catch {
-            setTotalFiltered(result.length < pageSize ? from + result.length : from + pageSize + 1);
+      if (selectedReport) {
+        const updated = items.find((item) => item.id === selectedReport.id);
+        if (updated) {
+          setSelectedReport((prev) => (prev ? { ...prev, ...updated } : updated));
+          if (!detailOpen) {
+            setEditTitle(updated.title);
+            setEditSeverity(updated.severity ?? '');
+            setEditResolution(updated.resolution ?? '');
           }
-          setSelectedIds((prev) => {
-            const next = new Set<string>();
-            const ids = new Set(result.map((r) => r.id));
-            prev.forEach((id) => { if (ids.has(id)) next.add(id); });
-            return next;
-          });
-        } catch (minErr) {
-          const minMsg = (minErr as { message?: string; code?: string })?.message || String(minErr);
-          console.error('[fetchReports] Minimal fallback failed:', minMsg, minErr);
-          toast.error('Gagal memuat laporan', { description: minMsg });
         }
       }
+    };
+
+    setLoading(true);
+    try {
+      const primaryQuery = applyFiltersAndSort(
+        supabase.from('reports').select(REPORT_LIST_COLUMNS, { count: 'exact' }),
+        { includeSeverity: true }
+      );
+      const { items, total } = await runPagedQuery(primaryQuery, true);
+      applyResult(items, total);
+    } catch (primaryError) {
+      console.warn('[AdminDashboard] Extended reports query failed, trying fallback', primaryError);
+      try {
+        const fallbackQuery = applyFiltersAndSort(
+          supabase.from('reports').select(REPORT_FALLBACK_COLUMNS, { count: 'exact' }),
+          { includeSeverity: false }
+        );
+        const { items, total } = await runPagedQuery(fallbackQuery, false);
+        applyResult(items, total);
+      } catch (fallbackError) {
+        console.warn('[AdminDashboard] Fallback reports query failed, trying minimal', fallbackError);
+        try {
+          const minimalQuery = applyFiltersAndSort(
+            supabase.from('reports').select(REPORT_MINIMAL_COLUMNS),
+            { includeSeverity: false }
+          );
+          const { items } = await runPagedQuery(minimalQuery, false);
+          applyResult(items, items.length);
+          toast.warning('Beberapa kolom laporan tidak tersedia. Tampilkan data dasar saja.');
+        } catch (minimalError) {
+          const message = minimalError instanceof Error ? minimalError.message : String(minimalError);
+          console.error('[AdminDashboard] Minimal reports query failed:', minimalError);
+          toast.error('Gagal memuat laporan', { description: message });
+          setReports([]);
+          setTotalFiltered(0);
+          setSelectedIds(new Set());
+        }
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [
+    statusFilter,
+    severityFilter,
+    categoryFilter,
+    debouncedSearch,
+    sortBy,
+    page,
+    pageSize,
+    selectedReport,
+    detailOpen,
+  ]);
 
   const allVisibleSelected = useMemo(() => {
     if (reports.length === 0) return false;
@@ -419,11 +357,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const openDetail = (r: Report) => {
+  const openDetail = (r: ReportListItem) => {
     try {
       setSelectedReport(r);
       setEditTitle(r?.title ?? '');
-      setEditSeverity((r?.severity ?? '') as '' | 'ringan' | 'sedang' | 'berat');
+      setEditSeverity(r?.severity ?? '');
       setEditResolution(r?.resolution ?? '');
       setDetailOpen(true);
       fetchReportLogs(r.id);
@@ -438,13 +376,44 @@ const AdminDashboard = () => {
     try {
       setDetailLoading(true);
       setFullReport(null);
-      const { data, error } = await supabase
-        .from('reports')
-        .select('description, reporter_name, phone, latitude, longitude, photo_url, photo_urls')
-        .eq('id', reportId)
-        .maybeSingle();
-      if (error) throw error;
-      setFullReport((data || null) as FullReport | null);
+      let detail: ReportDetail | null = null;
+      let primaryError: unknown;
+      try {
+        const { data, error } = await supabase
+          .from('reports')
+          .select(REPORT_DETAIL_COLUMNS)
+          .eq('id', reportId)
+          .maybeSingle();
+        if (error) throw error;
+        detail = (data ?? null) as ReportDetail | null;
+      } catch (err) {
+        primaryError = err;
+        console.warn('[AdminDashboard] Detail select failed, using fallback columns', err);
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('reports')
+          .select('description, reporter_name, phone, resolution')
+          .eq('id', reportId)
+          .maybeSingle();
+        if (!fallbackErr && fallbackData) {
+          const fallback = fallbackData as Partial<ReportDetail>;
+          detail = {
+            description: fallback.description ?? null,
+            reporter_name: fallback.reporter_name ?? null,
+            phone: fallback.phone ?? null,
+            latitude: null,
+            longitude: null,
+            photo_url: null,
+            photo_urls: null,
+          };
+        } else {
+          throw err;
+        }
+      }
+      if (detail) {
+        setFullReport(detail);
+      } else if (primaryError) {
+        throw primaryError;
+      }
     } catch (err) {
       console.error('Gagal memuat detail laporan:', err);
     } finally {
@@ -461,7 +430,8 @@ const AdminDashboard = () => {
         .eq('report_id', reportId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setLogs((data || []) as ReportLog[]);
+      const rows = (data ?? []) as ReportLogEntry[];
+      setLogs(rows);
     } catch (err) {
       console.error('Gagal memuat riwayat perubahan:', err);
       toast.error('Gagal memuat riwayat perubahan');
@@ -470,33 +440,46 @@ const AdminDashboard = () => {
     }
   };
 
-  const summarizeLog = (log: ReportLog) => {
+  const summarizeLog = (log: ReportLogEntry) => {
     const changes: string[] = [];
-    const b = (log.before || {}) as Record<string, unknown>;
-    const a = (log.after || {}) as Record<string, unknown>;
+    const before = (log.before ?? {}) as Record<string, unknown>;
+    const after = (log.after ?? {}) as Record<string, unknown>;
     const add = (k: string, fromVal: unknown, toVal: unknown) => {
       const fromStr = fromVal == null || fromVal === '' ? '-' : String(fromVal);
       const toStr = toVal == null || toVal === '' ? '-' : String(toVal);
-      changes.push(`${k}: ${fromStr} → ${toStr}`);
+      changes.push(`${k}: ${fromStr} -> ${toStr}`);
     };
-    const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
-    keys.forEach((k) => add(k, b[k], a[k]));
+    const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+    keys.forEach((k) => add(k, before[k], after[k]));
     const actionLabel = log.action === 'status_update' ? 'Ubah status' : log.action === 'bulk_status_update' ? 'Bulk status' : 'Edit';
-    return `${actionLabel} — ${changes.join('; ')}`;
+    return `${actionLabel} - ${changes.join('; ')}`;
   };
 
-  const buildExportRows = () => {
+  type ExportRow = {
+    id: string;
+    title: string;
+    category: string;
+    severity: string;
+    status: ReportStatus;
+    created_at: string;
+    resolution: string;
+    location_name: string;
+    kecamatan: string;
+    desa: string;
+  };
+
+  const buildExportRows = (): ExportRow[] => {
     return reports.map((r) => ({
       id: r.id,
       title: r.title,
-      category: r.category || '',
-      severity: r.severity || '',
+      category: String(r.category ?? ''),
+      severity: r.severity ?? '',
       status: r.status,
       created_at: formatDateTime(r.created_at),
-      resolution: r.resolution || '',
-      location_name: shortLocation(r) || '',
-      kecamatan: r.kecamatan || '',
-      desa: r.desa || '',
+      resolution: r.resolution?.trim() ?? '',
+      location_name: shortLocation(r),
+      kecamatan: r.kecamatan ?? '',
+      desa: r.desa ?? '',
     }));
   };
 
@@ -507,7 +490,7 @@ const AdminDashboard = () => {
         toast.info('Tidak ada data untuk diexport');
         return;
       }
-      const columns = [
+      const columns: Array<{ header: string; key: keyof ExportRow }> = [
         { header: 'ID', key: 'id' },
         { header: 'Judul', key: 'title' },
         { header: 'Kategori', key: 'category' },
@@ -518,7 +501,7 @@ const AdminDashboard = () => {
         { header: 'Lokasi', key: 'location_name' },
         { header: 'Kecamatan', key: 'kecamatan' },
         { header: 'Desa', key: 'desa' },
-      ] as const;
+      ];
 
       const escape = (val: unknown) => {
         if (val == null) return '';
@@ -530,9 +513,10 @@ const AdminDashboard = () => {
         return s;
       };
 
-      const headerLine = columns.map(c => escape(c.header)).join(',');
-  type Row = ReturnType<typeof buildExportRows>[number];
-  const bodyLines = rows.map((r: Row) => columns.map(c => escape((r as Record<string, unknown>)[c.key])).join(','));
+      const headerLine = columns.map(({ header }) => escape(header)).join(',');
+      const bodyLines = rows.map((row) =>
+        columns.map(({ key }) => escape(row[key])).join(',')
+      );
       const csv = [headerLine, ...bodyLines].join('\r\n');
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -572,7 +556,7 @@ const AdminDashboard = () => {
         return;
       }
 
-      const columns = [
+      const columns: Array<{ header: string; dataKey: keyof ExportRow }> = [
         { header: 'ID', dataKey: 'id' },
         { header: 'Judul', dataKey: 'title' },
         { header: 'Kategori', dataKey: 'category' },
@@ -583,10 +567,10 @@ const AdminDashboard = () => {
         { header: 'Lokasi', dataKey: 'location_name' },
         { header: 'Kecamatan', dataKey: 'kecamatan' },
         { header: 'Desa', dataKey: 'desa' },
-      ] as const;
+      ];
 
-      const head = [columns.map((c) => c.header)];
-      const body = rows.map((r) => columns.map((c) => (r as Record<string, unknown>)[c.dataKey] as string | number | null));
+      const head = [columns.map(({ header }) => header)];
+      const body = rows.map((row) => columns.map(({ dataKey }) => row[dataKey] ?? ''));
 
       const doc = new jsPDF({ orientation: 'landscape' });
       // Judul sederhana
@@ -670,8 +654,8 @@ const AdminDashboard = () => {
       }
       toast.success('Perubahan tersimpan');
       setDetailOpen(false);
-      fetchReports();
-      fetchStats();
+      await fetchReports();
+      await fetchStats();
       if (selectedReport) fetchReportLogs(selectedReport.id);
     } catch (err) {
       console.error(err);
@@ -699,7 +683,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const performBulkUpdate = async (status: 'baru' | 'diproses' | 'selesai') => {
+  const performBulkUpdate = async (status: ReportStatus) => {
     try {
       setBulkLoading(true);
       const ids = Array.from(selectedIds);
@@ -709,9 +693,9 @@ const AdminDashboard = () => {
         .select('id,status')
         .in('id', ids);
       if (beforeErr) throw beforeErr;
-      const beforeMap = new Map<string, 'baru' | 'diproses' | 'selesai' | string>();
-      const beforeTyped = (beforeRows || []) as Array<{ id: string; status: 'baru' | 'diproses' | 'selesai' | string }>;
-      beforeTyped.forEach((r) => beforeMap.set(r.id, r.status));
+      const previous = (beforeRows ?? []) as Array<{ id: string; status: ReportStatus }>;
+      const beforeMap = new Map<string, ReportStatus>();
+      previous.forEach((r) => beforeMap.set(r.id, r.status));
       const { error } = await supabase
         .from('reports')
         .update({ status })
@@ -735,10 +719,10 @@ const AdminDashboard = () => {
         toast.warning('Bulk update berhasil, namun gagal mencatat audit log');
       }
       toast.success(`Berhasil mengupdate ${ids.length} laporan`);
-      setSelectedIds(new Set());
-      setBulkStatus("");
-      fetchReports();
-      fetchStats();
+      setSelectedIds(new Set<string>());
+      setBulkStatus('');
+      await fetchReports();
+      await fetchStats();
     } catch (err) {
       console.error(err);
       toast.error('Gagal melakukan bulk update');
@@ -748,23 +732,24 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('reports')
         .select('id,status');
       if (error) throw error;
-      const total = data?.length || 0;
-      const baru = data?.filter((r) => r.status === 'baru').length || 0;
-      const diproses = data?.filter((r) => r.status === 'diproses').length || 0;
-      const selesai = data?.filter((r) => r.status === 'selesai').length || 0;
+      const rows = (data ?? []) as Array<{ id: string; status: ReportStatus }>;
+      const total = rows.length;
+      const baru = rows.filter((r) => r.status === 'baru').length;
+      const diproses = rows.filter((r) => r.status === 'diproses').length;
+      const selesai = rows.filter((r) => r.status === 'selesai').length;
       setStats({ total, baru, diproses, selesai });
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
-  const fetchChartData = async () => {
+  const fetchChartData = useCallback(async () => {
     try {
       setChartLoading(true);
       const fromISO = new Date(Date.now() - chartDays * 24 * 60 * 60 * 1000).toISOString();
@@ -789,7 +774,7 @@ const AdminDashboard = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const items = (data || []) as Array<{ created_at: string; category: string | null }>;
+      const items = (data ?? []) as Array<{ created_at: string; category: ReportCategory | null }>;
 
       // Build daily buckets
       const days: Array<{ dateKey: string; label: string; count: number }> = [];
@@ -815,7 +800,7 @@ const AdminDashboard = () => {
       // Build category counts
       const catCount = new Map<string, number>();
       for (const it of items) {
-        const name = it.category || 'Lainnya';
+        const name = it.category ? String(it.category) : 'Lainnya';
         catCount.set(name, (catCount.get(name) || 0) + 1);
       }
       const catArr = Array.from(catCount.entries())
@@ -827,20 +812,89 @@ const AdminDashboard = () => {
     } finally {
       setChartLoading(false);
     }
+  }, [chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter]);
+
+  // sync tab to URL query param
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const next = tab === 'geo' ? 'geo' : tab === 'help' ? 'help' : 'reports';
+    if (next !== activeTab) setActiveTab(next);
+  }, [activeTab, searchParams]);
+
+  const onChangeTab = (tab: 'reports' | 'geo' | 'help') => {
+    setActiveTab(tab);
+    setSearchParams((prev) => {
+      const sp = new URLSearchParams(prev);
+      if (tab === 'reports') sp.delete('tab'); else sp.set('tab', tab);
+      return sp;
+    }, { replace: true });
   };
 
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      toast.error("Akses ditolak");
+      navigate("/");
+    }
+  }, [authLoading, isAdmin, navigate]);
+
+  // Realtime updates for reports
+  useEffect(() => {
+    if (!user || !isAdmin || activeTab !== 'reports') return;
+    const channel = supabase
+      .channel('reports-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
+        void fetchReports();
+        void fetchStats();
+        void fetchChartData();
+      })
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeTab, fetchChartData, fetchReports, fetchStats, isAdmin, user]);
+
+  // debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    if (user && isAdmin && activeTab === 'reports') {
+      setPage(1);
+    }
+  }, [activeTab, categoryFilter, debouncedSearch, isAdmin, sortBy, severityFilter, statusFilter, user]);
+
+  useEffect(() => {
+    if (user && isAdmin && activeTab === 'reports') {
+      void fetchReports();
+    }
+  }, [activeTab, fetchReports, isAdmin, page, pageSize, user]);
+
+  useEffect(() => {
+    if (user && isAdmin && activeTab === 'reports') {
+      void fetchChartData();
+    }
+  }, [activeTab, fetchChartData, isAdmin, user]);
+
+  useEffect(() => {
+    if (user && isAdmin && activeTab === 'reports') {
+      void fetchStats();
+    }
+  }, [activeTab, fetchStats, isAdmin, user]);
+
   const categories = useMemo(() => {
-    const set = new Set<string>();
-    reports.forEach((r) => r.category && set.add(r.category));
+    const set = new Set<ReportCategory>();
+    reports.forEach((r) => set.add(r.category));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [reports]);
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, newStatus: ReportStatus) => {
     setUpdatingId(id);
     const prevStatus = reports.find((r) => r.id === id)?.status;
     const { error } = await supabase
       .from("reports")
-      .update({ status: newStatus as "baru" | "diproses" | "selesai" })
+      .update({ status: newStatus })
       .eq("id", id);
 
     if (error) {
@@ -860,8 +914,8 @@ const AdminDashboard = () => {
         console.warn('Gagal menulis audit log (status):', logErr);
       }
       toast.success("Status berhasil diupdate");
-      fetchReports();
-      fetchStats();
+      await fetchReports();
+      await fetchStats();
       if (selectedReport && selectedReport.id === id) fetchReportLogs(id);
     }
     setUpdatingId(null);
@@ -886,7 +940,14 @@ const AdminDashboard = () => {
         </div>
 
         {/* Admin Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => onChangeTab(v as 'reports' | 'geo' | 'help')}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if (isAdminTab(value)) {
+              onChangeTab(value);
+            }
+          }}
+        >
           <TabsList className="w-full md:w-auto grid grid-cols-3 mb-6">
             <TabsTrigger value="reports">Laporan</TabsTrigger>
             <TabsTrigger value="geo">Geo Data</TabsTrigger>
@@ -934,7 +995,7 @@ const AdminDashboard = () => {
           </Card>
         </div>
         {loading ? (
-          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan…</div>
+          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan...</div>
         ) : (
         <>
         {/* Charts */}
@@ -1009,7 +1070,14 @@ const AdminDashboard = () => {
         <Card className="mb-5">
           <CardContent className="pt-5 space-y-3">
             <div className="flex flex-col gap-3">
-              <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <Tabs
+                value={statusFilter}
+                onValueChange={(value) => {
+                  if (isStatusFilter(value)) {
+                    setStatusFilter(value);
+                  }
+                }}
+              >
                 <TabsList className="grid grid-cols-4 w-full md:w-auto">
                   <TabsTrigger value="semua">Semua</TabsTrigger>
                   <TabsTrigger value="baru">Baru</TabsTrigger>
@@ -1019,7 +1087,14 @@ const AdminDashboard = () => {
               </Tabs>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
-                  <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as typeof severityFilter)}>
+                  <Select
+                    value={severityFilter}
+                    onValueChange={(value) => {
+                      if (isSeverityFilter(value)) {
+                        setSeverityFilter(value);
+                      }
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Severity" />
                     </SelectTrigger>
@@ -1032,7 +1107,16 @@ const AdminDashboard = () => {
                   </Select>
                 </div>
                 <div>
-                  <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
+                  <Select
+                    value={categoryFilter}
+                    onValueChange={(value) => {
+                      if (value === 'semua') {
+                        setCategoryFilter('semua');
+                      } else if (categories.includes(value as ReportCategory)) {
+                        setCategoryFilter(value as ReportCategory);
+                      }
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Kategori" />
                     </SelectTrigger>
@@ -1045,14 +1129,21 @@ const AdminDashboard = () => {
                   </Select>
                 </div>
                 <div>
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => {
+                      if (isSortOption(value)) {
+                        setSortBy(value);
+                      }
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Urutkan" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                      <SelectItem value="severity_desc">Severity (tinggi → rendah)</SelectItem>
-                      <SelectItem value="category_asc">Kategori (A → Z)</SelectItem>
+                      <SelectItem value="severity_desc">Severity (tinggi ke rendah)</SelectItem>
+                      <SelectItem value="category_asc">Kategori (A ke Z)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1086,7 +1177,14 @@ const AdminDashboard = () => {
                 {selectedIds.size > 0 ? `${selectedIds.size} dipilih` : 'Tidak ada item dipilih'}
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto">
-                <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as typeof bulkStatus)}>
+                <Select
+                  value={bulkStatus}
+                  onValueChange={(value) => {
+                    if (value === '' || isReportStatus(value)) {
+                      setBulkStatus(value as ReportStatus | '');
+                    }
+                  }}
+                >
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Ubah status menjadi..." />
                   </SelectTrigger>
@@ -1159,7 +1257,7 @@ const AdminDashboard = () => {
                         <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
                         <TableCell>
                           {shortLocation(report)
-                            ? `📍 ${shortLocation(report)}`
+                            ? shortLocation(report)
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell>
@@ -1171,7 +1269,11 @@ const AdminDashboard = () => {
                         <TableCell className="text-right">
                           <Select
                             value={report.status}
-                            onValueChange={(value) => updateStatus(report.id, value)}
+                            onValueChange={(value) => {
+                              if (isReportStatus(value)) {
+                                updateStatus(report.id, value);
+                              }
+                            }}
                             disabled={updatingId === report.id}
                           >
                             <SelectTrigger className="w-[140px] ml-auto">
@@ -1190,7 +1292,7 @@ const AdminDashboard = () => {
                 </Table>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-4">
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    Menampilkan {Math.min((page - 1) * pageSize + 1, totalFiltered)}–{Math.min(page * pageSize, totalFiltered)} dari {totalFiltered}
+                    Menampilkan {Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)} dari {totalFiltered}
                     <div className="flex items-center gap-2">
                       <span className="hidden md:inline">Per halaman:</span>
                       <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
@@ -1235,7 +1337,7 @@ const AdminDashboard = () => {
         <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
           <DrawerContent className="flex flex-col max-h-[85vh] md:max-h-[80vh] overflow-hidden">
             <DrawerErrorBoundary>
-            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail…</div>}>
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
               <AdminDetail
                 selectedReport={selectedReport}
                 fullReport={fullReport}
@@ -1261,13 +1363,13 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="geo" className="mt-0">
-            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Geo Data Manager…</div>}>
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Geo Data Manager...</div>}>
               <GeoDataManagerLazy />
             </Suspense>
           </TabsContent>
 
           <TabsContent value="help" className="mt-0">
-            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center…</div>}>
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
               <HelpCenterLazy />
             </Suspense>
           </TabsContent>
@@ -1305,7 +1407,7 @@ export default AdminDashboard;
 
 // Lazy component for Drawer detail to keep Dashboard initial render light
 const AdminDetail = lazy(async () => {
-  const Mod = await import("react");
+  await import("react");
   return {
     default: function AdminDetailView({
       selectedReport,
@@ -1325,20 +1427,20 @@ const AdminDetail = lazy(async () => {
       saveEdits,
       saving,
     }: {
-      selectedReport: Report | null;
-      fullReport: FullReport | null;
+      selectedReport: ReportListItem | null;
+      fullReport: ReportDetail | null;
       detailLoading: boolean;
       editTitle: string;
       setEditTitle: (v: string) => void;
-      editSeverity: '' | 'ringan' | 'sedang' | 'berat';
-      setEditSeverity: (v: '' | 'ringan' | 'sedang' | 'berat') => void;
-      renderStatusBadge: (s: string) => ReactNode;
+      editSeverity: ReportSeverity | '';
+      setEditSeverity: (v: ReportSeverity | '') => void;
+      renderStatusBadge: (s: ReportStatus) => ReactNode;
       formatDateTime: (s?: string | null) => string;
       editResolution: string;
       setEditResolution: (v: string) => void;
       logsLoading: boolean;
-      logs: ReportLog[];
-      summarizeLog: (l: ReportLog) => string;
+      logs: ReportLogEntry[];
+      summarizeLog: (l: ReportLogEntry) => string;
       saveEdits: () => Promise<void> | void;
       saving: boolean;
     }) {
@@ -1364,14 +1466,19 @@ const AdminDetail = lazy(async () => {
                   <select
                     className="h-8 w-[160px] rounded-md border bg-background px-2 text-sm"
                     value={editSeverity}
-                    onChange={(e) => setEditSeverity(e.target.value as typeof editSeverity)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || REPORT_SEVERITIES.includes(value as ReportSeverity)) {
+                        setEditSeverity(value as ReportSeverity | '');
+                      }
+                    }}
                   >
                     <option value="">-</option>
                     <option value="berat">Berat</option>
                     <option value="sedang">Sedang</option>
                     <option value="ringan">Ringan</option>
                   </select>
-                  {renderStatusBadge(String(selectedReport.status || ''))}
+                  {renderStatusBadge(selectedReport.status)}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <div>
@@ -1417,33 +1524,39 @@ const AdminDetail = lazy(async () => {
                           return lat != null && lon != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : '-';
                         })()}
                       </div>
-                      {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              const lat = fullReport?.latitude as number;
-                              const lon = fullReport?.longitude as number;
-                              await navigator.clipboard.writeText(`${lat}, ${lon}`);
-                              toast.success('Koordinat disalin');
-                            }}
-                          >
-                            Salin
+                  {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const lat = fullReport?.latitude;
+                          const lon = fullReport?.longitude;
+                          if (typeof lat !== 'number' || typeof lon !== 'number') {
+                            return;
+                          }
+                          await navigator.clipboard.writeText(`${lat}, ${lon}`);
+                          toast.success('Koordinat disalin');
+                        }}
+                      >
+                        Salin
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              const lat = fullReport?.latitude as number;
-                              const lon = fullReport?.longitude as number;
-                              const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-                              window.open(url, '_blank', 'noopener,noreferrer');
-                            }}
-                          >
-                            Buka Maps
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                          const lat = fullReport?.latitude;
+                          const lon = fullReport?.longitude;
+                          if (typeof lat !== 'number' || typeof lon !== 'number') {
+                            return;
+                          }
+                          const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          Buka Maps
+                        </Button>
+                      </div>
                       )}
                     </div>
                   </div>
@@ -1493,7 +1606,7 @@ const AdminDetail = lazy(async () => {
                     <ul className="space-y-2 max-h-48 overflow-auto pr-2">
                       {logs.map((log) => (
                         <li key={log.id} className="text-sm">
-                          <div className="text-muted-foreground">{formatDateTime(log.created_at)} — {log.actor_email || '-'}</div>
+                          <div className="text-muted-foreground">{formatDateTime(log.created_at)} - {log.actor_email || '-'}</div>
                           <div>{summarizeLog(log)}</div>
                         </li>
                       ))}

@@ -456,37 +456,58 @@ const MapView = () => {
 
   // Load list of available geo_layers to display as toggles and apply default visibility
   useEffect(() => {
+    let cancelled = false;
+    const cached = sessionStorage.getItem('map:availableLayers');
+    if (cached) {
+      try {
+        const parsed: Array<{ key: string; name: string; geometry_type: string | null }> = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0 && !cancelled) {
+          setAvailableLayers(parsed);
+        }
+      } catch {
+        // ignore cache parse errors
+      }
+    }
+
     const loadList = async () => {
       try {
         const { data, error } = await supabase
           .from('geo_layers')
           .select('key,name,geometry_type,data')
           .order('created_at', { ascending: false });
-        if (!error && data) {
-          const rows = data as Array<{ key: string; name: string; geometry_type: string | null; data?: Record<string, unknown> | null }>;
-          // Exclude admin_boundaries as it has a dedicated toggle
-          const layers = rows.filter((l) => l.key !== 'admin_boundaries');
-          setAvailableLayers(layers.map(({ key, name, geometry_type }) => ({ key, name, geometry_type })));
+        if (cancelled || error || !data) return;
 
-          // Auto-enable layers marked default visible (data.meta.visibility_default) on first discovery
-          setOverlays((prev) => {
-            const dyn = { ...(prev.dynamic || {}) } as Record<string, boolean>;
-            let changed = false;
-            for (const l of layers) {
-              const visibility = Boolean(((l.data || undefined) as { meta?: { visibility_default?: boolean } } | undefined)?.meta?.visibility_default);
-              if (visibility && typeof dyn[l.key] === 'undefined') { dyn[l.key] = true; changed = true; }
-            }
-            // Back-compat: if assets exists and no preference set anywhere, default it on
-            const hasAssets = layers.some((l) => l.key === 'assets');
-            if (hasAssets && typeof dyn['assets'] === 'undefined') { dyn['assets'] = true; changed = true; }
-            return changed ? { ...prev, dynamic: dyn } : prev;
-          });
-        }
+        const rows = data as Array<{ key: string; name: string; geometry_type: string | null; data?: Record<string, unknown> | null }>;
+        const layers = rows.filter((l) => l.key !== 'admin_boundaries');
+        const mapped = layers.map(({ key, name, geometry_type }) => ({ key, name, geometry_type }));
+        setAvailableLayers(mapped);
+        sessionStorage.setItem('map:availableLayers', JSON.stringify(mapped));
+
+        setOverlays((prev) => {
+          const dyn = { ...(prev.dynamic || {}) } as Record<string, boolean>;
+          let changed = false;
+          for (const l of layers) {
+            const visibility = Boolean(((l.data || undefined) as { meta?: { visibility_default?: boolean } } | undefined)?.meta?.visibility_default);
+            if (visibility && typeof dyn[l.key] === 'undefined') { dyn[l.key] = true; changed = true; }
+          }
+          const hasAssets = layers.some((l) => l.key === 'assets');
+          if (hasAssets && typeof dyn['assets'] === 'undefined') { dyn['assets'] = true; changed = true; }
+          return changed ? { ...prev, dynamic: dyn } : prev;
+        });
       } catch (e) {
         console.warn('Failed to load layers list', e);
       }
     };
-    void loadList();
+
+    if (!cached || cached === '[]') {
+      void loadList();
+    } else {
+      void loadList();
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Lazy-load any toggled dynamic layer data and cache it
