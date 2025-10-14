@@ -2,9 +2,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Navigation, Loader as Loader2 } from 'lucide-react';
+import { Loader as Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -51,7 +51,7 @@ const createCustomIcon = (category: string, status: string, severity?: Report['s
     baru: '#f59e0b',
     diproses: '#3b82f6',
     selesai: '#10b981',
-  };
+  } as const;
 
   const color = colors[status as keyof typeof colors] || '#6b7280';
   const sevColors: Record<NonNullable<Report['severity']>, string> = {
@@ -66,37 +66,39 @@ const createCustomIcon = (category: string, status: string, severity?: Report['s
     html: `
       <div style="
         background-color: ${color};
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 50% 50% 50% 0;
         transform: rotate(-45deg);
-        border: 3px solid ${sevBorder};
-        box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        border: 2px solid ${sevBorder};
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         display: flex;
         align-items: center;
-        justify-content: center;
-      ">
-        <span style="
-          transform: rotate(45deg);
-          color: white;
-          font-weight: bold;
-          font-size: 16px;
-        ">📍</span>
+        justify-content: center;">
+        <span style="transform: rotate(45deg); font-size: 12px; color: white;">●</span>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -24],
   });
 };
 
-// Simpler icon for assets with status-based color
 const createAssetIcon = (status: 'aktif' | 'nonaktif' | 'rusak', category?: string) => {
-  const color = status === 'aktif' ? '#10b981' : status === 'rusak' ? '#ef4444' : '#9ca3af';
-  // Optional category hint via emoji
-  const emoji = category?.toLowerCase().includes('jembatan') ? '🌉' :
-    category?.toLowerCase().includes('irigasi') ? '💧' :
-    category?.toLowerCase().includes('jalan') ? '🛣️' : '📍';
+  const colors: Record<typeof status, string> = {
+    aktif: '#16a34a',
+    nonaktif: '#6b7280',
+    rusak: '#ef4444',
+  } as const;
+  const emoji = (() => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('bendungan')) return '🏞️';
+    if (cat.includes('saluran')) return '🚰';
+    if (cat.includes('pintu')) return '🚪';
+    if (cat.includes('sungai')) return '🌊';
+    return '📍';
+  })();
+  const color = colors[status] ?? '#16a34a';
   return L.divIcon({
     className: 'asset-marker',
     html: `
@@ -110,8 +112,7 @@ const createAssetIcon = (status: 'aktif' | 'nonaktif' | 'rusak', category?: stri
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         display: flex;
         align-items: center;
-        justify-content: center;
-      ">
+        justify-content: center;">
         <span style="transform: rotate(45deg); font-size: 12px;">${emoji}</span>
       </div>
     `,
@@ -171,6 +172,12 @@ const MapView = () => {
   // Dynamic overlays from geo_layers
   const [availableLayers, setAvailableLayers] = useState<Array<{ key: string; name: string; geometry_type: string | null }>>([]);
   const [dynamicData, setDynamicData] = useState<Record<string, FeatureCollection<Geometry> | null>>({});
+  type LayerStyle = {
+    point?: { color?: string; fillColor?: string; fillOpacity?: number; radius?: number; weight?: number };
+    line?: { color?: string; weight?: number; opacity?: number; dashArray?: string };
+    polygon?: { color?: string; weight?: number; opacity?: number; fillColor?: string; fillOpacity?: number };
+  };
+  const [dynamicStyle, setDynamicStyle] = useState<Record<string, LayerStyle>>({});
   const [dynamicLoading, setDynamicLoading] = useState<Record<string, boolean>>({});
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
@@ -268,27 +275,23 @@ const MapView = () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  // Lazy-load admin boundaries when toggled on
   useEffect(() => {
     const loadAdminBoundaries = async () => {
       if (!overlays.adminBoundaries) return;
-      if (adminGeoJson || adminLoading) return;
+      if (adminGeoJson && kecamatanLines) return; // already loaded
       setAdminLoading(true);
       try {
-        // 1) Try admin-managed layer from Supabase first
+        // Try from DB first (geo_layers.key = 'admin_boundaries')
         let data: FeatureCollection<Geometry> | null = null;
         let srcCrsFromDb: string | undefined = undefined;
         try {
-          const { data: gl, error } = await supabase
+          const { data: row, error } = await supabase
             .from('geo_layers')
             .select('data')
             .eq('key', 'admin_boundaries')
-            .limit(1)
             .maybeSingle();
-          if (!error && gl?.data) {
-            const raw = gl.data as unknown as Record<string, unknown>;
-            // Preferred wrapper shape: { featureCollection, crs }
+          if (!error && row?.data) {
+            const raw = row.data as unknown as Record<string, unknown>;
             if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
               const wrapper = raw as { featureCollection?: unknown; crs?: string };
               if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
@@ -296,7 +299,6 @@ const MapView = () => {
                 srcCrsFromDb = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
               }
             }
-            // Back-compat: direct FeatureCollection or nested value
             if (!data) {
               if ((raw as { type?: string }).type === 'FeatureCollection') {
                 data = raw as unknown as FeatureCollection<Geometry>;
@@ -307,14 +309,13 @@ const MapView = () => {
               }
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          // ignore
+        }
 
-        // 2) Fallback to public files
+        // Fallback to public files
         if (!data) {
-          const candidates = [
-            '/data/ciamis_kecamatan.geojson',
-            '/data/adm_ciamis.geojson',
-          ];
+          const candidates = ['/data/ciamis_kecamatan.geojson', '/data/adm_ciamis.geojson'];
           for (const url of candidates) {
             try {
               const r = await fetch(url, { cache: 'force-cache' });
@@ -338,12 +339,9 @@ const MapView = () => {
           const f = data!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
           if (!f) return null;
           const g = f.geometry;
-          // Try to peek first coordinate
           const peek = (coords: unknown): [number, number] | null => {
             if (!Array.isArray(coords)) return null;
-            if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-              return [coords[0] as number, coords[1] as number];
-            }
+            if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') return [coords[0] as number, coords[1] as number];
             for (const c of coords as unknown[]) {
               const p = peek(c);
               if (p) return p;
@@ -353,39 +351,32 @@ const MapView = () => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return peek((g as any).coordinates);
         })();
-
         const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
 
         let result = data;
         if (needsUTM49S || looksProjected) {
-          // Define UTM zone 49S
           proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
-
           const transformCoord = (pt: number[]): [number, number] => {
             const x = pt[0];
             const y = pt[1];
             const [lon, lat] = proj4('EPSG:32749', 'EPSG:4326', [x, y]);
             return [lon, lat];
           };
-
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const reprojectGeometry = (geom: any): any => {
             if (!geom) return geom;
             const t = geom.type;
             const coords = geom.coordinates;
-            const mapCoords = (arr: unknown, depth = 0): unknown => {
+            const mapCoords = (arr: unknown): unknown => {
               if (!Array.isArray(arr)) return arr;
-              if (arr.length > 0 && typeof arr[0] === 'number') {
-                return transformCoord(arr as number[]);
-              }
-              return (arr as unknown[]).map((a) => mapCoords(a, depth + 1));
+              if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
+              return (arr as unknown[]).map((a) => mapCoords(a));
             };
             if (t === 'GeometryCollection') {
               return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
             }
             return { type: t, coordinates: mapCoords(coords) };
           };
-
           result = {
             type: 'FeatureCollection',
             features: data.features.map((f) => ({
@@ -396,7 +387,7 @@ const MapView = () => {
           } as FeatureCollection<Geometry>;
         }
 
-        // Prepare kecamatan boundary lines (Indonesia style: kecamatan dashed thicker)
+        // Build kecamatan boundary lines
         try {
           const getKecName = (p?: Record<string, unknown>): string | undefined =>
             (p?.KECAMATAN as string) || (p?.Kecamatan as string) || undefined;
@@ -408,7 +399,6 @@ const MapView = () => {
             arr.push(f);
             groups.set(name, arr);
           }
-
           const lineFeatures: Array<Feature<LineString | MultiLineString>> = [];
           groups.forEach((features, name) => {
             try {
@@ -418,7 +408,6 @@ const MapView = () => {
                 lineFeatures.push(line);
               }
             } catch (e) {
-              // Fallback: skip problematic kecamatan
               console.warn('Failed to build kecamatan boundary for', name, e);
             }
           });
@@ -442,8 +431,8 @@ const MapView = () => {
         setAdminLoading(false);
       }
     };
-    loadAdminBoundaries();
-  }, [overlays.adminBoundaries, adminGeoJson, adminLoading]);
+    void loadAdminBoundaries();
+  }, [overlays.adminBoundaries, adminGeoJson, kecamatanLines]);
 
   // When boundaries are first loaded and toggled on, fit the map to their extent for visibility
   useEffect(() => {
@@ -465,30 +454,33 @@ const MapView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapInstance, overlays.adminBoundaries, !!adminGeoJson]);
 
-  // Load list of available geo_layers to display as toggles
+  // Load list of available geo_layers to display as toggles and apply default visibility
   useEffect(() => {
     const loadList = async () => {
       try {
         const { data, error } = await supabase
           .from('geo_layers')
-          .select('key,name,geometry_type')
+          .select('key,name,geometry_type,data')
           .order('created_at', { ascending: false });
         if (!error && data) {
+          const rows = data as Array<{ key: string; name: string; geometry_type: string | null; data?: Record<string, unknown> | null }>;
           // Exclude admin_boundaries as it has a dedicated toggle
-          const layers = (data as Array<{ key: string; name: string; geometry_type: string | null }>).
-            filter((l) => l.key !== 'admin_boundaries');
-          setAvailableLayers(layers);
-          // Auto-enable assets layer on first discovery if not explicitly set
-          const hasAssets = layers.some((l) => l.key === 'assets');
-          if (hasAssets) {
-            setOverlays((prev) => {
-              const dyn = prev.dynamic || {};
-              if (typeof dyn.assets === 'undefined') {
-                return { ...prev, dynamic: { ...dyn, assets: true } };
-              }
-              return prev;
-            });
-          }
+          const layers = rows.filter((l) => l.key !== 'admin_boundaries');
+          setAvailableLayers(layers.map(({ key, name, geometry_type }) => ({ key, name, geometry_type })));
+
+          // Auto-enable layers marked default visible (data.meta.visibility_default) on first discovery
+          setOverlays((prev) => {
+            const dyn = { ...(prev.dynamic || {}) } as Record<string, boolean>;
+            let changed = false;
+            for (const l of layers) {
+              const visibility = Boolean(((l.data || undefined) as { meta?: { visibility_default?: boolean } } | undefined)?.meta?.visibility_default);
+              if (visibility && typeof dyn[l.key] === 'undefined') { dyn[l.key] = true; changed = true; }
+            }
+            // Back-compat: if assets exists and no preference set anywhere, default it on
+            const hasAssets = layers.some((l) => l.key === 'assets');
+            if (hasAssets && typeof dyn['assets'] === 'undefined') { dyn['assets'] = true; changed = true; }
+            return changed ? { ...prev, dynamic: dyn } : prev;
+          });
         }
       } catch (e) {
         console.warn('Failed to load layers list', e);
@@ -537,6 +529,14 @@ const MapView = () => {
                 if (found) fc = found as FeatureCollection<Geometry>;
               }
             }
+
+            // Extract style if provided
+            try {
+              const maybeStyle = (raw as { style?: unknown })?.style;
+              if (maybeStyle && typeof maybeStyle === 'object') {
+                setDynamicStyle((s) => ({ ...s, [key]: maybeStyle as Record<string, unknown> as LayerStyle }));
+              }
+            } catch { /* ignore */ }
 
             if (fc) {
               // EPSG defs we support
@@ -781,11 +781,11 @@ const MapView = () => {
         if (isAfter(reportDate, toDate)) return false;
       }
 
-  // 7-day lookback window: [currentDate - 6, currentDate]
-  const timeStart = startOfDay(subDays(timeFilterDate, 6));
-  const timeEnd = startOfDay(timeFilterDate);
-  if (isBefore(reportDate, timeStart)) return false;
-  if (isAfter(reportDate, timeEnd)) return false;
+      // 7-day lookback window: [currentDate - 6, currentDate]
+      const timeStart = startOfDay(subDays(timeFilterDate, 6));
+      const timeEnd = startOfDay(timeFilterDate);
+      if (isBefore(reportDate, timeStart)) return false;
+      if (isAfter(reportDate, timeEnd)) return false;
 
       if (drawnPolygon) {
         const point = turf.point([report.longitude, report.latitude]);
@@ -907,7 +907,7 @@ const MapView = () => {
           </p>
         </div>
 
-  <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-180px)]' : 'h-[calc(100vh-220px)]'}`}>
+        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-180px)]' : 'h-[calc(100vh-220px)]'}`}>
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -999,29 +999,31 @@ const MapView = () => {
                     data={dynamicData[key]!}
                     style={(feat) => {
                       const t = feat?.geometry?.type;
+                      const styLine = dynamicStyle[key]?.line;
+                      const styPoly = dynamicStyle[key]?.polygon;
                       // If key hints irrigation
                       if (key.toLowerCase().includes('irigasi') || key.toLowerCase().includes('irrigation')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#0ea5e9', weight: 3, opacity: 0.9 };
-                        return { color: '#0ea5e9', weight: 1.5, opacity: 0.8, fillColor: '#38bdf8', fillOpacity: 0.15 };
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#0ea5e9', weight: styLine?.weight ?? 3, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                        return { color: styPoly?.color ?? '#0ea5e9', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#38bdf8', fillOpacity: styPoly?.fillOpacity ?? 0.15 };
                       }
                       // If key hints flood zones / hazard
                       if (key.toLowerCase().includes('banjir') || key.toLowerCase().includes('flood')) {
-                        return { color: '#ef4444', weight: 1, opacity: 0.7, fillColor: '#f87171', fillOpacity: 0.2 };
+                        return { color: styPoly?.color ?? '#ef4444', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.7, fillColor: styPoly?.fillColor ?? '#f87171', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
                       }
                       // If key hints rivers
                       if (key.toLowerCase().includes('sungai') || key.toLowerCase().includes('river')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#38bdf8', weight: 2.5, opacity: 0.95 };
-                        return { color: '#38bdf8', weight: 1.5, opacity: 0.85, fillColor: '#7dd3fc', fillOpacity: 0.18 };
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#38bdf8', weight: styLine?.weight ?? 2.5, opacity: styLine?.opacity ?? 0.95, dashArray: styLine?.dashArray };
+                        return { color: styPoly?.color ?? '#38bdf8', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.85, fillColor: styPoly?.fillColor ?? '#7dd3fc', fillOpacity: styPoly?.fillOpacity ?? 0.18 };
                       }
                       // If key hints paddy fields (sawah)
                       if (key.toLowerCase().includes('sawah') || key.toLowerCase().includes('paddy')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: '#16a34a', weight: 2, opacity: 0.9 };
-                        return { color: '#16a34a', weight: 1, opacity: 0.9, fillColor: '#86efac', fillOpacity: 0.25 };
+                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#16a34a', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                        return { color: styPoly?.color ?? '#16a34a', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.9, fillColor: styPoly?.fillColor ?? '#86efac', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
                       }
                       // Defaults by geometry
-                      if (t === 'LineString' || t === 'MultiLineString') return { color: '#334155', weight: 2, opacity: 0.9 };
-                      if (t === 'Point' || t === 'MultiPoint') return { color: '#16a34a', weight: 2, opacity: 0.9 };
-                      return { color: '#475569', weight: 1, opacity: 0.8, fillColor: '#cbd5e1', fillOpacity: 0.2 };
+                      if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#334155', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                      if (t === 'Point' || t === 'MultiPoint') return { color: (dynamicStyle[key]?.point?.color) ?? '#16a34a', weight: (dynamicStyle[key]?.point?.weight) ?? 2, opacity: 0.9 };
+                      return { color: styPoly?.color ?? '#475569', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#cbd5e1', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
                     }}
                     pointToLayer={(feature, latlng) => {
                       if (key === 'assets') {
@@ -1030,7 +1032,14 @@ const MapView = () => {
                         const cat = (p?.category as string) || '';
                         return L.marker(latlng, { icon: createAssetIcon((['aktif','nonaktif','rusak'].includes(status) ? (status as 'aktif'|'nonaktif'|'rusak') : 'aktif'), cat) });
                       }
-                      return L.circleMarker(latlng, { radius: 5, color: '#16a34a', weight: 1, fillOpacity: 0.7 });
+                      const sty = dynamicStyle[key]?.point;
+                      return L.circleMarker(latlng, {
+                        radius: sty?.radius ?? 5,
+                        color: sty?.color ?? '#16a34a',
+                        weight: sty?.weight ?? 1,
+                        fillColor: sty?.fillColor ?? '#16a34a',
+                        fillOpacity: sty?.fillOpacity ?? 0.7,
+                      });
                     }}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties as Record<string, unknown> | undefined;

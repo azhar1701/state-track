@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import UnifiedImporter from '@/components/import/UnifiedImporter';
 import type { ImportMode } from '@/components/import/UnifiedImporter';
+import LayerInspector from '@/components/geodata/LayerInspector';
 // removed ArrowUp/ArrowDown as popup configurator is removed
 
 // Popup configurator removed per request
@@ -96,6 +97,8 @@ export default function GeoDataManager() {
   // unified importer handles importing state internally
 
   const [open, setOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectKey, setInspectKey] = useState<string | null>(null);
   const [form, setForm] = useState<{ code: string; name: string; category: Asset['category']; latitude: string; longitude: string; keterangan: string }>(
     { code: '', name: '', category: 'lainnya', latitude: '', longitude: '', keterangan: '' }
   );
@@ -417,6 +420,27 @@ export default function GeoDataManager() {
                     <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => { setInspectKey(r.key); setInspectorOpen(true); }}>Detail</Button>
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              try {
+                                const { data, error } = await supabase
+                                  .from('geo_layers')
+                                  .select('data')
+                                  .eq('id', r.id)
+                                  .limit(1)
+                                  .maybeSingle();
+                                if (error || !data) return toast.error('Gagal mengambil data layer');
+                                const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${r.key}.geojson.json`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              } catch {
+                                toast.error('Gagal mengunduh data');
+                              }
+                            }}>Unduh</Button>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="destructive">Hapus</Button>
@@ -609,6 +633,9 @@ export default function GeoDataManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+  {/* Layer Inspector */}
+  <LayerInspector open={inspectorOpen} onOpenChange={setInspectorOpen} layerKey={inspectKey} />
 
       {/* Popup configurator removed */}
     </div>
