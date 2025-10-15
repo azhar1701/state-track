@@ -46,6 +46,21 @@ interface Report {
   user_id: string;
 }
 
+type AssetRow = {
+  id: string;
+  code: string | null;
+  name: string | null;
+  category: string | null;
+  status: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  keterangan: string | null;
+  created_at: string | null;
+};
+
+const MAP_PREFS_STORAGE_KEY = 'admin:mapPreferences';
+const MAP_OVERLAY_STORAGE_KEY = 'map:overlays';
+
 const createCustomIcon = (category: string, status: string, severity?: Report['severity']) => {
   const colors = {
     baru: '#f59e0b',
@@ -134,6 +149,9 @@ const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: numbe
 
 const MapView = () => {
   const urlParams = parseURLParams();
+  const hasUrlCenter = Boolean(urlParams.center);
+  const hasUrlZoom = typeof urlParams.zoom === 'number';
+  const hasUrlBasemap = Boolean(urlParams.basemap);
   const isMobile = useIsMobile();
 
   const [reports, setReports] = useState<Report[]>([]);
@@ -158,11 +176,130 @@ const MapView = () => {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showOverlayPanel, setShowOverlayPanel] = useState(false);
   const [overlays, setOverlays] = useState<MapOverlays>({
-    adminBoundaries: false,
+    adminBoundaries: true,
     clustering: true,
     heatmap: false,
     dynamic: {},
   });
+
+  // Apply persisted admin map preferences (center, zoom, basemap, default overlays)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(MAP_PREFS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as Partial<{
+        centerLat: string;
+        centerLng: string;
+        zoom: string;
+        basemap: BasemapType;
+        showAdminBoundaries: boolean;
+        showAssets: boolean;
+      }>;
+
+      setOverlays((prev) => {
+        const nextDynamic = { ...(prev.dynamic || {}) };
+        let dynamicChanged = false;
+
+        // Paksa layer aset selalu nonaktif
+        if (typeof nextDynamic.assets !== 'undefined') {
+          nextDynamic.assets = false;
+          dynamicChanged = true;
+        }
+
+        const nextAdminBoundaries = typeof parsed.showAdminBoundaries === 'boolean'
+          ? parsed.showAdminBoundaries
+          : prev.adminBoundaries;
+        const adminChanged = nextAdminBoundaries !== prev.adminBoundaries;
+
+        if (!adminChanged && !dynamicChanged) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          adminBoundaries: nextAdminBoundaries,
+          dynamic: dynamicChanged ? nextDynamic : prev.dynamic,
+        };
+      });
+
+      if (!hasUrlCenter && parsed.centerLat && parsed.centerLng) {
+        const lat = parseFloat(parsed.centerLat);
+        const lng = parseFloat(parsed.centerLng);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          setMapCenter([lat, lng]);
+        }
+      }
+
+      if (!hasUrlZoom && parsed.zoom) {
+        const zoomVal = parseInt(parsed.zoom, 10);
+        if (!Number.isNaN(zoomVal)) {
+          setMapZoom(zoomVal);
+        }
+      }
+
+      if (!hasUrlBasemap && parsed.basemap) {
+        setBasemap(parsed.basemap);
+      }
+    } catch (error) {
+      console.warn('Failed to apply stored map preferences', error);
+    }
+  }, [hasUrlBasemap, hasUrlCenter, hasUrlZoom]);
+
+  // Restore last overlay toggles (if any)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(MAP_OVERLAY_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as Partial<MapOverlays>;
+      setOverlays((prev) => {
+        const nextDynamic = { ...(prev.dynamic || {}) };
+        for (const key of Object.keys(nextDynamic)) {
+          const lower = key.toLowerCase();
+          if (lower.includes('sawah') || lower.includes('padi')) {
+            delete nextDynamic[key];
+          }
+        }
+        if (parsed.dynamic && typeof parsed.dynamic === 'object') {
+          for (const [key, value] of Object.entries(parsed.dynamic)) {
+            const lower = key.toLowerCase();
+            if (lower.includes('sawah') || lower.includes('padi')) continue;
+            if (typeof value === 'boolean') nextDynamic[key] = value;
+          }
+        }
+        return {
+          adminBoundaries: typeof parsed.adminBoundaries === 'boolean' ? parsed.adminBoundaries : prev.adminBoundaries,
+          clustering: typeof parsed.clustering === 'boolean' ? parsed.clustering : prev.clustering,
+          heatmap: typeof parsed.heatmap === 'boolean' ? parsed.heatmap : prev.heatmap,
+          dynamic: nextDynamic,
+        };
+      });
+    } catch (error) {
+      console.warn('Failed to restore overlay toggles', error);
+    }
+  }, []);
+
+  // Persist overlay toggles for next session
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const snapshot: MapOverlays = {
+        adminBoundaries: overlays.adminBoundaries,
+        clustering: overlays.clustering,
+        heatmap: overlays.heatmap,
+        dynamic: Object.fromEntries(
+          Object.entries(overlays.dynamic || {}).filter(([key]) => {
+            const lower = key.toLowerCase();
+            return !lower.includes('sawah') && !lower.includes('padi');
+          })
+        ),
+      };
+      window.localStorage.setItem(MAP_OVERLAY_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (error) {
+      console.warn('Failed to persist overlay toggles', error);
+    }
+  }, [overlays]);
 
   // Administrative boundaries geojson cache
   const [adminGeoJson, setAdminGeoJson] = useState<FeatureCollection<Geometry> | null>(null);
@@ -193,6 +330,8 @@ const MapView = () => {
   const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
   const [ctxAddress, setCtxAddress] = useState<string | null>(null);
   const [ctxLoading, setCtxLoading] = useState(false);
+  // Fix: minDate for TimeSlider (scope global in component)
+  const minDate = startOfDay(new Date('2025-10-01'));
 
   // Build dynamic legend items based on active overlays and layer types
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
@@ -205,6 +344,7 @@ const MapView = () => {
     const getName = (key: string) => availableLayers.find((l) => l.key === key)?.name || key;
     for (const key of activeDyn) {
       const lower = key.toLowerCase();
+      if (lower === 'assets') continue;
       const style = dynamicStyle[key];
       const pointColor = style?.point?.fillColor ?? style?.point?.color;
       const lineColor = style?.line?.color;
@@ -244,11 +384,7 @@ const MapView = () => {
         });
         continue;
       }
-      if (lower === 'assets') {
-        const defaultColor = '#16a34a';
-        items.push({ type: 'point', label: 'Aset', color: pointColor ?? defaultColor });
-        continue;
-      }
+      // ...existing code...
       // Fall back to geometry type from DB or data sample
       const gt = availableLayers.find((l) => l.key === key)?.geometry_type
         || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
@@ -257,6 +393,8 @@ const MapView = () => {
         const defaultColor = '#334155';
         items.push({ type: 'line', label: getName(key), color: lineColor ?? defaultColor, dashArray: lineDash });
       } else if (/Point/i.test(String(gt))) {
+        // Jangan tampilkan label 'Aset' untuk geometry point dari key assets
+        if (getName(key).toLowerCase() === 'aset' || lower === 'assets') continue;
         const defaultColor = '#16a34a';
         items.push({ type: 'point', label: getName(key), color: pointColor ?? defaultColor });
       } else {
@@ -270,13 +408,8 @@ const MapView = () => {
         });
       }
     }
-    return items;
+  return items;
   }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData, dynamicStyle]);
-
-  const minDate = useMemo(() => {
-    // Fix the earliest selectable date to Oct 1, 2025
-    return startOfDay(new Date('2025-10-01'));
-  }, []);
 
   const maxDate = useMemo(() => {
     if (reports.length === 0) return new Date();
@@ -520,7 +653,12 @@ const MapView = () => {
           let changed = false;
           for (const l of layers) {
             const visibility = Boolean(((l.data || undefined) as { meta?: { visibility_default?: boolean } } | undefined)?.meta?.visibility_default);
-            if (visibility && typeof dyn[l.key] === 'undefined') { dyn[l.key] = true; changed = true; }
+            const keyLower = l.key.toLowerCase();
+            const allowAutoToggle = !keyLower.includes('sawah') && !keyLower.includes('padi');
+            if (visibility && allowAutoToggle && typeof dyn[l.key] === 'undefined') {
+              dyn[l.key] = true;
+              changed = true;
+            }
           }
           const hasAssets = layers.some((l) => l.key === 'assets');
           if (hasAssets && typeof dyn['assets'] === 'undefined') { dyn['assets'] = true; changed = true; }
@@ -559,12 +697,13 @@ const MapView = () => {
             .eq('key', key)
             .limit(1)
             .maybeSingle();
+
+          let fc: FeatureCollection<Geometry> | null = null;
+          let srcCrs: string | undefined = undefined;
+          let raw: Record<string, unknown> | null = null;
+
           if (!error && gl?.data) {
-            // Accept FeatureCollection or attempt to find one inside nested objects
-            let fc: FeatureCollection<Geometry> | null = null;
-            let srcCrs: string | undefined = undefined;
-            const raw = gl.data as unknown as Record<string, unknown>;
-            // Preferred shape from GeoDataManager: { featureCollection, crs }
+            raw = gl.data as unknown as Record<string, unknown>;
             if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
               const wrapper = raw as { featureCollection?: unknown; crs?: string };
               if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
@@ -572,7 +711,6 @@ const MapView = () => {
                 srcCrs = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
               }
             }
-            // Back-compat: accept direct FC or nested object values
             if (!fc) {
               if ((raw as { type?: string }).type === 'FeatureCollection') {
                 fc = raw as unknown as FeatureCollection<Geometry>;
@@ -583,19 +721,78 @@ const MapView = () => {
               }
             }
 
-            // Extract style if provided
-            try {
-              const maybeStyle = (raw as { style?: unknown })?.style;
-              if (maybeStyle && typeof maybeStyle === 'object') {
-                setDynamicStyle((s) => ({ ...s, [key]: maybeStyle as Record<string, unknown> as LayerStyle }));
-              }
-            } catch { /* ignore */ }
+            if (raw) {
+              try {
+                const maybeStyle = (raw as { style?: unknown })?.style;
+                if (maybeStyle && typeof maybeStyle === 'object') {
+                  setDynamicStyle((s) => ({ ...s, [key]: maybeStyle as Record<string, unknown> as LayerStyle }));
+                }
+              } catch { /* ignore */ }
+            }
+          }
 
-            if (fc) {
-              // EPSG defs we support
-              proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
-              proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
-              proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
+          if (!fc && key === 'assets') {
+            try {
+              const { data: assetRows, error: assetError } = await supabase
+                .from('assets')
+                .select('id,code,name,category,status,latitude,longitude,keterangan,created_at')
+                .order('created_at', { ascending: false });
+              if (!assetError && assetRows) {
+                const rows = assetRows as AssetRow[];
+                const features = rows
+                  .map((row) => {
+                    const rawLat = row.latitude as unknown;
+                    const rawLon = row.longitude as unknown;
+                    const lat =
+                      typeof rawLat === 'number'
+                        ? rawLat
+                        : typeof rawLat === 'string'
+                          ? parseFloat(rawLat)
+                          : null;
+                    const lon =
+                      typeof rawLon === 'number'
+                        ? rawLon
+                        : typeof rawLon === 'string'
+                          ? parseFloat(rawLon)
+                          : null;
+                    if (lat === null || lon === null || Number.isNaN(lat) || Number.isNaN(lon)) {
+                      return null;
+                    }
+                    return {
+                      type: 'Feature',
+                      geometry: {
+                        type: 'Point',
+                        coordinates: [lon, lat],
+                      },
+                      properties: {
+                        id: row.id,
+                        code: row.code,
+                        name: row.name,
+                        category: row.category,
+                        status: row.status,
+                        keterangan: row.keterangan,
+                        created_at: row.created_at,
+                      },
+                    } as Feature<Geometry>;
+                  })
+                  .filter((f): f is Feature<Geometry> => Boolean(f));
+                fc = {
+                  type: 'FeatureCollection',
+                  features,
+                } as FeatureCollection<Geometry>;
+              } else if (assetError) {
+                console.warn('Failed to fetch assets fallback layer', assetError);
+              }
+            } catch (assetFallbackError) {
+              console.warn('Failed to build assets feature collection', assetFallbackError);
+            }
+          }
+
+          if (fc) {
+            // EPSG defs we support
+            proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+            proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
+            proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
 
               // Decide source CRS: prefer stored srcCrs, fallback to embedded fc.crs.name, then heuristic
               const embeddedCrsName = (fc as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
@@ -658,14 +855,21 @@ const MapView = () => {
               }
               setDynamicData((s) => ({ ...s, [key]: resultFC }));
             } else {
-              toast.error(`Gagal memuat layer: ${key}`, { description: 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.' });
-            }
-          } else {
-            toast.error(`Gagal memuat layer: ${key}`);
+              toast.error(`Gagal memuat layer: ${key}`, {
+                description: key === 'assets'
+                  ? (!error && !gl?.data
+                    ? 'Tidak ditemukan data aset. Tambahkan aset dari GeoData Manager terlebih dahulu.'
+                    : 'Data aset belum tersedia atau koordinat aset belum lengkap.')
+                  : 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.',
+            });
           }
         } catch (e) {
           console.warn('Failed to load layer', key, e);
-          toast.error(`Gagal memuat layer: ${key}`);
+          toast.error(`Gagal memuat layer: ${key}`, {
+            description: key === 'assets'
+              ? 'Terjadi kesalahan saat mengambil data aset.'
+              : undefined,
+          });
         } finally {
           setDynamicLoading((s) => ({ ...s, [key]: false }));
         }

@@ -7,14 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import UnifiedImporter from '@/components/import/UnifiedImporter';
-import type { ImportMode } from '@/components/import/UnifiedImporter';
 import LayerInspector from '@/components/geodata/LayerInspector';
 import { Loader2 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
@@ -73,24 +71,10 @@ export default function GeoDataManager() {
   const [loading, setLoading] = useState(false);
   const [keyVal, setKeyVal] = useState('admin_boundaries');
   const [name, setName] = useState('Admin Boundaries');
-  const [importMode, setImportMode] = useState<ImportMode>('layer');
   const [layerSearch, setLayerSearch] = useState('');
   const [layerSort, setLayerSort] = useState<'created_at_desc'|'name_asc'>('created_at_desc');
   const [missingAdminLayer, setMissingAdminLayer] = useState(false);
   // Popup configurator state removed
-
-  // Assets tab state & logic (ported from Assets.tsx)
-  type Asset = {
-    id: string;
-    code: string;
-    name: string;
-    category: 'jalan' | 'jembatan' | 'irigasi' | 'drainase' | 'sungai' | 'lainnya';
-    latitude: number;
-    longitude: number;
-    keterangan: string | null;
-    status: 'aktif' | 'nonaktif' | 'rusak';
-    created_at: string;
-  };
 
   type UserManagementRow = {
     id: string;
@@ -133,19 +117,8 @@ export default function GeoDataManager() {
 
   // Asset geometry helpers moved into UnifiedImporter
 
-  const [assetRows, setAssetRows] = useState<Asset[]>([]);
-  const [assetLoading, setAssetLoading] = useState(false);
-  const [q, setQ] = useState('');
-  const [category, setCategory] = useState<'all' | Asset['category']>('all');
-  const [status, setStatus] = useState<'all' | Asset['status']>('all');
-  // unified importer handles importing state internally
-
-  const [open, setOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [inspectKey, setInspectKey] = useState<string | null>(null);
-  const [form, setForm] = useState<{ code: string; name: string; category: Asset['category']; latitude: string; longitude: string; keterangan: string }>(
-    { code: '', name: '', category: 'lainnya', latitude: '', longitude: '', keterangan: '' }
-  );
   const [activeTab, setActiveTab] = useState<'geodata' | 'settings'>('geodata');
   const [settingsInitialized, setSettingsInitialized] = useState(false);
 
@@ -198,20 +171,6 @@ export default function GeoDataManager() {
   const [restoreInProgress, setRestoreInProgress] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
 
-  const loadAssets = useCallback(async () => {
-    setAssetLoading(true);
-    let query = supabase.from('assets').select('*').order('created_at', { ascending: false });
-    if (category !== 'all') query = query.eq('category', category);
-    if (status !== 'all') query = query.eq('status', status);
-    const { data, error } = await query;
-    setAssetLoading(false);
-    if (error) return toast.error('Gagal memuat aset');
-    const list = (data ?? []) as Asset[];
-    setAssetRows(q ? list.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) || r.code.toLowerCase().includes(q.toLowerCase())) : list);
-  }, [q, category, status]);
-
-  useEffect(() => { void loadAssets(); }, [loadAssets]);
-
   useEffect(() => {
     try {
       const storedMapPrefs = localStorage.getItem(MAP_PREFS_STORAGE_KEY);
@@ -249,40 +208,7 @@ export default function GeoDataManager() {
     } catch (error) {
       console.warn('Failed to load security settings from storage', error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const createAsset = async () => {
-    const lat = parseFloat(form.latitude);
-    const lon = parseFloat(form.longitude);
-    if (!form.code || !form.name || Number.isNaN(lat) || Number.isNaN(lon)) return toast.error('Lengkapi form dengan benar');
-  const payload = { code: form.code, name: form.name, category: form.category, latitude: lat, longitude: lon, keterangan: form.keterangan };
-    const { error } = await supabase.from('assets').insert(payload);
-    if (error) return toast.error('Gagal menambah aset');
-    toast.success('Aset ditambahkan');
-    setOpen(false);
-  setForm({ code: '', name: '', category: 'lainnya', latitude: '', longitude: '', keterangan: '' });
-    void loadAssets();
-    // Publish/update assets as a GeoJSON FeatureCollection layer so it appears on the map
-    try {
-      const { data: allAssets } = await supabase.from('assets').select('*').order('created_at', { ascending: false });
-      const list = (allAssets ?? []) as Asset[];
-      const fc = {
-        type: 'FeatureCollection',
-        features: list.map((a) => ({
-          type: 'Feature',
-          properties: { id: a.id, code: a.code, name: a.name, category: a.category, status: a.status, keterangan: a.keterangan },
-          geometry: { type: 'Point', coordinates: [a.longitude, a.latitude] },
-        })),
-      };
-      await supabase.from('geo_layers').upsert({ key: 'assets', name: 'Assets', geometry_type: 'Point', data: { featureCollection: fc, crs: 'EPSG:4326' } }, { onConflict: 'key' });
-    } catch (e) {
-      console.warn('Failed to publish assets layer', e);
-    }
-  };
-
-  const setCategoryTyped = (v: 'all' | Asset['category']) => setCategory(v);
-  const setStatusTyped = (v: 'all' | Asset['status']) => setStatus(v);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -563,21 +489,8 @@ export default function GeoDataManager() {
           <CardTitle>Impor Data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label>Mode Impor</Label>
-              <Select value={importMode} onValueChange={(v) => setImportMode(v as ImportMode)}>
-                <SelectTrigger><SelectValue placeholder="Pilih mode" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="layer">Layer</SelectItem>
-                  <SelectItem value="assets">Assets</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <UnifiedImporter
-            key={importMode}
-            mode={importMode}
+            mode="layer"
             initialKey={keyVal}
             initialName={name}
             onSaveLayer={async ({ key, name, geometry_type, data }) => {
@@ -601,56 +514,6 @@ export default function GeoDataManager() {
                 setKeyVal(key);
                 setName(name);
                 void load();
-              }
-            }}
-            onSaveAssets={async (toInsert) => {
-              // helpers
-              const chunk = <T,>(arr: T[], size: number): T[][] => Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
-              const dedupBy = <T extends { code: string }>(arr: T[]): T[] => {
-                const map = new Map<string, T>();
-                for (const item of arr) {
-                  const key = String(item.code).trim();
-                  if (!key) continue; // skip invalid
-                  // prefer last occurrence to override previous
-                  map.set(key, item);
-                }
-                return Array.from(map.values());
-              };
-              try {
-                const deduped = dedupBy(toInsert as Array<{ code: string }>);
-                const removed = toInsert.length - deduped.length;
-                if (removed > 0) {
-                  toast.info(`${removed} duplikat kode aset digabung otomatis`);
-                }
-                const batches = chunk(deduped as Array<{ code: string; name: string; category: Asset['category']; latitude: number; longitude: number; keterangan: string | null; status: Asset['status'] }>, 500);
-                for (const part of batches) {
-                  const { error } = await supabase
-                    .from('assets')
-                    .upsert(part, { onConflict: 'code' });
-                  if (error) throw error;
-                }
-                toast.success(`Berhasil impor ${toInsert.length} aset`);
-                void loadAssets();
-                try {
-                  const { data: allAssets } = await supabase.from('assets').select('*').order('created_at', { ascending: false });
-                  const list = (allAssets ?? []) as Asset[];
-                  const fc = {
-                    type: 'FeatureCollection',
-                    features: list.map((a) => ({
-                      type: 'Feature',
-                      properties: { id: a.id, code: a.code, name: a.name, category: a.category, status: a.status, keterangan: a.keterangan },
-                      geometry: { type: 'Point', coordinates: [a.longitude, a.latitude] },
-                    })),
-                  };
-                  await supabase.from('geo_layers').upsert({ key: 'assets', name: 'Assets', geometry_type: 'Point', data: { featureCollection: fc, crs: 'EPSG:4326' } }, { onConflict: 'key' });
-                } catch (e) {
-                  console.warn('Failed to publish assets layer', e);
-                  toast.warning('Aset terimpor, namun publikasi layer gagal. Coba refresh atau ulangi.');
-                }
-              } catch (err) {
-                console.error(err);
-                const message = (err as { message?: string })?.message || 'Gagal mengimpor aset';
-                toast.error('Gagal mengimpor aset', { description: message });
               }
             }}
           />
@@ -810,171 +673,7 @@ export default function GeoDataManager() {
         </CardContent>
       </Card>
 
-      {/* Assets section */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-xl font-semibold">Asset Registry</div>
-        <div className="flex gap-2">
-          <Button onClick={() => setOpen(true)}>Tambah Aset</Button>
-        </div>
-      </div>
-
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Filter</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <Label>Kategori</Label>
-            <Select value={category} onValueChange={(v) => setCategoryTyped(v as 'all' | Asset['category'])}>
-              <SelectTrigger><SelectValue placeholder="Semua kategori" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="jalan">Jalan</SelectItem>
-                <SelectItem value="jembatan">Jembatan</SelectItem>
-                <SelectItem value="irigasi">Irigasi</SelectItem>
-                <SelectItem value="drainase">Drainase</SelectItem>
-                <SelectItem value="sungai">Sungai</SelectItem>
-                <SelectItem value="lainnya">Lainnya</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(v) => setStatusTyped(v as 'all' | Asset['status'])}>
-              <SelectTrigger><SelectValue placeholder="Semua status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="aktif">Aktif</SelectItem>
-                <SelectItem value="nonaktif">Nonaktif</SelectItem>
-                <SelectItem value="rusak">Rusak</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2">
-            <Label>Cari</Label>
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau kode..." />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Aset</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-                  <TableHeader>
-                <TableRow>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Koordinat</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                    {assetRows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{r.code}</TableCell>
-                    <TableCell>{r.name}</TableCell>
-                        <TableCell>
-                          <Select value={r.category} onValueChange={async (v) => {
-                            if (v === r.category) return;
-                            const { error } = await supabase.from('assets').update({ category: v as Asset['category'] }).eq('id', r.id);
-                            if (!error) { toast.success('Kategori aset diperbarui'); void loadAssets(); }
-                            else toast.error('Gagal memperbarui kategori aset');
-                          }}>
-                            <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="jalan">Jalan</SelectItem>
-                              <SelectItem value="jembatan">Jembatan</SelectItem>
-                              <SelectItem value="irigasi">Irigasi</SelectItem>
-                              <SelectItem value="drainase">Drainase</SelectItem>
-                              <SelectItem value="sungai">Sungai</SelectItem>
-                              <SelectItem value="lainnya">Lainnya</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select value={r.status} onValueChange={async (v) => {
-                            if (v === r.status) return;
-                            const { error } = await supabase.from('assets').update({ status: v as Asset['status'] }).eq('id', r.id);
-                            if (!error) { toast.success('Status aset diperbarui'); void loadAssets(); }
-                            else toast.error('Gagal memperbarui status aset');
-                          }}>
-                            <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="aktif">Aktif</SelectItem>
-                              <SelectItem value="nonaktif">Nonaktif</SelectItem>
-                              <SelectItem value="rusak">Rusak</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                    <TableCell className="text-right">{r.latitude.toFixed(5)}, {r.longitude.toFixed(5)}</TableCell>
-                  </TableRow>
-                ))}
-                {assetRows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{assetLoading ? 'MemuatÔÇª' : 'Tidak ada aset'}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Aset</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Kode</Label>
-              <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-            </div>
-            <div>
-              <Label>Nama</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <Label>Kategori</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as Asset['category'] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="jalan">Jalan</SelectItem>
-                  <SelectItem value="jembatan">Jembatan</SelectItem>
-                  <SelectItem value="irigasi">Irigasi</SelectItem>
-                  <SelectItem value="drainase">Drainase</SelectItem>
-                  <SelectItem value="sungai">Sungai</SelectItem>
-                  <SelectItem value="lainnya">Lainnya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Latitude</Label>
-                <Input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
-              </div>
-              <div>
-                <Label>Longitude</Label>
-                <Input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
-              </div>
-            </div>
-            <div>
-                  <Label>Keterangan</Label>
-              <Input value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} />
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={createAsset}>Simpan</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-  {/* Layer Inspector */}
+      {/* Layer Inspector */}
   <LayerInspector open={inspectorOpen} onOpenChange={setInspectorOpen} layerKey={inspectKey} />
 
       {/* Popup configurator removed */}

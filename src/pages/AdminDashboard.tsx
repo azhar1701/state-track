@@ -135,6 +135,8 @@ const AdminDashboard = () => {
   const [chartDaily, setChartDaily] = useState<Array<{ date: string; count: number }>>([]);
   const [chartByCategory, setChartByCategory] = useState<Array<{ name: string; count: number }>>([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [chartInitialized, setChartInitialized] = useState(false);
+  const [statsInitialized, setStatsInitialized] = useState(false);
   const [logs, setLogs] = useState<ReportLogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -313,15 +315,14 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   }, [
-    statusFilter,
-    severityFilter,
-    categoryFilter,
-    debouncedSearch,
-    sortBy,
-    page,
-    pageSize,
-    selectedReport,
-    detailOpen,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  statusFilter,
+  severityFilter,
+  categoryFilter,
+  debouncedSearch,
+  sortBy,
+  page,
+  pageSize,
   ]);
 
   const allVisibleSelected = useMemo(() => {
@@ -734,14 +735,18 @@ const AdminDashboard = () => {
       const diproses = rows.filter((r) => r.status === 'diproses').length;
       const selesai = rows.filter((r) => r.status === 'selesai').length;
       setStats({ total, baru, diproses, selesai });
+      setStatsInitialized(true);
     } catch (err) {
       console.error(err);
     }
   }, []);
 
   const fetchChartData = useCallback(async () => {
+    // Minimum spinner time for smoothness
+    const MIN_LOADING_MS = 400;
+  const loadingStart = Date.now();
+    if (!chartLoading) setChartLoading(true);
     try {
-      setChartLoading(true);
       const fromISO = new Date(Date.now() - chartDays * 24 * 60 * 60 * 1000).toISOString();
       let query = supabase
         .from('reports')
@@ -797,12 +802,18 @@ const AdminDashboard = () => {
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
       setChartByCategory(catArr);
+      setChartInitialized(true);
     } catch (err) {
       console.error(err);
     } finally {
-      setChartLoading(false);
+      const elapsed = Date.now() - loadingStart;
+      if (elapsed < MIN_LOADING_MS) {
+        setTimeout(() => setChartLoading(false), MIN_LOADING_MS - elapsed);
+      } else {
+        setChartLoading(false);
+      }
     }
-  }, [chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter]);
+  }, [chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter, chartLoading]);
 
   // sync tab to URL query param
   useEffect(() => {
@@ -862,10 +873,11 @@ const AdminDashboard = () => {
   }, [activeTab, fetchReports, isAdmin, page, pageSize, user]);
 
   useEffect(() => {
+    // Only fetch chart data when filters or tab change, not on every mount
     if (user && isAdmin && activeTab === 'reports') {
       void fetchChartData();
     }
-  }, [activeTab, fetchChartData, isAdmin, user]);
+  }, [activeTab, fetchChartData, isAdmin, user, chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter]);
 
   useEffect(() => {
     if (user && isAdmin && activeTab === 'reports') {
@@ -990,70 +1002,77 @@ const AdminDashboard = () => {
         ) : (
         <>
         {/* Charts */}
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
-          <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">7 hari</SelectItem>
-              <SelectItem value="30">30 hari</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartLoading ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
-              ) : chartDaily.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
-              ) : (
-                <ChartContainer
-                  config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                  className="h-64 md:h-72 lg:h-80"
-                  withAspect={false}
-                >
-                  <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                    <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartLoading ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
-              ) : chartByCategory.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
-              ) : (
-                <ChartContainer
-                  config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                  className="h-64 md:h-72 lg:h-80"
-                  withAspect={false}
-                >
-                  <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                    <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                    <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                    <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                  </BarChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Chart area: only show after first data load */}
+        {/* Chart area: only show after all data is loaded */}
+        {!(chartInitialized && statsInitialized) ? (
+          <div className="h-80 flex items-center justify-center text-muted-foreground text-lg">Memuat insight laporan...</div>
+        ) : (
+          <div
+            className="transition-opacity duration-700 ease-in-out"
+            style={{ opacity: chartInitialized && statsInitialized ? 1 : 0 }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
+              <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
+                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 hari</SelectItem>
+                  <SelectItem value="30">30 hari</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {chartDaily.length === 0 ? (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                  ) : (
+                    <ChartContainer
+                      config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                      className="h-64 md:h-72 lg:h-80"
+                      withAspect={false}
+                    >
+                      <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {chartByCategory.length === 0 ? (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                  ) : (
+                    <ChartContainer
+                      config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                      className="h-64 md:h-72 lg:h-80"
+                      withAspect={false}
+                    >
+                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
         </>
         )}
 

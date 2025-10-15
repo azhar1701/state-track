@@ -338,30 +338,32 @@ export default function MyReports() {
 
       {/* Drawer detail report */}
       <Dialog open={!!selectedReport} onOpenChange={(open) => setSelectedReport(open ? selectedReport : null)}>
-        <DialogContent className="sm:max-w-[42rem] p-0 border-none bg-transparent shadow-none">
+        <DialogContent className="max-w-md p-0 border-none bg-background/80 shadow-lg rounded-xl">
           {selectedReport && (
-            <ReportDetailDrawer
-              report={{
-                id: selectedReport.id,
-                title: selectedReport.title || 'Tanpa judul',
-                description: selectedReport.description || '',
-                category: selectedReport.category || 'lainnya',
-                status: selectedReport.status || 'baru',
-                severity: selectedReport.severity ?? null,
-                resolution: selectedReport.resolution ?? null,
-                latitude: selectedReport.latitude,
-                longitude: selectedReport.longitude,
-                location_name: selectedReport.location_name,
-                photo_url: selectedReport.photo_url,
-                photo_urls: selectedReport.photo_urls,
-                created_at: selectedReport.created_at,
-                user_id: selectedReport.user_id,
-              }}
-              onClose={() => {
-                setSelectedReport(null);
-                refetch();
-              }}
-            />
+            <div className="rounded-xl overflow-hidden">
+              <ReportDetailDrawer
+                report={{
+                  id: selectedReport.id,
+                  title: selectedReport.title || 'Tanpa judul',
+                  description: selectedReport.description || '',
+                  category: selectedReport.category || 'lainnya',
+                  status: selectedReport.status || 'baru',
+                  severity: selectedReport.severity ?? null,
+                  resolution: selectedReport.resolution ?? null,
+                  latitude: selectedReport.latitude,
+                  longitude: selectedReport.longitude,
+                  location_name: selectedReport.location_name,
+                  photo_url: selectedReport.photo_url,
+                  photo_urls: selectedReport.photo_urls,
+                  created_at: selectedReport.created_at,
+                  user_id: selectedReport.user_id,
+                }}
+                onClose={() => {
+                  setSelectedReport(null);
+                  refetch();
+                }}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

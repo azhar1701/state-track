@@ -116,122 +116,99 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
     <Card
       role="dialog"
       aria-label="Detail laporan"
-      className="
-        flex flex-col
-        w-full sm:w-[24rem] md:w-[28rem] lg:w-[32rem]
-        max-w-[min(100vw-1.5rem,40rem)]
-        max-h-[min(90vh,calc(100vh-80px))]
-        overflow-hidden shadow-lg border
-        bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80
-      "
+      className="flex flex-col w-full max-w-md max-h-[90vh] overflow-hidden shadow-lg border bg-background/95 backdrop-blur"
     >
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="space-y-1.5 flex-1 pr-2">
-          <CardTitle className="text-base md:text-lg leading-tight break-words">{report.title}</CardTitle>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 sticky top-0 z-10 bg-background/95 backdrop-blur">
+        <div className="flex-1 pr-2">
+          <CardTitle className="text-base font-semibold leading-tight break-words mb-1">{report.title}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="outline" className="px-2 py-0 h-5">
-              {statusColors[report.status as keyof typeof statusColors] ? (
-                <span className={`inline-block w-2 h-2 rounded-full mr-1 align-middle ${statusColors[report.status as keyof typeof statusColors].split(' ')[0]}`}></span>
-              ) : (
-                <span className="inline-block w-2 h-2 rounded-full mr-1 align-middle bg-slate-500"></span>
-              )}
               {report.status}
             </Badge>
-            <span>•</span>
             <Badge variant="secondary" className="px-2 py-0 h-5">
               {categoryLabels[report.category as keyof typeof categoryLabels] ?? report.category}
             </Badge>
           </div>
         </div>
-        <Button aria-label="Tutup" title="Tutup" variant="ghost" size="sm" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
       </CardHeader>
-      <CardContent className="space-y-3 flex-1 overflow-y-auto pr-1">
+      <CardContent className="space-y-2 flex-1 overflow-y-auto pr-1">
         {photos.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">Dokumentasi</h4>
-            <ul className="space-y-1">
+          <div className="mb-2">
+            <ul className="flex gap-2">
               {photos.map((src, i) => (
                 <li key={src + i}>
                   <button
                     type="button"
-                    className="text-sm text-primary underline-offset-2 hover:underline focus:underline focus:outline-none"
+                    className="text-xs text-primary underline-offset-2 hover:underline focus:underline focus:outline-none"
                     onClick={() => { setActiveIndex(i); setLightboxOpen(true); }}
                   >
-                    Lihat dokumentasi {i + 1}
+                    Foto {i + 1}
                   </button>
                 </li>
               ))}
             </ul>
           </div>
         )}
-
-        <div className="space-y-1">
-          <h4 className="font-medium text-sm">Deskripsi</h4>
-          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">{report.description}</p>
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Deskripsi</div>
+          <div className="text-sm text-foreground whitespace-pre-wrap break-words">{report.description}</div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <h4 className="font-medium text-sm">Severity</h4>
+        <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+          <div>
+            <div className="text-muted-foreground">Severity</div>
             <div>
               {report.severity ? (
                 <Badge variant={report.severity === 'berat' ? 'destructive' : report.severity === 'sedang' ? 'secondary' : 'outline'}>
                   {report.severity}
                 </Badge>
               ) : (
-                <span className="text-sm text-muted-foreground">-</span>
+                <span className="text-muted-foreground">-</span>
               )}
             </div>
           </div>
-          <div className="space-y-1">
-            <h4 className="font-medium text-sm">Hasil/Respon</h4>
-            <div className="text-sm text-foreground whitespace-pre-wrap">{report.resolution || <span className="text-muted-foreground">-</span>}</div>
+          <div>
+            <div className="text-muted-foreground">Respon</div>
+            <div className="text-foreground whitespace-pre-wrap">{report.resolution || <span className="text-muted-foreground">-</span>}</div>
           </div>
         </div>
-
         {report.location_name && (
-          <div className="space-y-1">
-            <h4 className="font-medium text-sm">Lokasi</h4>
-            <div className="flex items-start gap-2 text-sm">
-              <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <div className="mt-2">
+            <div className="text-xs text-muted-foreground mb-1">Lokasi</div>
+            <div className="flex items-center gap-2 text-xs">
+              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-muted-foreground break-words">{report.location_name}</span>
             </div>
           </div>
         )}
-
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-2 gap-2 text-xs mt-2">
           <div>
-            <div className="text-xs text-muted-foreground">Koordinat</div>
-            <div className="font-mono text-sm text-foreground">{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</div>
+            <div className="text-muted-foreground">Koordinat</div>
+            <div className="font-mono text-xs text-foreground">{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Tanggal</div>
-            <div className="text-sm text-foreground">{format(new Date(report.created_at), 'dd MMMM yyyy, HH:mm')}</div>
+            <div className="text-muted-foreground">Tanggal</div>
+            <div className="text-xs text-foreground">{format(new Date(report.created_at), 'dd MMM yyyy, HH:mm')}</div>
           </div>
         </div>
-
-        <div className="space-y-2 pt-1">
-          <h4 className="font-medium text-sm">Linimasa Status</h4>
+        <div className="mt-2">
+          <div className="text-xs text-muted-foreground mb-1">Status</div>
           {logsLoading ? (
-            <div className="text-sm text-muted-foreground">Memuat riwayat…</div>
+            <div className="text-xs text-muted-foreground">Memuat riwayat…</div>
           ) : timeline.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Belum ada perubahan status.</div>
+            <div className="text-xs text-muted-foreground">Belum ada perubahan status.</div>
           ) : (
             <ol className="relative border-l pl-3 ml-1">
               {timeline.map((it, idx) => (
-                <li key={idx} className="mb-3 ml-2">
-                  <div className="absolute -left-[7px] mt-1 h-3 w-3 rounded-full bg-primary" />
-                  <div className="text-xs text-muted-foreground">{format(new Date(it.time), 'dd MMM yyyy, HH:mm')}</div>
-                  <div className="text-sm">{it.label}</div>
+                <li key={idx} className="mb-2 ml-2">
+                  <div className="absolute -left-[7px] mt-1 h-2 w-2 rounded-full bg-primary" />
+                  <div className="text-[10px] text-muted-foreground">{format(new Date(it.time), 'dd MMM yyyy, HH:mm')}</div>
+                  <div className="text-xs">{it.label}</div>
                 </li>
               ))}
             </ol>
           )}
         </div>
-
-        <div className="pt-1">
+        <div className="pt-2">
           <Button onClick={openInGoogleMaps} className="w-full" size="sm" variant="outline">
             <ExternalLink className="w-4 h-4 mr-2" />
             Buka di Google Maps

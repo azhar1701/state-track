@@ -558,16 +558,6 @@ const AdminSettings = () => {
                 onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, showAdminBoundaries: checked }))}
               />
             </label>
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Tampilkan aset</div>
-                <p className="text-sm text-muted-foreground">Perlihatkan layer aset secara default.</p>
-              </div>
-              <Switch
-                checked={mapPreferences.showAssets}
-                onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, showAssets: checked }))}
-              />
-            </label>
           </div>
 
           <Button onClick={saveMapPreferences} disabled={mapPrefSaving}>

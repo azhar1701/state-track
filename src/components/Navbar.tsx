@@ -8,7 +8,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,7 +80,17 @@ const Navbar = () => {
                 </Link>
 
                 {/* Context nav: Admin Dashboard or Help Center (non-admin) */}
-                {isAdmin ? (
+                {loading ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2"
+                    disabled
+                  >
+                    <LayoutDashboard className="icon-sm animate-pulse" />
+                    Memuat...
+                  </Button>
+                ) : isAdmin ? (
                   <Link to="/admin">
                     <Button
                       variant={isActive("/admin") ? "secondary" : "ghost"}
@@ -237,7 +247,17 @@ const Navbar = () => {
                   </Link>
 
                   {/* Context nav */}
-                  {isAdmin ? (
+                  {loading ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      disabled
+                    >
+                      <LayoutDashboard className="icon-sm animate-pulse" />
+                      Memuat...
+                    </Button>
+                  ) : isAdmin ? (
                     <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
                       <Button
                         variant={isActive("/admin") ? "secondary" : "ghost"}
@@ -251,20 +271,6 @@ const Navbar = () => {
                       </Button>
                     </Link>
                   ) : (
-                    <Link to="/help" onClick={() => setMobileMenuOpen(false)}>
-                      <Button
-                        variant={isActive("/help") ? "secondary" : "ghost"}
-                        size="sm"
-                        className="w-full justify-start gap-2"
-                        onMouseEnter={prefetchHelp}
-                        onFocus={prefetchHelp}
-                      >
-                        <FileText className="icon-sm" />
-                        Help Center
-                      </Button>
-                    </Link>
-                  )}
-                  {!isAdmin && (
                     <Link to="/help" onClick={() => setMobileMenuOpen(false)}>
                       <Button
                         variant={isActive("/help") ? "secondary" : "ghost"}

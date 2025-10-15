@@ -40,6 +40,12 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isSupabaseConfigured) {
+      toast.error("Supabase belum dikonfigurasi. Hubungi administrator.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,10 +61,16 @@ const Auth = () => {
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        const message = error.message ?? "";
+        const normalized = message.toLowerCase();
+        if (normalized.includes("failed to fetch") || normalized.includes("network")) {
+          toast.error("Tidak dapat terhubung ke server. Periksa koneksi internet atau konfigurasi Supabase.");
+        } else if (message.includes("Invalid login credentials")) {
           toast.error("Email atau password salah");
+        } else if (message) {
+          toast.error(message);
         } else {
-          toast.error(error.message);
+          toast.error("Gagal login. Silakan coba lagi.");
         }
         return;
       }
@@ -66,12 +78,15 @@ const Auth = () => {
       try {
         const user = signInData.user;
         if (user) {
-          const { data: roleData } = await supabase
+          const { data: roleData, error: roleError } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", user.id)
             .eq("role", "admin")
             .maybeSingle();
+          if (roleError) {
+            console.warn("Gagal memeriksa role admin:", roleError);
+          }
 
           toast.success("Login berhasil!");
           if (roleData && roleData.role === "admin") {
@@ -89,7 +104,12 @@ const Auth = () => {
         navigate("/");
       }
     } catch (error) {
-      toast.error("Terjadi kesalahan saat login");
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.toLowerCase().includes("failed to fetch") || message.toLowerCase().includes("network")) {
+        toast.error("Tidak dapat terhubung ke server. Periksa koneksi internet atau konfigurasi Supabase.");
+      } else {
+        toast.error("Terjadi kesalahan saat login");
+      }
       console.error("Login error:", error);
     } finally {
       setLoading(false);
@@ -98,6 +118,11 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured) {
+      toast.error("Supabase belum dikonfigurasi. Hubungi administrator.");
+      return;
+    }
+
     setLoading(true);
 
     try {
