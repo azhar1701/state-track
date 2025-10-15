@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import EmptyState from '@/components/common/EmptyState';
 // Sync button removed per request
 
 type ReportRow = {
@@ -51,6 +53,7 @@ const statusLabels: Record<string, string> = {
 const PAGE_SIZE = 10;
 
 export default function MyReports() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -266,7 +269,12 @@ export default function MyReports() {
           ) : error ? (
             <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
           ) : rows.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Belum ada laporan.</div>
+            <EmptyState
+              title="Belum ada laporan"
+              description="Buat laporan pertama Anda untuk mulai memantau perbaikan."
+              action={{ label: 'Buat Laporan', onClick: () => navigate('/report') }}
+              secondaryAction={{ label: 'Lihat Peta', onClick: () => navigate('/map') }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

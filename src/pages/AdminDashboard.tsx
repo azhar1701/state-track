@@ -997,6 +997,9 @@ const AdminDashboard = () => {
             </CardHeader>
           </Card>
         </div>
+        {loading ? (
+          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan...</div>
+        ) : (
         <>
         {/* Charts */}
         {/* Chart area: only show after first data load */}
@@ -1008,75 +1011,65 @@ const AdminDashboard = () => {
           className="transition-opacity duration-700 ease-in-out fade-in"
           style={{ opacity: chartInitialized && statsInitialized ? 1 : 0 }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">Insight Laporan</h2>
+            <div className="mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
+              <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
               <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[140px]"/>
                 <SelectContent>
                   <SelectItem value="7">7 hari</SelectItem>
                   <SelectItem value="30">30 hari</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              <Card className="rounded-xl shadow-md">
-                <CardHeader className="pb-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
+              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                <CardHeader className="pb-2 fade-in">
                   <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="fade-in">
                   {chartDaily.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                   ) : (
-                    <div className="relative">
+                    <div className="flex items-center justify-center h-64 md:h-72 lg:h-80">
                       <ChartContainer
                         config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                        className="h-56 sm:h-64 md:h-72"
+                        className="w-full h-full shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in"
                         withAspect={false}
                       >
-                        <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                          <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                        </LineChart>
+                      <LineChart data={chartDaily} margin={{ top: 12, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                      </LineChart>
                       </ChartContainer>
-                      {chartLoading && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm text-muted-foreground text-xs">
-                          Memuat data...
-                        </div>
-                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
-              <Card className="rounded-xl shadow-md">
-                <CardHeader className="pb-2">
+              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                <CardHeader className="pb-2 fade-in">
                   <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="fade-in">
                   {chartByCategory.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                   ) : (
-                    <div className="relative">
+                    <div className="flex items-center justify-center h-64 md:h-72 lg:h-80">
                       <ChartContainer
                         config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                        className="h-56 sm:h-64 md:h-72"
+                        className="w-full h-full shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in"
                         withAspect={false}
                       >
-                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                          <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                          <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                        </BarChart>
+                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                      </BarChart>
                       </ChartContainer>
-                      {chartLoading && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm text-muted-foreground text-xs">
-                          Memuat data...
-                        </div>
-                      )}
                     </div>
                   )}
                 </CardContent>
@@ -1085,6 +1078,7 @@ const AdminDashboard = () => {
           </div>
         )}
         </>
+        )}
 
         {/* Filters */}
         <Card className="mb-5">
@@ -1475,16 +1469,26 @@ const AdminDetail = lazy(async () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
       return (
-        <>
-          <DrawerHeader className="text-left pb-2">
-            <DrawerTitle className="text-base">Detail Laporan</DrawerTitle>
-            <DrawerDescription className="text-xs">Informasi ringkas laporan.</DrawerDescription>
-          </DrawerHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
-            {!selectedReport ? (
-              <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>
-            ) : (
-              <div className="space-y-3">
+          <>
+            <DrawerHeader className="text-left pb-2">
+              <DrawerTitle className="text-base">Detail Laporan</DrawerTitle>
+              <DrawerDescription className="text-xs">Informasi ringkas laporan.</DrawerDescription>
+            </DrawerHeader>
+            {/* Scrollable detail area for Windows compatibility */}
+            <div
+              className="flex-1 overflow-y-auto px-5 py-3 space-y-3"
+              style={{
+                maxHeight: '60vh',
+                minHeight: '320px',
+                overscrollBehavior: 'contain',
+                scrollbarColor: '#cbd5e1 #f1f5f9',
+                scrollbarWidth: 'thin',
+              }}
+            >
+              {!selectedReport ? (
+                <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>
+              ) : (
+                <div className="space-y-3">
                 <div>
                   <div className="text-xs text-muted-foreground">Judul</div>
                   <Input className="h-9" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />

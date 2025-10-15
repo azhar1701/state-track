@@ -546,7 +546,7 @@ const ReportForm = () => {
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 fade-in">
-        <div className="container max-w-3xl px-2 md:px-4 slide-up">
+        <div className="container max-w-4xl px-2 md:px-4 slide-up">
           <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
           <CardHeader className="pb-4 fade-in">
             <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
@@ -567,42 +567,43 @@ const ReportForm = () => {
                 {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category">Kategori *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
-                  required
-                >
-                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="jalan">Jalan</SelectItem>
-                    <SelectItem value="jembatan">Jembatan</SelectItem>
-                    <SelectItem value="irigasi">Irigasi</SelectItem>
-                    <SelectItem value="drainase">Drainase</SelectItem>
-                    <SelectItem value="sungai">Sungai</SelectItem>
-                    <SelectItem value="lainnya">Lainnya</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
-              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="category">Kategori *</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
+                    required
+                  >
+                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                      <SelectValue placeholder="Pilih kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jalan">Jalan</SelectItem>
+                      <SelectItem value="jembatan">Jembatan</SelectItem>
+                      <SelectItem value="irigasi">Irigasi</SelectItem>
+                      <SelectItem value="drainase">Drainase</SelectItem>
+                      <SelectItem value="sungai">Sungai</SelectItem>
+                      <SelectItem value="lainnya">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
+                </div>
 
-              {/* Reordered: Severity */}
-              <div className="space-y-2">
-                <Label htmlFor="severity">Tingkat Keparahan *</Label>
-                <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
-                    <SelectValue placeholder="Pilih tingkat" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ringan">Ringan</SelectItem>
-                    <SelectItem value="sedang">Sedang</SelectItem>
-                    <SelectItem value="berat">Berat</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="severity">Tingkat Keparahan *</Label>
+                  <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
+                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                      <SelectValue placeholder="Pilih tingkat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ringan">Ringan</SelectItem>
+                      <SelectItem value="sedang">Sedang</SelectItem>
+                      <SelectItem value="berat">Berat</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
+                </div>
               </div>
 
               {/* Description */}
@@ -635,79 +636,85 @@ const ReportForm = () => {
                 <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
               </div>
 
-              {/* Kecamatan dropdown (placed before Desa) */}
-              <div className="space-y-2">
-                <Label htmlFor="kecamatan">Kecamatan *</Label>
-                <Select
-                  value={selectedKecamatanId ?? ''}
-                  onValueChange={(value) => {
-                    setSelectedKecamatanId(value);
-                    const kec = kecamatanList.find(k => k.id === value);
-                    if (kec) {
-                      setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
-                      // Reset desa if not part of selected kecamatan
-                      const currentDesa = (selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined);
-                      if (!currentDesa || currentDesa.kecamatan_id !== value) {
-                        setSelectedDesaId(null);
-                        setFormData((prev) => ({ ...prev, desa: '' }));
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="kecamatan">Kecamatan *</Label>
+                  <Select
+                    value={selectedKecamatanId ?? ''}
+                    onValueChange={(value) => {
+                      setSelectedKecamatanId(value);
+                      const kec = kecamatanList.find(k => k.id === value);
+                      if (kec) {
+                        setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
+                        const currentDesa = selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined;
+                        if (!currentDesa || currentDesa.kecamatan_id !== value) {
+                          setSelectedDesaId(null);
+                          setFormData((prev) => ({ ...prev, desa: '' }));
+                        }
                       }
-                    }
-                  }}
-                >
-                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
-                    <SelectValue placeholder="Pilih kecamatan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kecamatanList.map(k => (
-                      <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
+                    }}
+                  >
+                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                      <SelectValue placeholder="Pilih kecamatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kecamatanList.map(k => (
+                        <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="desa">Desa/Kelurahan *</Label>
+                  <Select
+                    value={selectedDesaId ?? ''}
+                    onValueChange={(value) => {
+                      const desa = desaList.find(d => d.id === value);
+                      setSelectedDesaId(value);
+                      if (desa) {
+                        setFormData((prev) => ({ ...prev, desa: desa.name }));
+                      }
+                    }}
+                    disabled={!selectedKecamatanId}
+                  >
+                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                      <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {desaList.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
+                </div>
               </div>
 
-              {/* Desa dropdown (filtered by selected kecamatan) */}
-              <div className="space-y-2">
-                <Label htmlFor="desa">Desa/Kelurahan *</Label>
-                <Select
-                  value={selectedDesaId ?? ''}
-                  onValueChange={(value) => {
-                    const desa = desaList.find(d => d.id === value);
-                    setSelectedDesaId(value);
-                    if (desa) {
-                      setFormData((prev) => ({ ...prev, desa: desa.name }));
-                    }
-                  }}
-                  disabled={!selectedKecamatanId}
-                >
-                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
-                    <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {desaList.map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
-              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="reporterName">Nama Pelapor *</Label>
+                  <Input
+                    id="reporterName"
+                    value={formData.reporterName}
+                    onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  />
+                  {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
+                </div>
 
-              {/* Nama Pelapor */}
-              <div className="space-y-2">
-                <Label htmlFor="reporterName">Nama Pelapor *</Label>
-                <Input id="reporterName" value={formData.reporterName}
-                       onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
-                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40" />
-                {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
-              </div>
-
-              {/* Nomor Pelapor */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Kontak Pelapor *</Label>
-                <Input id="phone" inputMode="tel" value={formData.phone}
-                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40" />
-                {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Kontak Pelapor *</Label>
+                  <Input
+                    id="phone"
+                    inputMode="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  />
+                  {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                </div>
               </div>
 
               

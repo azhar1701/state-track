@@ -2,9 +2,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader as Loader2 } from 'lucide-react';
+import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -75,6 +75,12 @@ const createCustomIcon = (category: string, status: string, severity?: Report['s
     berat: '#ef4444',
   };
   const sevBorder = severity ? sevColors[severity] : '#9ca3af';
+  const statusLabel = (() => {
+    if (status === 'baru') return 'B';
+    if (status === 'diproses') return 'P';
+    if (status === 'selesai') return 'S';
+    return category?.charAt(0)?.toUpperCase() ?? 'L';
+  })();
 
   return L.divIcon({
     className: 'custom-marker',
@@ -90,7 +96,7 @@ const createCustomIcon = (category: string, status: string, severity?: Report['s
         display: flex;
         align-items: center;
         justify-content: center;">
-        <span style="transform: rotate(45deg); font-size: 12px; color: white;">●</span>
+        <span style="transform: rotate(45deg); font-size: 12px; font-weight:600; color: white;">${statusLabel}</span>
       </div>
     `,
     iconSize: [28, 28],
@@ -105,13 +111,11 @@ const createAssetIcon = (status: 'aktif' | 'nonaktif' | 'rusak', category?: stri
     nonaktif: '#6b7280',
     rusak: '#ef4444',
   } as const;
-  const emoji = (() => {
-    const cat = (category || '').toLowerCase();
-    if (cat.includes('bendungan')) return '🏞️';
-    if (cat.includes('saluran')) return '🚰';
-    if (cat.includes('pintu')) return '🚪';
-    if (cat.includes('sungai')) return '🌊';
-    return '📍';
+  const label = (() => {
+    if (status === 'aktif') return 'A';
+    if (status === 'rusak') return 'R';
+    if (status === 'nonaktif') return 'N';
+    return category?.charAt(0)?.toUpperCase() ?? 'L';
   })();
   const color = colors[status] ?? '#16a34a';
   return L.divIcon({
@@ -128,7 +132,7 @@ const createAssetIcon = (status: 'aktif' | 'nonaktif' | 'rusak', category?: stri
         display: flex;
         align-items: center;
         justify-content: center;">
-        <span style="transform: rotate(45deg); font-size: 12px;">${emoji}</span>
+        <span style="transform: rotate(45deg); font-size: 11px; font-weight:600; color:#fff;">${label}</span>
       </div>
     `,
     iconSize: [24, 24],
@@ -181,6 +185,26 @@ const MapView = () => {
     heatmap: false,
     dynamic: {},
   });
+
+  const statusCounts = useMemo(() => {
+    const counts = { total: reports.length, baru: 0, diproses: 0, selesai: 0 };
+    for (const report of reports) {
+      if (report.status === 'baru') counts.baru += 1;
+      else if (report.status === 'diproses') counts.diproses += 1;
+      else if (report.status === 'selesai') counts.selesai += 1;
+    }
+    return counts;
+  }, [reports]);
+
+  const statusSummary = useMemo(
+    () => [
+      { key: 'total', label: 'Total', value: statusCounts.total, icon: FileText, tone: 'text-primary' },
+      { key: 'baru', label: 'Baru', value: statusCounts.baru, icon: Clock, tone: 'text-amber-500 dark:text-amber-400' },
+      { key: 'diproses', label: 'Diproses', value: statusCounts.diproses, icon: Loader2, tone: 'text-sky-500 dark:text-sky-400' },
+      { key: 'selesai', label: 'Selesai', value: statusCounts.selesai, icon: CheckCircle, tone: 'text-emerald-500 dark:text-emerald-400' },
+    ],
+    [statusCounts],
+  );
 
   // Apply persisted admin map preferences (center, zoom, basemap, default overlays)
   useEffect(() => {
@@ -1163,6 +1187,22 @@ const MapView = () => {
           </p>
         </div>
 
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-6">
+          {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
+            <Card key={key} className="border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm">
+              <CardContent className="py-3 px-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+                    <p className="text-xl font-semibold mt-1">{loading ? '...' : value}</p>
+                  </div>
+                  <Icon className={`h-5 w-5 ${tone}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-180px)]' : 'h-[calc(100vh-220px)]'}`}>
           <MapContainer
             center={mapCenter}
@@ -1469,7 +1509,7 @@ const MapView = () => {
                     loop={false}
                   />
                   <div className="mt-1 text-center text-[11px] text-muted-foreground">
-                    Rentang: {format(startOfDay(subDays(timeFilterDate, 6)), 'dd MMM yy')} – {format(startOfDay(timeFilterDate), 'dd MMM yy')}
+                    Rentang: {format(startOfDay(subDays(timeFilterDate, 6)), 'dd MMM yy')} - {format(startOfDay(timeFilterDate), 'dd MMM yy')}
                   </div>
                 </div>
               </div>
@@ -1526,7 +1566,7 @@ const MapView = () => {
                     }
                   }}
                 >
-                  {ctxLoading ? 'Mencari…' : 'Lihat alamat'}
+                  {ctxLoading ? 'Mencari...' : 'Lihat alamat'}
                 </Button>
               </div>
               {ctxAddress && (
@@ -1548,13 +1588,13 @@ const MapView = () => {
           {/* Admin layer loader indicator */}
           {adminLoading && overlays.adminBoundaries && (
             <div className="absolute left-4 top-24 z-[1300]">
-              <Card className="px-3 py-2 text-sm">Memuat batas administratif…</Card>
+              <Card className="px-3 py-2 text-sm">Memuat batas administratif.</Card>
             </div>
           )}
           {/* Other layer loaders */}
           {Object.entries(dynamicLoading).some(([k, v]) => (overlays.dynamic?.[k] && v)) && (
             <div className="absolute left-4 top-36 z-[1300]">
-              <Card className="px-3 py-2 text-sm">Memuat layer geospasial…</Card>
+              <Card className="px-3 py-2 text-sm">Memuat layer geospasial.</Card>
             </div>
           )}
         </div>
@@ -1587,3 +1627,15 @@ const ScaleBar = ({ map }: { map: L.Map }) => {
   }, [map]);
   return null;
 };
+
+
+
+
+
+
+
+
+
+
+
+

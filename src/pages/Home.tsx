@@ -10,6 +10,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import Footer from "@/components/Footer";
+import LoadingOverlay from "@/components/common/LoadingOverlay";
 import StatusLegend from "@/components/home/StatusLegend";
 import CategoryLegend from "@/components/home/CategoryLegend";
 import RecentReports from "@/components/home/RecentReports";
@@ -229,24 +230,29 @@ const Home = () => {
                 <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
               </CardHeader>
               <CardContent>
-                {chartLoading ? (
-                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
-                ) : chartDaily.length === 0 ? (
-                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                {chartDaily.length === 0 ? (
+                  chartLoading ? (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                  ) : (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                  )
                 ) : (
-                  <ChartContainer
-                    config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                    className="h-56 sm:h-64 md:h-72"
-                    withAspect={false}
-                  >
-                    <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                      <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                      <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ChartContainer>
+                  <div className="relative">
+                    <ChartContainer
+                      config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                      className="h-56 sm:h-64 md:h-72"
+                      withAspect={false}
+                    >
+                      <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ChartContainer>
+                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -255,24 +261,29 @@ const Home = () => {
                 <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
               </CardHeader>
               <CardContent>
-                {chartLoading ? (
-                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
-                ) : chartByCategory.length === 0 ? (
-                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                {chartByCategory.length === 0 ? (
+                  chartLoading ? (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                  ) : (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                  )
                 ) : (
-                  <ChartContainer
-                    config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                    className="h-56 sm:h-64 md:h-72"
-                    withAspect={false}
-                  >
-                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                      <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                      <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                      <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                      <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                    </BarChart>
-                  </ChartContainer>
+                  <div className="relative">
+                    <ChartContainer
+                      config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                      className="h-56 sm:h-64 md:h-72"
+                      withAspect={false}
+                    >
+                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                  </div>
                 )}
               </CardContent>
             </Card>

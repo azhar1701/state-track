@@ -132,9 +132,7 @@ const AdminSettings = () => {
         .order("created_at", { ascending: false });
       if (profilesError) throw profilesError;
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id,role");
+      const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id,role");
       if (rolesError) throw rolesError;
 
       const adminIds = new Set((roles ?? []).filter((role) => role.role === "admin").map((role) => role.user_id));
@@ -148,7 +146,16 @@ const AdminSettings = () => {
       setUsers(list);
     } catch (error) {
       console.error("Failed to load users", error);
-      toast.error("Gagal memuat pengguna");
+      const message =
+        error && typeof error === "object" && "message" in error && typeof (error as { message?: string }).message === "string"
+          ? (error as { message: string }).message
+          : null;
+      if (message && /access denied|permission denied/i.test(message)) {
+        toast.error("Akses ditolak. Pastikan akun Anda memiliki role admin di tabel user_roles.");
+      } else {
+        toast.error("Gagal memuat pengguna");
+      }
+      setUsers([]);
     } finally {
       setUsersLoading(false);
     }
