@@ -545,15 +545,15 @@ const ReportForm = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-6">
-      <div className="container max-w-4xl">
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">Buat Laporan Baru</CardTitle>
-            <CardDescription>Laporkan masalah infrastruktur publik dengan lengkap</CardDescription>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 fade-in">
+        <div className="container max-w-3xl px-2 md:px-4 slide-up">
+          <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
+          <CardHeader className="pb-4 fade-in">
+            <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
+            <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur publik dengan lengkap</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6 fade-in">
               <div className="space-y-2">
                 <Label htmlFor="title">Judul Laporan *</Label>
                 <Input
@@ -562,8 +562,9 @@ const ReportForm = () => {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
                 />
-                {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
+                {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
               </div>
 
               <div className="space-y-2">
@@ -573,7 +574,7 @@ const ReportForm = () => {
                   onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                     <SelectValue placeholder="Pilih kategori" />
                   </SelectTrigger>
                   <SelectContent>
@@ -585,14 +586,14 @@ const ReportForm = () => {
                     <SelectItem value="lainnya">Lainnya</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.category && <p className="text-sm text-red-600">{errors.category}</p>}
+                {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
               </div>
 
               {/* Reordered: Severity */}
               <div className="space-y-2">
                 <Label htmlFor="severity">Tingkat Keparahan *</Label>
                 <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                     <SelectValue placeholder="Pilih tingkat" />
                   </SelectTrigger>
                   <SelectContent>
@@ -601,7 +602,7 @@ const ReportForm = () => {
                     <SelectItem value="berat">Berat</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.severity && <p className="text-sm text-red-600">{errors.severity}</p>}
+                {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
               </div>
 
               {/* Description */}
@@ -614,8 +615,9 @@ const ReportForm = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
                 />
-                {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
+                {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
               </div>
 
               {/* Tanggal Kejadian */}
@@ -627,8 +629,9 @@ const ReportForm = () => {
                   value={formData.incidentDate}
                   onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
                   required
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
                 />
-                {errors.incidentDate && <p className="text-sm text-red-600">{errors.incidentDate}</p>}
+                {errors.incidentDate && <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>}
                 <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
               </div>
 
@@ -651,7 +654,7 @@ const ReportForm = () => {
                     }
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                     <SelectValue placeholder="Pilih kecamatan" />
                   </SelectTrigger>
                   <SelectContent>
@@ -660,7 +663,7 @@ const ReportForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.kecamatan && <p className="text-sm text-red-600">{errors.kecamatan}</p>}
+                {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
               </div>
 
               {/* Desa dropdown (filtered by selected kecamatan) */}
@@ -677,7 +680,7 @@ const ReportForm = () => {
                   }}
                   disabled={!selectedKecamatanId}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                     <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
                   </SelectTrigger>
                   <SelectContent>
@@ -686,23 +689,25 @@ const ReportForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.desa && <p className="text-sm text-red-600">{errors.desa}</p>}
+                {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
               </div>
 
               {/* Nama Pelapor */}
               <div className="space-y-2">
                 <Label htmlFor="reporterName">Nama Pelapor *</Label>
                 <Input id="reporterName" value={formData.reporterName}
-                       onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })} />
-                {errors.reporterName && <p className="text-sm text-red-600">{errors.reporterName}</p>}
+                       onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
+                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40" />
+                {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
               </div>
 
               {/* Nomor Pelapor */}
               <div className="space-y-2">
                 <Label htmlFor="phone">Kontak Pelapor *</Label>
                 <Input id="phone" inputMode="tel" value={formData.phone}
-                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
+                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40" />
+                {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
               </div>
 
               
@@ -724,7 +729,7 @@ const ReportForm = () => {
                 {photoPreviews.length > 0 && (
                   <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {photoPreviews.map((src, idx) => (
-                      <img key={idx} src={src} alt={`Preview ${idx+1}`} className="w-full h-28 object-cover rounded border" />
+                      <img key={idx} src={src} alt={`Preview ${idx+1}`} className="w-full h-28 object-cover rounded border scale-in" />
                     ))}
                   </div>
                 )}
@@ -786,7 +791,7 @@ const ReportForm = () => {
                   </div>
 
                   {location && (
-                    <div className="relative h-80 rounded-lg overflow-hidden border">
+                    <div className="relative h-80 rounded-lg overflow-hidden border scale-in">
                       <MapContainer
                         center={[location.latitude, location.longitude]}
                         zoom={15}
@@ -806,7 +811,7 @@ const ReportForm = () => {
                       <Button
                         type="button"
                         onClick={getUserLocation}
-                        className="absolute bottom-2 left-2 z-[1000]"
+                        className="absolute bottom-2 left-2 z-[1000] fade-in"
                         size="sm"
                       >
                         <Navigation className="icon-sm mr-2" />

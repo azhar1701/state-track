@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container py-8">
-        <div className="grid gap-6 md:grid-cols-3">
+    <footer className="border-t bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-inner transition-all duration-300 rounded-t-xl">
+      <div className="container py-10 px-2 md:px-4">
+        <div className="grid gap-8 md:grid-cols-3">
           <div>
             <div className="font-semibold text-lg">LaporInfra</div>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
@@ -41,7 +41,7 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="mt-8 pt-6 border-t text-xs text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2">
+        <div className="mt-10 pt-6 border-t text-xs text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2">
           <div>© {year} LaporInfra. Semua hak dilindungi.</div>
           <div>Dibuat dengan React, Vite, Tailwind, dan Leaflet.</div>
         </div>

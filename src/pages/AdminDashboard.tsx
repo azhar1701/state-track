@@ -960,7 +960,7 @@ const AdminDashboard = () => {
           <TabsContent value="reports" className="mt-0">
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Total Laporan</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
@@ -969,7 +969,7 @@ const AdminDashboard = () => {
               </div>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Baru</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
@@ -978,7 +978,7 @@ const AdminDashboard = () => {
               </div>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Diproses</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
@@ -987,7 +987,7 @@ const AdminDashboard = () => {
               </div>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Selesai</CardTitle>
               <div className="text-3xl font-bold flex items-center gap-2">
@@ -997,9 +997,6 @@ const AdminDashboard = () => {
             </CardHeader>
           </Card>
         </div>
-        {loading ? (
-          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan...</div>
-        ) : (
         <>
         {/* Charts */}
         {/* Chart area: only show after first data load */}
@@ -1008,21 +1005,21 @@ const AdminDashboard = () => {
           <div className="h-80 flex items-center justify-center text-muted-foreground text-lg">Memuat insight laporan...</div>
         ) : (
           <div
-            className="transition-opacity duration-700 ease-in-out"
-            style={{ opacity: chartInitialized && statsInitialized ? 1 : 0 }}
+          className="transition-opacity duration-700 ease-in-out fade-in"
+          style={{ opacity: chartInitialized && statsInitialized ? 1 : 0 }}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold">Insight Laporan</h2>
               <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7">7 hari</SelectItem>
                   <SelectItem value="30">30 hari</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-              <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+              <Card className="rounded-xl shadow-md">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
                 </CardHeader>
@@ -1030,23 +1027,30 @@ const AdminDashboard = () => {
                   {chartDaily.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                   ) : (
-                    <ChartContainer
-                      config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                      className="h-64 md:h-72 lg:h-80"
-                      withAspect={false}
-                    >
-                      <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ChartContainer>
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                      {chartLoading && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm text-muted-foreground text-xs">
+                          Memuat data...
+                        </div>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="rounded-xl shadow-md">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
                 </CardHeader>
@@ -1054,19 +1058,26 @@ const AdminDashboard = () => {
                   {chartByCategory.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                   ) : (
-                    <ChartContainer
-                      config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                      className="h-64 md:h-72 lg:h-80"
-                      withAspect={false}
-                    >
-                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                      </BarChart>
-                    </ChartContainer>
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                          <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                        </BarChart>
+                      </ChartContainer>
+                      {chartLoading && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm text-muted-foreground text-xs">
+                          Memuat data...
+                        </div>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -1074,7 +1085,6 @@ const AdminDashboard = () => {
           </div>
         )}
         </>
-        )}
 
         {/* Filters */}
         <Card className="mb-5">
@@ -1348,24 +1358,26 @@ const AdminDashboard = () => {
           <DrawerContent className="flex flex-col max-h-[85vh] md:max-h-[80vh] overflow-hidden">
             <DrawerErrorBoundary>
             <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
-              <AdminDetail
-                selectedReport={selectedReport}
-                fullReport={fullReport}
-                detailLoading={detailLoading}
-                editTitle={editTitle}
-                setEditTitle={setEditTitle}
-                editSeverity={editSeverity}
-                setEditSeverity={setEditSeverity}
-                renderStatusBadge={renderStatusBadge}
-                formatDateTime={formatDateTime}
-                editResolution={editResolution}
-                setEditResolution={setEditResolution}
-                logsLoading={logsLoading}
-                logs={logs}
-                summarizeLog={summarizeLog}
-                saveEdits={saveEdits}
-                saving={saving}
-              />
+              <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex-1 overflow-hidden">
+                <AdminDetail
+                  selectedReport={selectedReport}
+                  fullReport={fullReport}
+                  detailLoading={detailLoading}
+                  editTitle={editTitle}
+                  setEditTitle={setEditTitle}
+                  editSeverity={editSeverity}
+                  setEditSeverity={setEditSeverity}
+                  renderStatusBadge={renderStatusBadge}
+                  formatDateTime={formatDateTime}
+                  editResolution={editResolution}
+                  setEditResolution={setEditResolution}
+                  logsLoading={logsLoading}
+                  logs={logs}
+                  summarizeLog={summarizeLog}
+                  saveEdits={saveEdits}
+                  saving={saving}
+                />
+              </div>
             </Suspense>
             </DrawerErrorBoundary>
           </DrawerContent>
@@ -1638,28 +1650,28 @@ const AdminDetail = lazy(async () => {
               ? fullReport.photo_urls
               : (fullReport?.photo_url ? [fullReport.photo_url] : []);
             return photos.length > 0 ? (
-            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-              <DialogContent className="sm:max-w-[90vw] p-0">
-                <DialogHeader className="px-4 pt-4 pb-2">
-                  <DialogTitle>Dokumentasi</DialogTitle>
-                  <DialogDescription>Klik di luar gambar untuk menutup.</DialogDescription>
-                </DialogHeader>
-                <div className="w-full flex items-center justify-center p-2">
-                  <img
-                    src={photos[activePhotoIndex]}
-                    alt={`Dokumentasi ${activePhotoIndex + 1}`}
-                    className="max-h-[80vh] w-auto object-contain rounded"
-                  />
-                </div>
-                {photos.length > 1 && (
-                  <div className="flex items-center justify-between px-4 pb-4 text-sm text-muted-foreground">
-                    <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i - 1 + photos.length) % photos.length)}>Sebelumnya</Button>
-                    <span>{activePhotoIndex + 1} / {photos.length}</span>
-                    <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i + 1) % photos.length)}>Berikutnya</Button>
+              <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+                <DialogContent className="sm:max-w-[90vw] p-0 rounded-xl shadow-lg transition-all duration-300 border border-border bg-background">
+                  <DialogHeader className="px-4 pt-4 pb-2">
+                    <DialogTitle>Dokumentasi</DialogTitle>
+                    <DialogDescription>Klik di luar gambar untuk menutup.</DialogDescription>
+                  </DialogHeader>
+                  <div className="w-full flex items-center justify-center p-2">
+                    <img
+                      src={photos[activePhotoIndex]}
+                      alt={`Dokumentasi ${activePhotoIndex + 1}`}
+                      className="max-h-[80vh] w-auto object-contain rounded"
+                    />
                   </div>
-                )}
-              </DialogContent>
-            </Dialog>
+                  {photos.length > 1 && (
+                    <div className="flex items-center justify-between px-4 pb-4 text-sm text-muted-foreground">
+                      <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i - 1 + photos.length) % photos.length)}>Sebelumnya</Button>
+                      <span>{activePhotoIndex + 1} / {photos.length}</span>
+                      <Button size="sm" variant="outline" onClick={() => setActivePhotoIndex((i) => (i + 1) % photos.length)}>Berikutnya</Button>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             ) : null;
           })()}
 

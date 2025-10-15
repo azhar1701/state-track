@@ -27,18 +27,18 @@ const Navbar = () => {
   // const prefetchAssets = () => import("@/pages/Assets");
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container">
-        <div className="flex h-14 items-center justify-between">
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-md transition-all duration-300">
+      <div className="container px-2 md:px-4">
+        <div className="flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <div className="p-1.5 bg-primary/10 rounded-lg">
+            <div className="p-2 bg-primary/10 rounded-xl shadow-sm">
               <MapPin className="icon-sm text-primary" />
             </div>
             <span className="hidden sm:inline">LaporInfra</span>
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3">
             {user && (
               <>
                 {/* Primary nav: Map, My Reports, Report */}
@@ -195,8 +195,9 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 rounded-lg border border-border bg-background shadow-sm transition-all duration-300"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Buka menu"
           >
             {mobileMenuOpen ? <X className="icon-md" /> : <Menu className="icon-md" />}
           </button>
@@ -204,8 +205,8 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-3 border-t">
-            <div className="flex flex-col gap-2">
+          <div className="md:hidden py-3 border-t bg-background rounded-b-xl shadow-lg transition-all duration-300">
+            <div className="flex flex-col gap-3 px-2">
               {user && (
                 <>
                   {/* Primary nav */}

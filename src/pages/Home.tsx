@@ -132,7 +132,7 @@ const Home = () => {
   <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Hero Section */}
   <section className="container py-12 md:py-16">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
+  <div className="max-w-4xl mx-auto text-center space-y-8 px-2 md:px-0">
           <div className="inline-flex p-3 bg-primary/10 rounded-full mb-4">
             <MapPin className="icon-lg text-primary" />
           </div>
@@ -148,7 +148,7 @@ const Home = () => {
             {authLoading ? null : !user ? (
               // Anonymous: only show Login/Signup entry point
               <Link to="/auth">
-                <Button size="lg" className="gap-2 shadow-lg">
+                <Button size="lg" className="gap-2 shadow-lg rounded-xl py-3 px-6">
                   Masuk / Daftar
                 </Button>
               </Link>
@@ -182,27 +182,27 @@ const Home = () => {
 
       {/* Stats Section */}
       <section className="container py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
           <Card className="text-center">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-primary">{stats.total}</CardTitle>
               <CardDescription>Total Laporan</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-accent">{stats.baru}</CardTitle>
               <CardDescription>Laporan Baru</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-secondary">{stats.diproses}</CardTitle>
               <CardDescription>Diproses</CardDescription>
             </CardHeader>
           </Card>
           <Card className="text-center">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-green-600">{stats.selesai}</CardTitle>
               <CardDescription>Selesai</CardDescription>
             </CardHeader>
@@ -212,7 +212,7 @@ const Home = () => {
 
       {/* Charts Section */}
       <section className="container py-8">
-        <div className="max-w-5xl mx-auto">
+  <div className="max-w-5xl mx-auto px-2 md:px-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
@@ -224,7 +224,7 @@ const Home = () => {
             </Select>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <Card>
+            <Card className="rounded-xl shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
               </CardHeader>
@@ -250,7 +250,7 @@ const Home = () => {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="rounded-xl shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
               </CardHeader>
@@ -282,10 +282,10 @@ const Home = () => {
 
       {/* Features Section */}
       <section className="container py-10">
-        <div className="max-w-5xl mx-auto">
+  <div className="max-w-5xl mx-auto px-2 md:px-0">
           <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Fitur Unggulan</h2>
           <div className="grid md:grid-cols-3 gap-4 md:gap-6 items-stretch">
-            <Card className="border-2 hover:border-primary transition-all duration-300 h-full">
+            <Card className="border-2 hover:border-primary transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-3">
                   <FileText className="icon-lg text-primary" />
@@ -297,7 +297,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-secondary transition-all duration-300 h-full">
+            <Card className="border-2 hover:border-secondary transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-3">
                   <MapIcon className="icon-lg text-secondary" />
@@ -309,7 +309,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-accent transition-all duration-300 h-full">
+            <Card className="border-2 hover:border-accent transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-3">
                   <Users className="icon-lg text-accent" />
@@ -326,10 +326,10 @@ const Home = () => {
 
       {/* How It Works Section */}
       <section className="container py-10 mb-12">
-        <div className="max-w-4xl mx-auto">
+  <div className="max-w-4xl mx-auto px-2 md:px-0">
           <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Cara Kerja</h2>
           <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold">
                 1
               </div>
@@ -338,7 +338,7 @@ const Home = () => {
                 Buat akun gratis untuk mulai membuat laporan
               </p>
             </div>
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary text-secondary-foreground text-2xl font-bold">
                 2
               </div>
@@ -347,7 +347,7 @@ const Home = () => {
                 Ambil foto, tandai lokasi, dan kirim laporan
               </p>
             </div>
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent text-accent-foreground text-2xl font-bold">
                 3
               </div>
@@ -362,7 +362,7 @@ const Home = () => {
 
       {/* Information Blocks */}
       <section className="container py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto px-2 md:px-0">
           <div className="lg:col-span-2 flex flex-col gap-6 md:gap-8">
             <RecentReports />
             <CategoryLegend />
