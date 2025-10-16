@@ -439,73 +439,8 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div>
-            <CardTitle>Manajemen Pengguna</CardTitle>
-            <p className="text-sm text-muted-foreground">Atur role pengguna dan akses admin.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => void loadUsers()} disabled={usersLoading}>
-            {usersLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-            Muat Ulang
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Telepon</TableHead>
-                  <TableHead>Dibuat</TableHead>
-                  <TableHead>Role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.full_name || "-"}</TableCell>
-                    <TableCell>{item.phone || "-"}</TableCell>
-                    <TableCell>{formatDateTime(item.created_at)}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={item.role}
-                        onValueChange={(val) => handleRoleChange(item.id, val as "admin" | "user")}
-                        disabled={userRoleUpdating === item.id}
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!usersLoading && users.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-sm text-muted-foreground">
-                      Tidak ada pengguna yang ditemukan.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {usersLoading && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                      <div className="flex items-center justify-center gap-2 py-4">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Memuat pengguna...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* User management hidden */}
+      {/* ...existing code... */}
 
       <Card>
         <CardHeader>

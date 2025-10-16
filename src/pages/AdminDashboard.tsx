@@ -315,14 +315,15 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   }, [
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  statusFilter,
-  severityFilter,
-  categoryFilter,
-  debouncedSearch,
-  sortBy,
-  page,
-  pageSize,
+    statusFilter,
+    severityFilter,
+    categoryFilter,
+    debouncedSearch,
+    sortBy,
+    page,
+    pageSize,
+    detailOpen,
+    selectedReport,
   ]);
 
   const allVisibleSelected = useMemo(() => {
