@@ -1026,6 +1026,14 @@ const MapView = () => {
 
     if (!error && data) {
       setReports(data as Report[]);
+      // Set timeFilterDate ke tanggal paling akhir laporan agar semua titik langsung tampil
+      if (Array.isArray(data) && data.length > 0) {
+        const maxDate = data.reduce((max, r) => {
+          const d = new Date(r.created_at);
+          return d > max ? d : max;
+        }, new Date(data[0].created_at));
+        setTimeFilterDate(maxDate);
+      }
     }
     setLoading(false);
   };

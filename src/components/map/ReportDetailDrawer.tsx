@@ -137,15 +137,16 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
     },
     { label: 'Status', value: report.status, valueClassName: 'capitalize' },
     { label: 'Kategori', value: categoryLabel, valueClassName: 'capitalize' },
+    { label: 'Severity', value: report.severity, valueClassName: 'capitalize' },
   ];
 
   return (
     <Card
       role="dialog"
       aria-label="Detail laporan"
-      className="flex h-full w-full max-w-[360px] max-h-[92vh] flex-col overflow-hidden rounded-xl border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="flex h-full w-full max-h-inherit flex-col overflow-hidden rounded-xl border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80"
     >
-      <CardHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <CardHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1.5">
             <CardTitle className="text-[15px] font-semibold leading-tight tracking-tight">
@@ -182,7 +183,7 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
         )}
       </CardHeader>
       <ScrollArea className="flex-1">
-        <CardContent className="flex flex-col gap-5 px-4 py-5">
+        <CardContent className="flex flex-col gap-4 px-3 py-3">
           {photos.length > 0 && (
             <section className="space-y-2">
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -240,16 +241,6 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
           <section className="space-y-2">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Respon</p>
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Severity</span>
-                {report.severity ? (
-                  <Badge className={cn('h-5 px-2 py-0 capitalize', severityTone)}>
-                    {report.severity}
-                  </Badge>
-                ) : (
-                  <span className="text-muted-foreground">Tidak ditentukan</span>
-                )}
-              </div>
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
                 {report.resolution || <span className="text-muted-foreground">Belum ada respon.</span>}
               </p>

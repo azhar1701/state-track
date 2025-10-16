@@ -1,3 +1,4 @@
+import LoadingOverlay from '@/components/common/LoadingOverlay';
 import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +79,7 @@ const REPORT_MINIMAL_COLUMNS =
 const REPORT_STATUSES: readonly ReportStatus[] = ['baru', 'diproses', 'selesai'];
 const REPORT_SEVERITIES: readonly ReportSeverity[] = ['ringan', 'sedang', 'berat'];
 const SORT_OPTIONS: readonly SortOption[] = ['created_at_desc', 'severity_desc', 'category_asc'];
-const ADMIN_TABS = ['reports', 'geo', 'help', 'settings'] as const;
+const ADMIN_TABS = ['reports', 'insights', 'geo', 'help', 'settings'] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 const isReportStatus = (value: string): value is ReportStatus =>
@@ -847,13 +848,13 @@ const AdminDashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
         void fetchReports();
         void fetchStats();
-        void fetchChartData();
+        // fetchChartData dihilangkan agar chart tidak selalu auto refresh
       })
       .subscribe();
     return () => {
       channel.unsubscribe();
     };
-  }, [activeTab, fetchChartData, fetchReports, fetchStats, isAdmin, user]);
+  }, [activeTab, fetchReports, fetchStats, isAdmin, user]);
 
   // debounce search input
   useEffect(() => {
@@ -874,8 +875,8 @@ const AdminDashboard = () => {
   }, [activeTab, fetchReports, isAdmin, page, pageSize, user]);
 
   useEffect(() => {
-    // Only fetch chart data when filters or tab change, not on every mount
-    if (user && isAdmin && activeTab === 'reports') {
+    // Fetch chart data when filters or tab change, for both 'reports' and 'insights' tab
+    if (user && isAdmin && activeTab === 'insights') {
       void fetchChartData();
     }
   }, [activeTab, fetchChartData, isAdmin, user, chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter]);
@@ -951,8 +952,9 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full md:w-auto grid grid-cols-4 mb-6">
+          <TabsList className="w-full md:w-auto grid grid-cols-5 mb-6">
             <TabsTrigger value="reports">Laporan</TabsTrigger>
+            <TabsTrigger value="insights">Insight</TabsTrigger>
             <TabsTrigger value="geo">Geo Data</TabsTrigger>
             <TabsTrigger value="help">Help Center</TabsTrigger>
             <TabsTrigger value="settings">Pengaturan</TabsTrigger>
@@ -998,89 +1000,7 @@ const AdminDashboard = () => {
             </CardHeader>
           </Card>
         </div>
-        {loading ? (
-          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data laporan...</div>
-        ) : (
-        <>
-        {/* Charts */}
-        {/* Chart area: only show after first data load */}
-        {/* Chart area: only show after all data is loaded */}
-        {!(chartInitialized && statsInitialized) ? (
-          <div className="h-80 flex items-center justify-center text-muted-foreground text-lg">Memuat insight laporan...</div>
-        ) : (
-          <div
-          className="transition-opacity duration-700 ease-in-out fade-in"
-          style={{ opacity: chartInitialized && statsInitialized ? 1 : 0 }}
-          >
-            <div className="mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-              <h2 className="text-lg font-semibold text-muted-foreground">Insight Laporan</h2>
-              <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-                <SelectTrigger className="w-[140px]"/>
-                <SelectContent>
-                  <SelectItem value="7">7 hari</SelectItem>
-                  <SelectItem value="30">30 hari</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
-              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
-                <CardHeader className="pb-2 fade-in">
-                  <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
-                </CardHeader>
-                <CardContent className="fade-in">
-                  {chartDaily.length === 0 ? (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 md:h-72 lg:h-80">
-                      <ChartContainer
-                        config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                        className="w-full h-full shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in"
-                        withAspect={false}
-                      >
-                      <LineChart data={chartDaily} margin={{ top: 12, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                      </ChartContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
-                <CardHeader className="pb-2 fade-in">
-                  <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
-                </CardHeader>
-                <CardContent className="fade-in">
-                  {chartByCategory.length === 0 ? (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 md:h-72 lg:h-80">
-                      <ChartContainer
-                        config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                        className="w-full h-full shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in"
-                        withAspect={false}
-                      >
-                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                      </BarChart>
-                      </ChartContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-        </>
-        )}
-
+       
         {/* Filters */}
         <Card className="mb-5">
           <CardContent className="pt-5 space-y-3">
@@ -1377,7 +1297,120 @@ const AdminDashboard = () => {
             </DrawerErrorBoundary>
           </DrawerContent>
         </Drawer>
-          </TabsContent>
+        </TabsContent>
+        <TabsContent value="insights" className="mt-0">
+           {chartLoading ? (
+          <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data insight...</div>
+        ) : (
+        <>
+        {/* Charts */}
+        {/* Chart area: only show after first data load */}
+        {/* Chart area: only show after all data is loaded */}
+        {(() => {
+          const chartsReady = chartInitialized && statsInitialized;
+          // Helper to truncate long category names for BarChart XAxis
+          const truncateLabel = (label: string, max = 12) =>
+            label.length > max ? label.slice(0, max - 1) + '…' : label;
+
+          if (!chartsReady) {
+            return (
+              <div className="h-80 flex items-center justify-center text-muted-foreground text-lg">Memuat insight laporan...</div>
+            );
+          }
+          return (
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">7 hari</SelectItem>
+                    <SelectItem value="30">30 hari</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
+                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                  <CardHeader className="pb-2 fade-in">
+                    <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="fade-in">
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                      <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      {chartDaily.length === 0 && !chartLoading && (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                  <CardHeader className="pb-2 fade-in">
+                    <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="fade-in">
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            axisLine={false}
+                            angle={-30}
+                            textAnchor="end"
+                            interval={0}
+                            height={52}
+                            tickMargin={6}
+                            tick={({ x, y, payload }) => (
+                              <text
+                                x={x}
+                                y={y}
+                                fontSize={12}
+                                textAnchor="end"
+                                transform={`rotate(-30,${x},${y})`}
+                                fill="#64748b"
+                              >
+                                {truncateLabel(payload.value)}
+                              </text>
+                            )}
+                          />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                          <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                        </BarChart>
+                      </ChartContainer>
+                      <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      {chartByCategory.length === 0 && !chartLoading && (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          );
+        })()}
+        </>
+        )}
+        </TabsContent>
 
           <TabsContent value="geo" className="mt-0">
             <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Geo Data Manager...</div>}>

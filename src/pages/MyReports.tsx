@@ -69,6 +69,7 @@ export default function MyReports() {
   const where = useMemo(() => ({ status, category, q }), [status, category, q]);
 
   const loadData = useCallback(async () => {
+    setSelectedReport(null);
     if (!user) {
       setRows([]);
       setTotal(0);
@@ -344,37 +345,33 @@ export default function MyReports() {
         </CardContent>
       </Card>
 
-      {/* Drawer detail report */}
-      <Dialog open={!!selectedReport} onOpenChange={(open) => setSelectedReport(open ? selectedReport : null)}>
-        <DialogContent className="max-w-md p-0 border-none bg-background/80 shadow-lg rounded-xl">
-          {selectedReport && (
-            <div className="rounded-xl overflow-hidden">
-              <ReportDetailDrawer
-                report={{
-                  id: selectedReport.id,
-                  title: selectedReport.title || 'Tanpa judul',
-                  description: selectedReport.description || '',
-                  category: selectedReport.category || 'lainnya',
-                  status: selectedReport.status || 'baru',
-                  severity: selectedReport.severity ?? null,
-                  resolution: selectedReport.resolution ?? null,
-                  latitude: selectedReport.latitude,
-                  longitude: selectedReport.longitude,
-                  location_name: selectedReport.location_name,
-                  photo_url: selectedReport.photo_url,
-                  photo_urls: selectedReport.photo_urls,
-                  created_at: selectedReport.created_at,
-                  user_id: selectedReport.user_id,
-                }}
-                onClose={() => {
-                  setSelectedReport(null);
-                  refetch();
-                }}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Floating detail card, sama seperti MapView */}
+      {selectedReport && (
+        <div
+          className={`fixed z-[1300] flex justify-center items-end md:items-start inset-0 pointer-events-none`}
+        >
+          <div
+            className={
+              `pointer-events-auto w-full max-w-[42rem] bg-background/95 rounded-xl shadow-lg border border-border/70 ` +
+              (window.innerWidth < 768
+                ? 'mx-2 mb-20' // mobile: margin horizontal dan bawah
+                : 'mt-28 ml-4') // desktop: margin atas dan kiri
+            }
+            style={{
+              minHeight: window.innerWidth < 700 ? 'calc(100dvh - 120px)' : 'auto',
+              maxHeight: 'calc(100dvh - 32px)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <ReportDetailDrawer
+              report={selectedReport}
+              onClose={() => setSelectedReport(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

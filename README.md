@@ -1,44 +1,3 @@
-# Welcome to your Lovable project
-
-## Project info
-
-**URL**: https://lovable.dev/projects/df59a3b0-9f65-4418-a053-973f630a6512
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/df59a3b0-9f65-4418-a053-973f630a6512) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-This project is built with:
 # state-track
 
 Important notes for this Vite + React app:
@@ -61,12 +20,6 @@ Important notes for this Vite + React app:
 - Toggle theme: Available in Navbar and Command Menu
 
 ## How can I deploy this project?
-
-## Can I connect a custom domain to my Lovable project?
-Yes, you can!
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-
 
 Create `.env.local` at project root (copy from `.env.local.example`) and fill:
 
