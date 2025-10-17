@@ -19,7 +19,27 @@ Important notes for this Vite + React app:
 - Open Command Menu: Ctrl+K (Windows/Linux) or Cmd+K (macOS)
 - Toggle theme: Available in Navbar and Command Menu
 
-## How can I deploy this project?
+
+## Deploy to GitHub Pages
+
+This project supports deployment to GitHub Pages. To deploy:
+
+1. Make sure the repository is public and you have push access.
+2. The Vite config is set up for GitHub Pages with `base: '/state-track/'`.
+3. Install dependencies (if not already):
+	```powershell
+	npm install
+	```
+4. Deploy using the deploy script:
+	```powershell
+	npm run deploy
+	```
+	This will build the project and publish the `dist` folder to the `gh-pages` branch using the `gh-pages` package.
+5. In your repository settings on GitHub, set GitHub Pages to deploy from the `gh-pages` branch (root).
+
+Your site will be available at: `https://<your-username>.github.io/state-track/`
+
+For custom domains or more advanced options, see the [gh-pages documentation](https://github.com/tschaub/gh-pages) and [Vite deployment guide](https://vitejs.dev/guide/static-deploy.html#github-pages).
 
 Create `.env.local` at project root (copy from `.env.local.example`) and fill:
 

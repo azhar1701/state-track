@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  // Set base for GitHub Pages deployment
+  base: "/state-track/",
   plugins: [
     react(),
     mode === "development" && componentTagger(),
