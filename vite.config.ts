@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: '/',
+  base: '/state-track/',
   server: {
     host: "::",
     port: 8080,
@@ -28,16 +28,16 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#0ea5e9',
         background_color: '#0b1220',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: '/state-track/',
+        scope: '/state-track/',
         icons: [
           {
-            src: '/favicon.ico',
+            src: '/state-track/favicon.ico',
             sizes: '48x48',
             type: 'image/x-icon'
           },
           {
-            src: '/placeholder.svg',
+            src: '/state-track/placeholder.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
