@@ -108,7 +108,7 @@
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
     "eslint": "^9.32.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "fake-indexeddb": "^6.0.0",
     "globals": "^15.15.0",
