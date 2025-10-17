@@ -15,7 +15,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-          - "digest"
       vite-and-plugins:
         patterns:
           - "vite"
