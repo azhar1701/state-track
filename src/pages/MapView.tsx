@@ -1069,11 +1069,7 @@ const MapView = () => {
         if (isAfter(reportDate, toDate)) return false;
       }
 
-      // 7-day lookback window: [currentDate - 6, currentDate]
-      const timeStart = startOfDay(subDays(timeFilterDate, 6));
-      const timeEnd = startOfDay(timeFilterDate);
-      if (isBefore(reportDate, timeStart)) return false;
-      if (isAfter(reportDate, timeEnd)) return false;
+      // Hilangkan filter 7 hari, tampilkan semua laporan
 
       if (drawnPolygon) {
         const point = turf.point([report.longitude, report.latitude]);
@@ -1087,7 +1083,7 @@ const MapView = () => {
 
       return true;
     });
-  }, [reports, filters, drawnPolygon, timeFilterDate]);
+  }, [reports, filters, drawnPolygon]);
 
   // Build or rebuild cluster layer when toggled or data changes
   useEffect(() => {

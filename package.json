@@ -1,8 +1,15 @@
 {
-  "name": "vite_react_shadcn_ts",
-  "private": true,
-  "version": "0.0.0",
+  "name": "state-track",
+  "private": false,
+  "version": "0.1.0",
   "type": "module",
+  "description": "A Vite + React app for infrastructure report mapping.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azhar1701/state-track.git"
+  },
+  "author": "azhar1701",
+  "license": "MIT",
   "scripts": {
     "env:init": "node -e \"const fs=require('fs');const cp=(s,t)=>fs.existsSync(s)&&!fs.existsSync(t)&&fs.copyFileSync(s,t);cp('.env.local.example','.env.local');cp('.env.example','.env');console.log('Initialized .env files (if missing).');\"",
     "predev": "node scripts/preflight-env.mjs",
