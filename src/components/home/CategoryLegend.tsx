@@ -9,9 +9,9 @@ const categories: Array<{ key: string; label: string; desc: string }> = [
 
 export default function CategoryLegend() {
   return (
-    <div className="space-y-3 rounded-md border p-4">
+    <div className="space-y-3 rounded-md border p-6 w-full">
       <h3 className="text-base md:text-lg font-semibold">Kategori Laporan</h3>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 gap-3 w-full">
         {categories.map((c) => (
           <div key={c.key} className="rounded-md border p-3">
             <div className="font-medium">{c.label}</div>
