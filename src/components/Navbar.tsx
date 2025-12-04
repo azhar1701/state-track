@@ -30,7 +30,7 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-md transition-all duration-300">
       <div className="container px-2 md:px-4">
         <div className="flex h-16 items-center justify-between gap-4">
-          <Link to="/auth" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
             <div className="p-2 bg-primary/10 rounded-xl shadow-sm">
               <MapPin className="icon-sm text-primary" />
             </div>
