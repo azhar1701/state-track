@@ -106,7 +106,8 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTabParam = (searchParams.get('tab') || 'reports').toLowerCase();
-  const initialTab: AdminTab = isAdminTab(initialTabParam) ? initialTabParam : 'reports';
+  const normalizedInitialTab = initialTabParam === 'insights' ? 'reports' : initialTabParam;
+  const initialTab: AdminTab = isAdminTab(normalizedInitialTab) ? normalizedInitialTab : 'reports';
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -825,16 +826,18 @@ const AdminDashboard = () => {
 
   // sync tab to URL query param
   useEffect(() => {
-    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    const tabParamRaw = (searchParams.get('tab') || '').toLowerCase();
+    const tabParam = tabParamRaw === 'insights' ? 'reports' : tabParamRaw;
     const next: AdminTab = isAdminTab(tabParam) ? tabParam : 'reports';
     if (next !== activeTab) setActiveTab(next);
   }, [activeTab, searchParams]);
 
   const onChangeTab = (tab: AdminTab) => {
-    setActiveTab(tab);
+    const safeTab = tab === 'insights' ? 'reports' : tab;
+    setActiveTab(safeTab);
     setSearchParams((prev) => {
       const sp = new URLSearchParams(prev);
-      if (tab === 'reports') sp.delete('tab'); else sp.set('tab', tab);
+      if (safeTab === 'reports') sp.delete('tab'); else sp.set('tab', safeTab);
       return sp;
     }, { replace: true });
   };
@@ -958,9 +961,8 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full md:w-auto grid grid-cols-5 mb-6">
+          <TabsList className="w-full md:w-auto grid grid-cols-4 mb-6">
             <TabsTrigger value="reports">Laporan</TabsTrigger>
-            <TabsTrigger value="insights">Insight</TabsTrigger>
             <TabsTrigger value="geo">Geo Data</TabsTrigger>
             <TabsTrigger value="help">Help Center</TabsTrigger>
             <TabsTrigger value="settings">Pengaturan</TabsTrigger>
