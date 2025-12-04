@@ -27,7 +27,8 @@
     "seed:ciamis": "node scripts/seed-ciamis.mjs",
     "fetch:ciamis-wiki": "node scripts/fetch-ciamis-wiki.mjs",
     "preview": "vite preview",
-    "deploy": "vite build && gh-pages -d dist"
+    "deploy": "vite build && gh-pages -d dist",
+    "postbuild": "node scripts/copy-404.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

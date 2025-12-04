@@ -55,12 +55,14 @@ const AppInner = () => {
   );
 };
 
+const basename = import.meta.env.BASE_URL || "/";
+
 const App = () => (
   <>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
   <Sonner />
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <AuthProvider>
             <AppInner />
           </AuthProvider>
