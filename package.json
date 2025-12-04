@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "A Vite + React app for infrastructure report mapping.",
+  "homepage": "https://azhar1701.github.io/state-track/",
   "repository": {
     "type": "git",
     "url": "https://github.com/azhar1701/state-track.git"
@@ -14,7 +15,8 @@
     "env:init": "node -e \"const fs=require('fs');const cp=(s,t)=>fs.existsSync(s)&&!fs.existsSync(t)&&fs.copyFileSync(s,t);cp('.env.local.example','.env.local');cp('.env.example','.env');console.log('Initialized .env files (if missing).');\"",
     "predev": "node scripts/preflight-env.mjs",
     "dev": "vite",
-    "build": "vite build",
+  "build": "vite build",
+  "postbuild": "node ./scripts/postbuild-copy.mjs",
     "build:dev": "vite build --mode development",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",

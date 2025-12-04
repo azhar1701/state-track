@@ -2,7 +2,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 // Removed TanStack Query per request
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import CommandMenu from "@/components/CommandMenu";
@@ -55,18 +55,16 @@ const AppInner = () => {
   );
 };
 
-const basename = import.meta.env.BASE_URL || "/";
-
 const App = () => (
   <>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
   <Sonner />
-        <BrowserRouter basename={basename}>
+  <HashRouter>
           <AuthProvider>
             <AppInner />
           </AuthProvider>
-        </BrowserRouter>
+  </HashRouter>
       </TooltipProvider>
     </ThemeProvider>
   </>
