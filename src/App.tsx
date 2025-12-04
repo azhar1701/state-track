@@ -37,6 +37,9 @@ const AppInner = () => {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
+              {/* Fallback for environments where basename is not applied (e.g., direct /state-track/ access) */}
+              <Route path="/state-track" element={<Navigate to="/" replace />} />
+              <Route path="/state-track/*" element={<Navigate to="/" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/report" element={<ReportForm />} />
@@ -56,7 +59,9 @@ const AppInner = () => {
   );
 };
 
-const basename = import.meta.env.BASE_URL || "/";
+const rawBase = import.meta.env.BASE_URL || "/";
+// Normalize trailing slashes so /state-track and /state-track/ both work
+const basename = rawBase === "/" ? "/" : rawBase.replace(/\/+$/, "");
 
 const App = () => (
   <>
