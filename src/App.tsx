@@ -35,7 +35,8 @@ const AppInner = () => {
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="/home" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/report" element={<ReportForm />} />

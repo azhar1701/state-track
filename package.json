@@ -15,8 +15,8 @@
     "env:init": "node -e \"const fs=require('fs');const cp=(s,t)=>fs.existsSync(s)&&!fs.existsSync(t)&&fs.copyFileSync(s,t);cp('.env.local.example','.env.local');cp('.env.example','.env');console.log('Initialized .env files (if missing).');\"",
     "predev": "node scripts/preflight-env.mjs",
     "dev": "vite",
-  "build": "vite build",
-  "postbuild": "node ./scripts/postbuild-copy.mjs",
+    "build": "vite build",
+    "postbuild": "node ./scripts/postbuild-copy.mjs",
     "build:dev": "vite build --mode development",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",
@@ -29,8 +29,7 @@
     "seed:ciamis": "node scripts/seed-ciamis.mjs",
     "fetch:ciamis-wiki": "node scripts/fetch-ciamis-wiki.mjs",
     "preview": "vite preview",
-    "deploy": "vite build && gh-pages -d dist",
-    "postbuild": "node scripts/copy-404.mjs"
+    "deploy": "vite build && gh-pages -d dist"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
