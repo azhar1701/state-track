@@ -22,22 +22,20 @@ Important notes for this Vite + React app:
 
 ## Deploy to GitHub Pages
 
-This project supports deployment to GitHub Pages. To deploy:
+Recommended (GitHub Actions): `.github/workflows/deploy-gh-pages.yml` builds Vite and deploys to Pages on pushes to `main`.
 
-1. Make sure the repository is public and you have push access.
-2. The Vite config is set up for GitHub Pages with `base: '/state-track/'`.
-3. Install dependencies (if not already):
-	```powershell
-	npm install
-	```
-4. Deploy using the deploy script:
-	```powershell
-	npm run deploy
-	```
-	This will build the project and publish the `dist` folder to the `gh-pages` branch using the `gh-pages` package.
-5. In your repository settings on GitHub, set GitHub Pages to deploy from the `gh-pages` branch (root).
+- In GitHub Settings > Pages, set source to GitHub Actions (if not already).
+- Add repository secrets for the production build: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, optionally `VITE_ADMIN_EMAILS` and `VITE_MAPBOX_TOKEN`.
+- Push to `main` or run the workflow manually; it uploads `dist` and publishes via `actions/deploy-pages`.
 
-Your site will be available at: `https://<your-username>.github.io/state-track/`
+Manual fallback:
+
+```powershell
+npm install
+npm run deploy
+```
+
+The deploy script builds and pushes `dist` to the `gh-pages` branch via the `gh-pages` package. Vite is already configured with `base: '/state-track/'`, so the site will live at `https://<your-username>.github.io/state-track/`.
 
 For custom domains or more advanced options, see the [gh-pages documentation](https://github.com/tschaub/gh-pages) and [Vite deployment guide](https://vitejs.dev/guide/static-deploy.html#github-pages).
 
