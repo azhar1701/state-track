@@ -1,9 +1,9 @@
-// src/lib/supabase-client.ts
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+// src/lib/supabase-client.js
+import { createClient } from '@supabase/supabase-js';
  
 // Ambil URL dan Anon Key dari environment variables yang sudah di-prefix NEXT_PUBLIC_
-const supabaseUrl: string = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey: string = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  
 // Validasi apakah variabel lingkungan sudah diset dengan benar saat aplikasi berjalan
 // (Pengecekan ini lebih efektif saat runtime di mana process.env sudah terisi)
@@ -25,7 +25,7 @@ if (!supabaseAnonKey) {
 // import { Database } from '../types/supabase'; // Sesuaikan path ke tipe Database Anda
 // export const supabase: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseAnonKey);
  
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  
 // Komentar untuk pengingat jika ingin menggunakan tipe database spesifik:
 // Untuk menggunakan client dengan tipe database spesifik dari Supabase (hasil generate `supabase gen types typescript --project-id <ref> --schema public > types/supabase.ts`):
