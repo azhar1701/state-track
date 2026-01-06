@@ -343,6 +343,14 @@ const MapView = () => {
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
+
+  // Sinkronkan perubahan timeFilterDate ke filters.dateTo
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      dateTo: timeFilterDate,
+    }));
+  }, [timeFilterDate]);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [clusterLayer, setClusterLayer] = useState<L.MarkerClusterGroup | null>(null);
   const [heatLayer, setHeatLayer] = useState<L.Layer | null>(null);
