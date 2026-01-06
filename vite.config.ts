@@ -6,7 +6,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const base = mode === "production" ? "/state-track/" : "/";
+  // Use root path for Netlify deployment (previously /state-track/ for GitHub Pages)
+  const base = "/";
 
   return {
     server: {
