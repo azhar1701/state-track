@@ -1,5 +1,5 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 // Removed TanStack Query per request
@@ -56,6 +56,7 @@ const AppInner = () => {
         </ErrorBoundary>
       </main>
       <CommandMenu />
+      <SpeedInsights />
     </>
   );
 };
