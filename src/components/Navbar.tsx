@@ -34,7 +34,7 @@ const Navbar = () => {
             <div className="p-2 bg-primary/10 rounded-xl shadow-sm">
               <MapPin className="icon-sm text-primary" />
             </div>
-            <span className="hidden sm:inline">LaporInfra</span>
+            <span className="hidden sm:inline">LISDA</span>
           </Link>
 
           {/* Desktop Menu */}

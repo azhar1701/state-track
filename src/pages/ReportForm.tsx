@@ -550,7 +550,7 @@ const ReportForm = () => {
           <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
           <CardHeader className="pb-4 fade-in">
             <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur publik dengan lengkap</CardDescription>
+            <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6 fade-in">

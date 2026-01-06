@@ -7,9 +7,9 @@ const Footer = () => {
       <div className="container py-10 px-2 md:px-4">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
-            <div className="font-semibold text-lg">LaporInfra</div>
+            <div className="font-semibold text-lg">LISDA</div>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-              Platform pelaporan dan monitoring kondisi infrastruktur publik.
+              Platform pelaporan dan monitoring kondisi infrastruktur SDA.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-6">
@@ -33,16 +33,16 @@ const Footer = () => {
           </div>
           <div>
             <div className="font-medium mb-2">Kontak</div>
-            <p className="text-sm text-muted-foreground">Email: support@example.com</p>
+            <p className="text-sm text-muted-foreground">Email: psdaciamis2025@gmail.com</p>
             <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground">Twitter</a>
+              <a href="#" className="hover:text-foreground">Instagram</a>
               <span>·</span>
               <a href="#" className="hover:text-foreground">GitHub</a>
             </div>
           </div>
         </div>
         <div className="mt-10 pt-6 border-t text-xs text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2">
-          <div>© {year} LaporInfra. Semua hak dilindungi.</div>
+          <div>© {year} LISDA. Semua hak dilindungi.</div>
           <div>Dibuat dengan React, Vite, Tailwind, dan Leaflet.</div>
         </div>
       </div>

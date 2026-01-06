@@ -1185,9 +1185,9 @@ const MapView = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Peta Laporan Infrastruktur</h1>
+          <h1 className="text-3xl font-bold mb-2">Peta Laporan dan Infrastruktur SDA</h1>
           <p className="text-muted-foreground">
-            Lihat semua laporan infrastruktur di peta interaktif
+            Lihat semua laporan dan sebaran infrastruktur SDA di peta interaktif
           </p>
         </div>
 
