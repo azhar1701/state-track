@@ -9,7 +9,7 @@ export const reportSchema = z.object({
     .string({ required_error: "Deskripsi wajib diisi" })
     .min(10, { message: "Deskripsi minimal 10 karakter" })
     .max(2000, { message: "Deskripsi maksimal 2000 karakter" }),
-  category: z.enum(["jalan", "jembatan", "irigasi", "drainase", "sungai", "lainnya"], {
+  category: z.enum(["irigasi", "drainase", "sungai", "lainnya"], {
     required_error: "Kategori wajib dipilih",
   }),
   severity: z.enum(["ringan", "sedang", "berat"], {

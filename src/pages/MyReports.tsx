@@ -36,8 +36,6 @@ type ReportRow = {
 };
 
 const categoryLabels: Record<string, string> = {
-  jalan: 'Jalan',
-  jembatan: 'Jembatan',
   irigasi: 'Irigasi',
   drainase: 'Drainase',
   sungai: 'Sungai',

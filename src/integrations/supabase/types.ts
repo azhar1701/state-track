@@ -359,7 +359,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      report_category: ["jalan", "jembatan", "irigasi", "drainase", "sungai", "lainnya"],
+      report_category: ["irigasi", "drainase", "sungai", "lainnya"],
       report_status: ["baru", "diproses", "selesai"],
       report_severity: ["ringan", "sedang", "berat"],
     },

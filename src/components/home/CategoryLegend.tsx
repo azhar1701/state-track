@@ -1,6 +1,4 @@
 const categories: Array<{ key: string; label: string; desc: string }> = [
-  { key: 'jalan', label: 'Jalan', desc: 'Kerusakan jalan, lubang, retak, genangan.' },
-  { key: 'jembatan', label: 'Jembatan', desc: 'Kerusakan struktur atau akses jembatan.' },
   { key: 'irigasi', label: 'Irigasi', desc: 'Saluran, pintu air, dan kelengkapannya.' },
   { key: 'drainase', label: 'Drainase', desc: 'Sumbatan, kerusakan saluran lingkungan.' },
   { key: 'sungai', label: 'Sungai', desc: 'Tanggul, erosi, atau sampah pada sungai.' },

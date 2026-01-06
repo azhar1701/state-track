@@ -128,7 +128,7 @@ export function ReportForm() {
     defaultValues: {
       title: savedDraft?.title ?? "",
       description: savedDraft?.description ?? "",
-      category: savedDraft?.category ?? "jalan",
+      category: savedDraft?.category ?? "irigasi",
       severity: savedDraft?.severity ?? "sedang",
       damageLevel: savedDraft?.damageLevel ?? 3,
       reporterName: savedDraft?.reporterName ?? "",
@@ -431,7 +431,7 @@ export function ReportForm() {
       form.reset({
         title: "",
         description: "",
-        category: "jalan",
+        category: "irigasi",
         severity: "sedang",
         damageLevel: 3,
         reporterName: "",
@@ -509,8 +509,6 @@ export function ReportForm() {
                 {...form.register("category")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value="jalan">Jalan</option>
-                <option value="jembatan">Jembatan</option>
                 <option value="irigasi">Irigasi</option>
                 <option value="drainase">Drainase</option>
                 <option value="sungai">Sungai</option>

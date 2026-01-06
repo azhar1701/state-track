@@ -49,8 +49,6 @@ const statusColors = {
 } as const;
 
 const categoryLabels = {
-  jalan: 'Jalan',
-  jembatan: 'Jembatan',
   irigasi: 'Irigasi',
   drainase: 'Drainase',
   sungai: 'Sungai',

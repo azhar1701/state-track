@@ -31,8 +31,6 @@ const SEVERITY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  jalan: "Jalan",
-  jembatan: "Jembatan",
   irigasi: "Irigasi",
   drainase: "Drainase",
   sungai: "Sungai",
