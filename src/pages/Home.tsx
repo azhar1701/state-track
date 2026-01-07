@@ -138,12 +138,10 @@ const Home = () => {
             <MapPin className="icon-lg text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Lapor Infrastruktur SDA
-            <span className="block text-primary mt-2">Dengan Mudah</span>
+            Sistem Informasi Pelaporan SDA
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Platform pelaporan dan monitoring kondisi infrastruktur Sumber Daya Air secara real-time.
-            Bersama mengelola Sumber Daya Air lebih baik.
+            aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             {authLoading ? null : !user ? (
