@@ -9,7 +9,7 @@ const Footer = () => {
           <div>
             <div className="font-semibold text-lg">LISDA</div>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-              Platform pelaporan dan monitoring kondisi infrastruktur SDA.
+              SIPASDA (Sistem Informasi Pelaporan SDA) adalah aplikasi web untuk pelaporan dan pemantauan sumber daya air di daerah. Masyarakat dapat melaporkan kondisi infrastruktur seperti irigasi, sungai, dan lainnya secara langsung, dilengkapi foto dan data spasial. Instansi terkait dapat menindaklanjuti laporan dengan cepat dan transparan, sementara pengguna bisa memantau status penanganannya.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-6">
@@ -42,7 +42,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="mt-10 pt-6 border-t text-xs text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2">
-          <div>© {year} LISDA. Semua hak dilindungi.</div>
+          <div>© {year} SIPASDA. Semua hak dilindungi.</div>
           <div>Dibuat dengan React, Vite, Tailwind, dan Leaflet.</div>
         </div>
       </div>
