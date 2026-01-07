@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="container py-10 px-2 md:px-4">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
-            <div className="font-semibold text-lg">LISDA</div>
+            <div className="font-semibold text-lg">SIPASDA</div>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               SIPASDA (Sistem Informasi Pelaporan SDA) adalah aplikasi web untuk pelaporan dan pemantauan sumber daya air di daerah. Masyarakat dapat melaporkan kondisi infrastruktur seperti irigasi, sungai, dan lainnya secara langsung, dilengkapi foto dan data spasial. Instansi terkait dapat menindaklanjuti laporan dengan cepat dan transparan, sementara pengguna bisa memantau status penanganannya.
             </p>
