@@ -37,7 +37,7 @@ type ReportFormData = {
 const reportSchema = z.object({
   title: z.string().min(5, { message: 'Judul minimal 5 karakter' }).max(100),
   description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
-  category: z.enum(['irigasi', 'sungai', 'lainnya']),
+  category: z.enum(['jalan', 'jembatan', 'irigasi', 'sungai', 'lainnya']),
   severity: z.enum(['ringan', 'sedang', 'berat']),
   incidentDate: z
     .string()
@@ -140,7 +140,7 @@ const ReportForm = () => {
     savedDraft ?? {
       title: '',
       description: '',
-      category: 'sungai',
+      category: 'irigasi',
       severity: 'sedang',
       incidentDate: new Date().toISOString().slice(0, 10),
       reporterName: '',
@@ -558,7 +558,7 @@ const ReportForm = () => {
                 <Label htmlFor="title">Judul Laporan *</Label>
                 <Input
                   id="title"
-                  placeholder="Contoh: Sungai Tersumbat di Desa Sukamaju"
+                  placeholder="Contoh: Sungai Cileueur meluap"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
