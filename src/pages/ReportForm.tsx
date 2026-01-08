@@ -20,7 +20,7 @@ import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } f
 import { enqueueReportForSync } from '@/hooks/useOutboxSync';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
-type Category = 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'lainnya';
+type Category = 'irigasi' | 'sungai' | 'lainnya';
 
 type ReportFormData = {
   title: string;
@@ -37,7 +37,7 @@ type ReportFormData = {
 const reportSchema = z.object({
   title: z.string().min(5, { message: 'Judul minimal 5 karakter' }).max(100),
   description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
-  category: z.enum(['jalan', 'jembatan', 'irigasi', 'sungai', 'lainnya']),
+  category: z.enum(['irigasi', 'sungai', 'lainnya']),
   severity: z.enum(['ringan', 'sedang', 'berat']),
   incidentDate: z
     .string()
@@ -140,7 +140,7 @@ const ReportForm = () => {
     savedDraft ?? {
       title: '',
       description: '',
-      category: 'jalan',
+      category: 'sungai',
       severity: 'sedang',
       incidentDate: new Date().toISOString().slice(0, 10),
       reporterName: '',
@@ -558,7 +558,7 @@ const ReportForm = () => {
                 <Label htmlFor="title">Judul Laporan *</Label>
                 <Input
                   id="title"
-                  placeholder="Contoh: Jalan rusak di depan SD Negeri 1"
+                  placeholder="Contoh: Sungai Tersumbat di Desa Sukamaju"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
@@ -579,8 +579,6 @@ const ReportForm = () => {
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="jalan">Jalan</SelectItem>
-                      <SelectItem value="jembatan">Jembatan</SelectItem>
                       <SelectItem value="irigasi">Irigasi</SelectItem>
                       <SelectItem value="sungai">Sungai</SelectItem>
                       <SelectItem value="lainnya">Lainnya</SelectItem>
