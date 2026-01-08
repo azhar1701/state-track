@@ -23,7 +23,6 @@ interface FilterPanelProps {
 
 const categoryLabels = {
   irigasi: 'Irigasi',
-  drainase: 'Drainase',
   sungai: 'Sungai',
   lainnya: 'Lainnya',
 } as const;
@@ -197,11 +196,13 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua kategori</SelectItem>
-              {Object.entries(categoryLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
+              {Object.entries(categoryLabels)
+                .filter(([value]) => value !== 'drainase')
+                .map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>

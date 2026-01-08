@@ -50,7 +50,6 @@ const statusColors = {
 
 const categoryLabels = {
   irigasi: 'Irigasi',
-  drainase: 'Drainase',
   sungai: 'Sungai',
   lainnya: 'Lainnya',
 } as const;

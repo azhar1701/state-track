@@ -20,7 +20,7 @@ import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } f
 import { enqueueReportForSync } from '@/hooks/useOutboxSync';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
-type Category = 'jalan' | 'jembatan' | 'irigasi' | 'drainase' | 'sungai' | 'lainnya';
+type Category = 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'lainnya';
 
 type ReportFormData = {
   title: string;
@@ -37,7 +37,7 @@ type ReportFormData = {
 const reportSchema = z.object({
   title: z.string().min(5, { message: 'Judul minimal 5 karakter' }).max(100),
   description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
-  category: z.enum(['jalan', 'jembatan', 'irigasi', 'drainase', 'sungai', 'lainnya']),
+  category: z.enum(['jalan', 'jembatan', 'irigasi', 'sungai', 'lainnya']),
   severity: z.enum(['ringan', 'sedang', 'berat']),
   incidentDate: z
     .string()
@@ -582,7 +582,6 @@ const ReportForm = () => {
                       <SelectItem value="jalan">Jalan</SelectItem>
                       <SelectItem value="jembatan">Jembatan</SelectItem>
                       <SelectItem value="irigasi">Irigasi</SelectItem>
-                      <SelectItem value="drainase">Drainase</SelectItem>
                       <SelectItem value="sungai">Sungai</SelectItem>
                       <SelectItem value="lainnya">Lainnya</SelectItem>
                     </SelectContent>

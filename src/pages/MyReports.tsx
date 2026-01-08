@@ -37,7 +37,6 @@ type ReportRow = {
 
 const categoryLabels: Record<string, string> = {
   irigasi: 'Irigasi',
-  drainase: 'Drainase',
   sungai: 'Sungai',
   lainnya: 'Lainnya',
 };
@@ -238,9 +237,11 @@ export default function MyReports() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua kategori</SelectItem>
-                {Object.entries(categoryLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
+                {Object.entries(categoryLabels)
+                  .filter(([val]) => val !== 'drainase')
+                  .map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

@@ -1,6 +1,5 @@
 const categories: Array<{ key: string; label: string; desc: string }> = [
   { key: 'irigasi', label: 'Irigasi', desc: 'Saluran, pintu air, dan kelengkapannya.' },
-  { key: 'drainase', label: 'Drainase', desc: 'Sumbatan, kerusakan saluran lingkungan.' },
   { key: 'sungai', label: 'Sungai', desc: 'Tanggul, erosi, atau sampah pada sungai.' },
   { key: 'lainnya', label: 'Lainnya', desc: 'Kategori umum lain yang relevan.' },
 ];
