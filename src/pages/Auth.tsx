@@ -173,9 +173,9 @@ const Auth = () => {
               <MapPin className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">LISDA</CardTitle>
+          <CardTitle className="text-2xl font-bold">SIPASDA</CardTitle>
           <CardDescription>
-            Lapor Infrastruktur Sumber Daya Air
+            Sistem Informasi Pelaporan Sumber Daya Air
           </CardDescription>
         </CardHeader>
         <CardContent>
