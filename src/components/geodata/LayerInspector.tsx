@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { FeatureCollection, Geometry } from 'geojson';
 import { LayerAttributeTable } from './LayerAttributeTable';
 import { Loader2 } from 'lucide-react';
+import { sanitizeForLog, sanitizeHTML } from '@/lib/security';
 
 type LayerInspectorProps = {
   open: boolean;
@@ -66,7 +67,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           try {
             normalizedData = JSON.parse(normalizedData) as unknown;
           } catch (err) {
-            console.warn('[LayerInspector] Failed to parse layer data JSON', err);
+            console.warn('[LayerInspector] Failed to parse layer data JSON', sanitizeForLog(err));
           }
         }
         const mergedRow: LayerRow = { ...r, data: normalizedData };
@@ -148,13 +149,13 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
         .update(updatePayload)
         .eq('id', row.id);
       if (error) {
-        console.warn('[LayerInspector] saveMeta failed by id', error);
+        console.warn('[LayerInspector] saveMeta failed by id', sanitizeForLog(error));
         const fallback = await supabase
           .from('geo_layers')
           .update(updatePayload)
           .eq('key', row.key);
         if (fallback.error) {
-          console.error('[LayerInspector] saveMeta fallback failed', fallback.error);
+          console.error('[LayerInspector] saveMeta fallback failed', sanitizeForLog(fallback.error));
           toast.error('Gagal menyimpan metadata', { description: fallback.error.message });
           return;
         }
@@ -162,7 +163,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
       setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
       toast.success('Metadata disimpan');
     } catch (e) {
-      console.error('[LayerInspector] saveMeta exception', e);
+      console.error('[LayerInspector] saveMeta exception', sanitizeForLog(e));
       toast.error('Gagal menyimpan metadata');
     } finally {
       setSavingMeta(false);
@@ -181,10 +182,10 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
 
       const { error } = await updateById();
       if (error) {
-        console.warn('[LayerInspector] saveStyle failed by id', error);
+        console.warn('[LayerInspector] saveStyle failed by id', sanitizeForLog(error));
         const fallback = await updateByKey();
         if (fallback.error) {
-          console.error('[LayerInspector] saveStyle fallback failed', fallback.error);
+          console.error('[LayerInspector] saveStyle fallback failed', sanitizeForLog(fallback.error));
           const retry = await updateByKey();
           if (retry.error) {
             toast.error('Gagal menyimpan style', { description: retry.error.message });
@@ -195,7 +196,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
       toast.success('Style disimpan');
       setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
     } catch (e) {
-      console.error('[LayerInspector] saveStyle exception', e);
+      console.error('[LayerInspector] saveStyle exception', sanitizeForLog(e));
       toast.error('Gagal menyimpan style');
     } finally {
       setSavingStyle(false);
@@ -239,7 +240,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
                 <div className="text-sm space-y-1">
                   <div className="grid grid-cols-2 gap-1">
                     <div className="text-muted-foreground">Nama</div>
-                    <div className="truncate">{row?.name ?? '-'}</div>
+                    <div className="truncate">{sanitizeHTML(row?.name ?? '-')}</div>
                     <div className="text-muted-foreground">Key</div>
                     <div className="truncate">{row?.key ?? '-'}</div>
                     <div className="text-muted-foreground">Tipe</div>

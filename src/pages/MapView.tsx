@@ -29,6 +29,7 @@ import * as turf from '@turf/turf';
 import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
+import { sanitizeForLog } from '@/lib/security';
 
 interface Report {
   id: string;
@@ -266,7 +267,7 @@ const MapView = () => {
         setBasemap(parsed.basemap);
       }
     } catch (error) {
-      console.warn('Failed to apply stored map preferences', error);
+      console.warn('Failed to apply stored map preferences', sanitizeForLog(error));
     }
   }, [hasUrlBasemap, hasUrlCenter, hasUrlZoom]);
 
@@ -300,7 +301,7 @@ const MapView = () => {
         };
       });
     } catch (error) {
-      console.warn('Failed to restore overlay toggles', error);
+      console.warn('Failed to restore overlay toggles', sanitizeForLog(error));
     }
   }, []);
 
@@ -321,7 +322,7 @@ const MapView = () => {
       };
       window.localStorage.setItem(MAP_OVERLAY_STORAGE_KEY, JSON.stringify(snapshot));
     } catch (error) {
-      console.warn('Failed to persist overlay toggles', error);
+      console.warn('Failed to persist overlay toggles', sanitizeForLog(error));
     }
   }, [overlays]);
 
@@ -605,7 +606,7 @@ const MapView = () => {
                 lineFeatures.push(line);
               }
             } catch (e) {
-              console.warn('Failed to build kecamatan boundary for', name, e);
+              console.warn('Failed to build kecamatan boundary for', name, sanitizeForLog(e));
             }
           });
           const kecLinesFC: FeatureCollection<Geometry> = {
@@ -614,13 +615,13 @@ const MapView = () => {
           } as FeatureCollection<Geometry>;
           setKecamatanLines(kecLinesFC);
         } catch (e) {
-          console.warn('Failed generating kecamatan lines', e);
+          console.warn('Failed generating kecamatan lines', sanitizeForLog(e));
           setKecamatanLines(null);
         }
 
         setAdminGeoJson(result);
       } catch (err) {
-        console.error('Failed to load admin boundaries', err);
+        console.error('Failed to load admin boundaries', sanitizeForLog(err));
         toast.error('Gagal memuat batas administratif', {
           description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson atau /public/data/adm_ciamis.geojson',
         });
@@ -697,7 +698,7 @@ const MapView = () => {
           return changed ? { ...prev, dynamic: dyn } : prev;
         });
       } catch (e) {
-        console.warn('Failed to load layers list', e);
+        console.warn('Failed to load layers list', sanitizeForLog(e));
       }
     };
 
@@ -813,10 +814,10 @@ const MapView = () => {
                   features,
                 } as FeatureCollection<Geometry>;
               } else if (assetError) {
-                console.warn('Failed to fetch assets fallback layer', assetError);
+                console.warn('Failed to fetch assets fallback layer', sanitizeForLog(assetError));
               }
             } catch (assetFallbackError) {
-              console.warn('Failed to build assets feature collection', assetFallbackError);
+              console.warn('Failed to build assets feature collection', sanitizeForLog(assetFallbackError));
             }
           }
 
@@ -896,7 +897,7 @@ const MapView = () => {
             });
           }
         } catch (e) {
-          console.warn('Failed to load layer', key, e);
+          console.warn('Failed to load layer', key, sanitizeForLog(e));
           toast.error(`Gagal memuat layer: ${key}`, {
             description: key === 'assets'
               ? 'Terjadi kesalahan saat mengambil data aset.'
@@ -1054,7 +1055,7 @@ const MapView = () => {
           setUserLocation([position.coords.latitude, position.coords.longitude]);
         },
         (error) => {
-          console.log('Error getting location:', error);
+          console.log('Error getting location:', sanitizeForLog(error));
         }
       );
     }

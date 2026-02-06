@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } from '@/lib/geocoding';
 import { enqueueReportForSync } from '@/hooks/useOutboxSync';
+import { sanitizeForLog } from '@/lib/security';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
 type Category = 'irigasi' | 'sungai' | 'lainnya';
@@ -487,7 +488,7 @@ const ReportForm = () => {
       const id = inserted?.id as string | number | undefined;
       navigate(id ? `/report/success?id=${id}` : '/report/success');
     } catch (error) {
-      console.error('Error submitting report:', error);
+      console.error('Error submitting report:', sanitizeForLog(error));
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
       let message = 'Gagal mengirim laporan. Silakan coba lagi.';
   const errAny = error as unknown as { message?: string };

@@ -16,6 +16,7 @@ import UnifiedImporter from '@/components/import/UnifiedImporter';
 import LayerInspector from '@/components/geodata/LayerInspector';
 import { Loader2 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { sanitizeHTML } from '@/lib/security';
 // removed ArrowUp/ArrowDown as popup configurator is removed
 
 // Popup configurator removed per request
@@ -596,7 +597,7 @@ export default function GeoDataManager() {
                   .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell>{r.key}</TableCell>
+                    <TableCell>{sanitizeHTML(r.key)}</TableCell>
                     <TableCell>
                       <InlineEditableText
                         value={r.name}
