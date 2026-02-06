@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import CommandMenu from "@/components/CommandMenu";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import PageLoader from "@/components/PageLoader";
 import { Suspense, lazy } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -32,6 +33,7 @@ const AppInner = () => {
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
       <Navbar />
+      <OfflineIndicator />
       <main id="main-content" className="min-h-[calc(100vh-3.5rem)]">{/* 3.5rem ~ navbar height */}
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>

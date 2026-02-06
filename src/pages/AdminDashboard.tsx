@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/drawer";
 import { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { FileText, Clock, CheckCircle, Loader2 } from "lucide-react";
+import { FileText, Clock, CheckCircle, Loader2, X } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 
@@ -905,12 +905,26 @@ const AdminDashboard = () => {
   const updateStatus = async (id: string, newStatus: ReportStatus) => {
     setUpdatingId(id);
     const prevStatus = reports.find((r) => r.id === id)?.status;
+    
+    // Optimistic update
+    setReports(prev =>
+      prev.map(r =>
+        r.id === id ? { ...r, status: newStatus } : r
+      )
+    );
+    
     const { error } = await supabase
       .from("reports")
       .update({ status: newStatus })
       .eq("id", id);
 
     if (error) {
+      // Rollback on error
+      setReports(prev =>
+        prev.map(r =>
+          r.id === id ? { ...r, status: prevStatus ?? 'baru' } : r
+        )
+      );
       toast.error("Gagal update status");
     } else {
       // write audit log (non-blocking)
@@ -926,8 +940,9 @@ const AdminDashboard = () => {
       } catch (logErr) {
         console.warn('Gagal menulis audit log (status):', logErr);
       }
-      toast.success("Status berhasil diupdate");
-      await fetchReports();
+      toast.success("Status berhasil diupdate", {
+        description: `Status diubah dari ${prevStatus} menjadi ${newStatus}`,
+      });
       await fetchStats();
       if (selectedReport && selectedReport.id === id) fetchReportLogs(id);
     }
@@ -1101,6 +1116,73 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Active Filters Display */}
+        {(statusFilter !== 'semua' || severityFilter !== 'semua' || categoryFilter !== 'semua' || search.length > 0) && (
+          <div className="flex gap-2 flex-wrap mb-4 p-4 bg-muted/50 rounded-lg border border-border">
+            {statusFilter !== 'semua' && (
+              <Badge variant="secondary" className="gap-2 pl-3">
+                Status: {statusFilter}
+                <button
+                  onClick={() => setStatusFilter('semua')}
+                  className="ml-1 hover:opacity-70"
+                  aria-label="Hapus filter status"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {severityFilter !== 'semua' && (
+              <Badge variant="secondary" className="gap-2 pl-3">
+                Severity: {severityFilter}
+                <button
+                  onClick={() => setSeverityFilter('semua')}
+                  className="ml-1 hover:opacity-70"
+                  aria-label="Hapus filter severity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {categoryFilter !== 'semua' && (
+              <Badge variant="secondary" className="gap-2 pl-3">
+                Kategori: {categoryFilter}
+                <button
+                  onClick={() => setCategoryFilter('semua')}
+                  className="ml-1 hover:opacity-70"
+                  aria-label="Hapus filter kategori"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {search.length > 0 && (
+              <Badge variant="secondary" className="gap-2 pl-3">
+                Cari: "{search}"
+                <button
+                  onClick={() => setSearch('')}
+                  className="ml-1 hover:opacity-70"
+                  aria-label="Hapus filter pencarian"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setStatusFilter('semua');
+                setSeverityFilter('semua');
+                setCategoryFilter('semua');
+                setSearch('');
+              }}
+              className="ml-auto"
+            >
+              Hapus Semua Filter
+            </Button>
+          </div>
+        )}
 
         {/* Reports Table */}
         <Card>
@@ -1630,8 +1712,13 @@ const AdminDetail = lazy(async () => {
                                 key={src + i}
                                 src={src}
                                 alt={`Dokumentasi ${i + 1}`}
-                                className="h-24 w-full object-cover rounded border cursor-zoom-in"
+                                loading="lazy"
+                                decoding="async"
+                                className="h-24 w-full object-cover rounded border cursor-zoom-in transition-transform hover:scale-105"
                                 onClick={() => { setActivePhotoIndex(i); setLightboxOpen(true); }}
+                                onError={(e) => {
+                                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="14" text-anchor="middle" dy=".3em" fill="%23999"%3EError%3C/text%3E%3C/svg%3E';
+                                }}
                               />
                             ))}
                           </div>

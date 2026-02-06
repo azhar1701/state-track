@@ -151,12 +151,19 @@ const ReportForm = () => {
     }
   );
   // Autosave draft
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  
   useEffect(() => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-    } catch {
-      // ignore quota/serialization errors
-    }
+    setSaveStatus('saving');
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+        setSaveStatus('saved');
+      } catch {
+        setSaveStatus('unsaved');
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [formData]);
 
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -550,8 +557,32 @@ const ReportForm = () => {
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
           <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
           <CardHeader className="pb-4 fade-in">
-            <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
+                <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 text-xs whitespace-nowrap">
+                {saveStatus === 'saving' && (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                    <span className="text-muted-foreground">Menyimpan...</span>
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-green-600" />
+                    <span className="text-green-600 font-medium">✓ Tersimpan</span>
+                  </>
+                )}
+                {saveStatus === 'unsaved' && (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <span className="text-red-500">Gagal simpan</span>
+                  </>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6 fade-in">

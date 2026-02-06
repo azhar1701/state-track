@@ -203,7 +203,12 @@ export const ReportDetailDrawer = ({ report, onClose }: ReportDetailDrawerProps)
                     <img
                       src={src}
                       alt={`${report.title || 'Laporan'} ${i + 1}`}
-                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover transition-transform hover:scale-110"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="14" text-anchor="middle" dy=".3em" fill="%23999"%3EError%3C/text%3E%3C/svg%3E';
+                      }}
                     />
                     <span className="absolute bottom-1 right-1 rounded bg-background/85 px-1 text-[10px] text-foreground shadow-sm">
                       {i + 1}/{photos.length}
