@@ -182,25 +182,25 @@ const Home = () => {
       {/* Stats Section */}
       <section className="container py-10">
   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
-          <Card className="text-center">
+          <Card className="glass-card text-center border-none">
             <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-primary">{stats.total}</CardTitle>
               <CardDescription>Total Laporan</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="text-center">
+          <Card className="glass-card text-center border-none">
             <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-accent">{stats.baru}</CardTitle>
               <CardDescription>Laporan Baru</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="text-center">
+          <Card className="glass-card text-center border-none">
             <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-secondary">{stats.diproses}</CardTitle>
               <CardDescription>Diproses</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="text-center">
+          <Card className="glass-card text-center border-none">
             <CardHeader className="pb-3 rounded-xl shadow-md">
               <CardTitle className="text-2xl font-bold text-green-600">{stats.selesai}</CardTitle>
               <CardDescription>Selesai</CardDescription>
@@ -223,7 +223,7 @@ const Home = () => {
             </Select>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <Card className="rounded-xl shadow-md">
+            <Card className="glass-card rounded-xl shadow-md border-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
               </CardHeader>
@@ -254,7 +254,7 @@ const Home = () => {
                 )}
               </CardContent>
             </Card>
-            <Card className="rounded-xl shadow-md">
+            <Card className="glass-card rounded-xl shadow-md border-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
               </CardHeader>
@@ -294,7 +294,7 @@ const Home = () => {
   <div className="max-w-5xl mx-auto px-2 md:px-0">
           <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Fitur Unggulan</h2>
           <div className="grid md:grid-cols-3 gap-4 md:gap-6 items-stretch">
-            <Card className="border-2 hover:border-primary transition-all duration-300 h-full rounded-xl shadow-md">
+            <Card className="glass-card border-2 border-white/20 hover:border-primary/40 transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-3">
                   <FileText className="icon-lg text-primary" />
@@ -306,7 +306,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-secondary transition-all duration-300 h-full rounded-xl shadow-md">
+            <Card className="glass-card border-2 border-white/20 hover:border-secondary/40 transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-3">
                   <MapIcon className="icon-lg text-secondary" />
@@ -318,7 +318,7 @@ const Home = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-accent transition-all duration-300 h-full rounded-xl shadow-md">
+            <Card className="glass-card border-2 border-white/20 hover:border-accent/40 transition-all duration-300 h-full rounded-xl shadow-md">
               <CardHeader>
                 <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-3">
                   <Users className="icon-lg text-accent" />

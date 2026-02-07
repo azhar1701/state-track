@@ -69,5 +69,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    worker: {
+      format: 'es',
+      plugins: () => [react()],
+    },
   };
 });

@@ -581,7 +581,7 @@ const ReportForm = () => {
     <>
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 fade-in">
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
-          <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
+          <Card className="glass-card shadow-2xl rounded-2xl border-none transition-all duration-300 scale-in">
           <CardHeader className="pb-4 fade-in">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">

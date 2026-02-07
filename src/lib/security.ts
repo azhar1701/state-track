@@ -46,26 +46,17 @@ export const sanitizeText = (dirty: string): string => {
 
 /**
  * Validate and sanitize file path to prevent path traversal
+ * Browser-only implementation (no Node.js path module)
  */
-export const sanitizePath = async (basePath: string, userPath: string): Promise<string> => {
-  // Browser environment - path traversal not applicable
-  if (typeof window !== 'undefined') {
-    return userPath;
-  }
+export const sanitizePath = (basePath: string, userPath: string): string => {
+  // Remove any path traversal attempts
+  const cleaned = userPath.replace(/\.\./g, '').replace(/[\\/]+/g, '/');
   
-  // Node environment - dynamic import to avoid bundler issues
-  try {
-    const pathModule = await import('path');
-    const joined = pathModule.join(basePath, userPath);
-    const normalized = pathModule.normalize(joined);
-    const resolvedBase = pathModule.resolve(basePath);
-    
-    if (!normalized.startsWith(resolvedBase)) {
-      throw new Error('Invalid path: directory traversal detected');
-    }
-    
-    return normalized;
-  } catch {
-    return userPath;
-  }
+  // Ensure it doesn't start with /
+  const normalized = cleaned.startsWith('/') ? cleaned.slice(1) : cleaned;
+  
+  // Join with base path
+  const joined = `${basePath.replace(/\/$/, '')}/${normalized}`;
+  
+  return joined;
 };

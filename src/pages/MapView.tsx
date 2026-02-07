@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,8 @@ import { FilterPanel } from '@/components/map/FilterPanel';
 import { OverlayToggle, type MapOverlays } from '@/components/map/OverlayToggle';
 import { TimeSlider } from '@/components/map/TimeSlider';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
+import { LayerDetailDrawer } from '@/components/map/LayerDetailDrawer';
+import { useLayerHighlight } from '@/hooks/useLayerHighlight';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
@@ -191,6 +193,11 @@ const MapView = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<{
+    id: string;
+    feature: Feature<Geometry>;
+    layer: L.Layer;
+  } | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     urlParams.center || [-7.325, 108.353] // Ciamis
@@ -392,8 +399,20 @@ const MapView = () => {
   const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
   const [ctxAddress, setCtxAddress] = useState<string | null>(null);
   const [ctxLoading, setCtxLoading] = useState(false);
-  // Fix: minDate for TimeSlider (scope global in component)
   const minDate = startOfDay(new Date('2025-10-01'));
+
+  const { registerLayer, unregisterLayer } = useLayerHighlight({
+    selectedFeatureId: selectedLayer?.id || null,
+  });
+
+  const handleZoomToLayer = useCallback(() => {
+    if (!selectedLayer || !mapInstance) return;
+    const layer = selectedLayer.layer;
+    if ('getBounds' in layer && typeof layer.getBounds === 'function') {
+      const bounds = (layer as L.Polyline | L.Polygon).getBounds();
+      mapInstance.fitBounds(bounds.pad(0.1));
+    }
+  }, [selectedLayer, mapInstance]);
 
   // Build dynamic legend items based on active overlays and layer types
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
@@ -1232,7 +1251,7 @@ const MapView = () => {
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-6">
           {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
-            <Card key={key} className="border border-border/60 glass-panel shadow-soft">
+            <Card key={key} className="glass-card border-none shadow-soft">
               <CardContent className="py-3 px-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -1287,6 +1306,15 @@ const MapView = () => {
                   })}
                   onEachFeature={(feature, layer) => {
                     const p = feature.properties as Record<string, unknown> | undefined;
+                    const featureId = `admin-${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    registerLayer(featureId, layer, {
+                      color: '#6b7280',
+                      weight: 1,
+                      opacity: 0.8,
+                      fillOpacity: 0,
+                    });
+
                     const name =
                       (p?.DESA_1 as string) ||
                       (p?.DESA as string) ||
@@ -1298,24 +1326,23 @@ const MapView = () => {
                     if (name) {
                       layer.bindTooltip(String(name), { sticky: true, direction: 'center', className: 'bg-black/60 text-white px-1 py-0.5 rounded border text-[11px]' });
                     }
-                    const desa = (p?.DESA_1 as string) || (p?.DESA as string) || (p?.name as string);
-                    const kec = (p?.KECAMATAN as string) || (p?.Kecamatan as string);
-                    const safeDesa = sanitizeText(desa ?? '-');
-                    const safeKec = sanitizeText(kec ?? '-');
-                    layer.bindPopup(
-                      `<div style="min-width:200px">
-                        <div style="font-weight:600;margin-bottom:4px">Detail Wilayah</div>
-                        <div><strong>Desa:</strong> ${safeDesa}</div>
-                        <div><strong>Kecamatan:</strong> ${safeKec}</div>
-                      </div>`
-                    );
+
+                    layer.on('click', () => {
+                      setSelectedLayer({ id: featureId, feature, layer });
+                    });
+
                     layer.on('mouseover', () => {
                       const anyLayer = layer as unknown as { setStyle?: (opts: L.PathOptions) => void };
                       if (typeof anyLayer.setStyle === 'function') anyLayer.setStyle({ weight: 2, color: '#111827' });
                     });
                     layer.on('mouseout', () => {
-                      const anyLayer = layer as unknown as { setStyle?: (opts: L.PathOptions) => void };
-                      if (typeof anyLayer.setStyle === 'function') anyLayer.setStyle({ weight: 1, color: '#6b7280' });
+                      if (selectedLayer?.id !== featureId) {
+                        const anyLayer = layer as unknown as { setStyle?: (opts: L.PathOptions) => void };
+                        if (typeof anyLayer.setStyle === 'function') anyLayer.setStyle({ weight: 1, color: '#6b7280' });
+                      }
+                    });
+                    layer.on('remove', () => {
+                      unregisterLayer(featureId);
                     });
                   }}
                 />
@@ -1391,10 +1418,20 @@ const MapView = () => {
                     }}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties as Record<string, unknown> | undefined;
+                      const featureId = `${key}-${Math.random().toString(36).substr(2, 9)}`;
+                      
+                      registerLayer(featureId, layer, {
+                        color: '#6b7280',
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0,
+                      });
+
                       const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
                       if (title) {
                         layer.bindTooltip(String(title), { sticky: true });
                       }
+
                       if (key === 'assets') {
                         const code = p?.code as string | undefined;
                         const cat = p?.category as string | undefined;
@@ -1414,23 +1451,15 @@ const MapView = () => {
                             <div><strong>Keterangan:</strong> ${safeKet}</div>
                           </div>
                         `);
-                      } else if (p) {
-                        // Generic popup showing first few properties
-                        const entries = Object.entries(p).slice(0, 8);
-                        const rows = entries.map(([k, v]) => {
-                          const safeKey = sanitizeText(k);
-                          const safeVal = sanitizeText(String(v ?? '-'));
-                          return `<div><strong>${safeKey}:</strong> ${safeVal}</div>`;
-                        }).join('');
-                        const safeTitle = sanitizeText(title);
-                        const html = `
-                          <div style="min-width:220px">
-                            <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
-                            ${rows}
-                          </div>
-                        `;
-                        layer.bindPopup(html);
+                      } else {
+                        layer.on('click', () => {
+                          setSelectedLayer({ id: featureId, feature, layer });
+                        });
                       }
+
+                      layer.on('remove', () => {
+                        unregisterLayer(featureId);
+                      });
                     }}
                   />
                 </Pane>
@@ -1554,6 +1583,14 @@ const MapView = () => {
               </div>
             </div>
           )}
+
+          {/* Layer Detail Drawer */}
+          <LayerDetailDrawer
+            isOpen={!!selectedLayer}
+            onClose={() => setSelectedLayer(null)}
+            feature={selectedLayer?.feature || null}
+            onZoomToFeature={handleZoomToLayer}
+          />
 
           {/* SidePanel consolidates Search, Filter, and Overlay */}
 
