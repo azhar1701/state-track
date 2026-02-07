@@ -1,0 +1,469 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\playwright.config.ts",
+    "rootDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "C:/Users/ariaz/OneDrive/Documents/GitHub/state-track/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 8,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:8080",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "smoke.spec.ts",
+      "file": "smoke.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "SIPASDA Smoke Test",
+          "file": "smoke.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "aplikasi harus load tanpa crash dan menampilkan peta",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 18992,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n\n    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:29:32",
+                        "location": {
+                          "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                          "column": 32,
+                          "line": 29
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 27 |\u001b[39m     \u001b[90m// Cek apakah Leaflet container ada (untuk peta berbasis Leaflet)\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[36mconst\u001b[39m mapContainer \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.leaflet-container'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 29 |\u001b[39m     \u001b[36mawait\u001b[39m expect(mapContainer)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m15000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 30 |\u001b[39m     console\u001b[33m.\u001b[39mlog(\u001b[32m'   ✅ Peta terdeteksi dan visible'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 31 |\u001b[39m\n \u001b[90m 32 |\u001b[39m     \u001b[90m// Step 4: Ambil screenshot sebagai bukti\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                            "column": 32,
+                            "line": 29
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n\n\n\u001b[0m \u001b[90m 27 |\u001b[39m     \u001b[90m// Cek apakah Leaflet container ada (untuk peta berbasis Leaflet)\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[36mconst\u001b[39m mapContainer \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.leaflet-container'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 29 |\u001b[39m     \u001b[36mawait\u001b[39m expect(mapContainer)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m15000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 30 |\u001b[39m     console\u001b[33m.\u001b[39mlog(\u001b[32m'   ✅ Peta terdeteksi dan visible'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 31 |\u001b[39m\n \u001b[90m 32 |\u001b[39m     \u001b[90m// Step 4: Ambil screenshot sebagai bukti\u001b[39m\u001b[0m\n\u001b[2m    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:29:32\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "📍 Step 1: Membuka halaman utama...\n"
+                        },
+                        {
+                          "text": "📍 Step 2: Verifikasi judul halaman...\n"
+                        },
+                        {
+                          "text": "   Title terdeteksi: \"SIPASDA - Sistem Informasi Pelaporan SDA\"\n"
+                        },
+                        {
+                          "text": "📍 Step 3: Memastikan peta terlihat...\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-07T23:54:49.238Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                        "column": 32,
+                        "line": 29
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4219922fea2e2bd3c691-7327a7368aaaab5e5aed",
+              "file": "smoke.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "navbar harus menampilkan elemen utama",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2972,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Navbar terdeteksi dan visible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-07T23:54:49.266Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-n-0b157-us-menampilkan-elemen-utama-chromium\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4219922fea2e2bd3c691-f3fab838009e3320029b",
+              "file": "smoke.spec.ts",
+              "line": 41,
+              "column": 3
+            },
+            {
+              "title": "tidak ada console error saat halaman load",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 5180,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: <= \u001b[32m0\u001b[39m\nReceived:    \u001b[31m1\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: <= \u001b[32m0\u001b[39m\nReceived:    \u001b[31m1\u001b[39m\n    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:74:27",
+                        "location": {
+                          "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                          "column": 27,
+                          "line": 74
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 72 |\u001b[39m     \n \u001b[90m 73 |\u001b[39m     \u001b[90m// Test berhasil jika tidak ada error atau error yang detected tidak kritis\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 74 |\u001b[39m     expect(errors\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeLessThanOrEqual(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 75 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 76 |\u001b[39m\n \u001b[90m 77 |\u001b[39m   test(\u001b[32m'aplikasi harus responsive di mobile'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                            "column": 27,
+                            "line": 74
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: <= \u001b[32m0\u001b[39m\nReceived:    \u001b[31m1\u001b[39m\n\n\u001b[0m \u001b[90m 72 |\u001b[39m     \n \u001b[90m 73 |\u001b[39m     \u001b[90m// Test berhasil jika tidak ada error atau error yang detected tidak kritis\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 74 |\u001b[39m     expect(errors\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeLessThanOrEqual(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 75 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 76 |\u001b[39m\n \u001b[90m 77 |\u001b[39m   test(\u001b[32m'aplikasi harus responsive di mobile'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:74:27\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [
+                        {
+                          "text": "⚠️  Console errors terdeteksi:\n"
+                        },
+                        {
+                          "text": "   - Failed to load resource: the server responded with a status of 400 ()\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2026-02-07T23:54:49.259Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                        "column": 27,
+                        "line": 74
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4219922fea2e2bd3c691-2859c92630f0579444f5",
+              "file": "smoke.spec.ts",
+              "line": 54,
+              "column": 3
+            },
+            {
+              "title": "aplikasi harus responsive di mobile",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 18722,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n\n    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:85:32",
+                        "location": {
+                          "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                          "column": 32,
+                          "line": 85
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 83 |\u001b[39m     \u001b[90m// Tunggu sampai peta visible\u001b[39m\n \u001b[90m 84 |\u001b[39m     \u001b[36mconst\u001b[39m mapContainer \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.leaflet-container'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 85 |\u001b[39m     \u001b[36mawait\u001b[39m expect(mapContainer)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m15000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 86 |\u001b[39m     \n \u001b[90m 87 |\u001b[39m     \u001b[90m// Ambil screenshot mobile\u001b[39m\n \u001b[90m 88 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mscreenshot({ \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                            "column": 32,
+                            "line": 85
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.leaflet-container')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.leaflet-container')\u001b[22m\n\n\n\u001b[0m \u001b[90m 83 |\u001b[39m     \u001b[90m// Tunggu sampai peta visible\u001b[39m\n \u001b[90m 84 |\u001b[39m     \u001b[36mconst\u001b[39m mapContainer \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.leaflet-container'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 85 |\u001b[39m     \u001b[36mawait\u001b[39m expect(mapContainer)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m15000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 86 |\u001b[39m     \n \u001b[90m 87 |\u001b[39m     \u001b[90m// Ambil screenshot mobile\u001b[39m\n \u001b[90m 88 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mscreenshot({ \u001b[0m\n\u001b[2m    at C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts:85:32\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-07T23:54:49.266Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\test-results\\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ariaz\\OneDrive\\Documents\\GitHub\\state-track\\e2e\\smoke.spec.ts",
+                        "column": 32,
+                        "line": 85
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4219922fea2e2bd3c691-ebdd181c9fb55846bbcc",
+              "file": "smoke.spec.ts",
+              "line": 77,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-07T23:54:46.961Z",
+    "duration": 21899.19099999999,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}

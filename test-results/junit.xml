@@ -1,0 +1,182 @@
+<testsuites id="" name="" tests="4" failures="3" skipped="0" errors="0" time="21.89919099999999">
+<testsuite name="smoke.spec.ts" timestamp="2026-02-07T23:54:48.006Z" hostname="chromium" tests="4" failures="3" skipped="0" time="45.866" errors="0">
+<testcase name="SIPASDA Smoke Test › aplikasi harus load tanpa crash dan menampilkan peta" classname="smoke.spec.ts" time="18.992">
+<failure message="smoke.spec.ts:14:3 aplikasi harus load tanpa crash dan menampilkan peta" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:14:3 › SIPASDA Smoke Test › aplikasi harus load tanpa crash dan menampilkan peta 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.leaflet-container')
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 15000ms
+      - waiting for locator('.leaflet-container')
+
+
+      27 |     // Cek apakah Leaflet container ada (untuk peta berbasis Leaflet)
+      28 |     const mapContainer = page.locator('.leaflet-container');
+    > 29 |     await expect(mapContainer).toBeVisible({ timeout: 15000 });
+         |                                ^
+      30 |     console.log('   ✅ Peta terdeteksi dan visible');
+      31 |
+      32 |     // Step 4: Ambil screenshot sebagai bukti
+        at C:\Users\ariaz\OneDrive\Documents\GitHub\state-track\e2e\smoke.spec.ts:29:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\test-results\smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[📍 Step 1: Membuka halaman utama...
+📍 Step 2: Verifikasi judul halaman...
+   Title terdeteksi: "SIPASDA - Sistem Informasi Pelaporan SDA"
+📍 Step 3: Memastikan peta terlihat...
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\video.webm]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\error-context.md]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-a-dc43c--crash-dan-menampilkan-peta-chromium\trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="SIPASDA Smoke Test › navbar harus menampilkan elemen utama" classname="smoke.spec.ts" time="2.972">
+<system-out>
+<![CDATA[✅ Navbar terdeteksi dan visible
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-n-0b157-us-menampilkan-elemen-utama-chromium\trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="SIPASDA Smoke Test › tidak ada console error saat halaman load" classname="smoke.spec.ts" time="5.18">
+<failure message="smoke.spec.ts:54:3 tidak ada console error saat halaman load" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:54:3 › SIPASDA Smoke Test › tidak ada console error saat halaman load ─
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 0
+    Received:    1
+
+      72 |     
+      73 |     // Test berhasil jika tidak ada error atau error yang detected tidak kritis
+    > 74 |     expect(errors.length).toBeLessThanOrEqual(0);
+         |                           ^
+      75 |   });
+      76 |
+      77 |   test('aplikasi harus responsive di mobile', async ({ page }) => {
+        at C:\Users\ariaz\OneDrive\Documents\GitHub\state-track\e2e\smoke.spec.ts:74:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\test-results\smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\video.webm]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\error-context.md]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-t-cc84d-ole-error-saat-halaman-load-chromium\trace.zip]]
+]]>
+</system-out>
+<system-err>
+<![CDATA[⚠️  Console errors terdeteksi:
+   - Failed to load resource: the server responded with a status of 400 ()
+]]>
+</system-err>
+</testcase>
+<testcase name="SIPASDA Smoke Test › aplikasi harus responsive di mobile" classname="smoke.spec.ts" time="18.722">
+<failure message="smoke.spec.ts:77:3 aplikasi harus responsive di mobile" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:77:3 › SIPASDA Smoke Test › aplikasi harus responsive di mobile ───────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.leaflet-container')
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 15000ms
+      - waiting for locator('.leaflet-container')
+
+
+      83 |     // Tunggu sampai peta visible
+      84 |     const mapContainer = page.locator('.leaflet-container');
+    > 85 |     await expect(mapContainer).toBeVisible({ timeout: 15000 });
+         |                                ^
+      86 |     
+      87 |     // Ambil screenshot mobile
+      88 |     await page.screenshot({ 
+        at C:\Users\ariaz\OneDrive\Documents\GitHub\state-track\e2e\smoke.spec.ts:85:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\test-results\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\test-results\smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\video.webm]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\error-context.md]]
+
+[[ATTACHMENT|smoke-SIPASDA-Smoke-Test-aplikasi-harus-responsive-di-mobile-chromium\trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

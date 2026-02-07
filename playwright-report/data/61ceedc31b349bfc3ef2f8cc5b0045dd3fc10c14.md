@@ -1,0 +1,289 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - link "Lewati ke konten utama" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation [ref=e4]:
+      - generic [ref=e6]:
+        - link "SIPASDA" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e9]
+          - generic [ref=e12]: SIPASDA
+        - generic [ref=e14]:
+          - link "Masuk / Daftar" [ref=e15] [cursor=pointer]:
+            - /url: /auth
+            - button "Masuk / Daftar" [ref=e16]
+          - button "Ganti tema" [ref=e17] [cursor=pointer]:
+            - img
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e21]:
+          - img [ref=e23]
+          - heading "Sistem Informasi Pelaporan SDA" [level=1] [ref=e26]
+          - paragraph [ref=e27]: aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
+          - link "Masuk / Daftar" [ref=e29] [cursor=pointer]:
+            - /url: /auth
+            - button "Masuk / Daftar" [ref=e30]
+        - generic [ref=e32]:
+          - generic [ref=e34]:
+            - heading "5" [level=3] [ref=e35]
+            - paragraph [ref=e36]: Total Laporan
+          - generic [ref=e38]:
+            - heading "1" [level=3] [ref=e39]
+            - paragraph [ref=e40]: Laporan Baru
+          - generic [ref=e42]:
+            - heading "2" [level=3] [ref=e43]
+            - paragraph [ref=e44]: Diproses
+          - generic [ref=e46]:
+            - heading "2" [level=3] [ref=e47]
+            - paragraph [ref=e48]: Selesai
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - heading "Insight Laporan" [level=2] [ref=e52]
+            - combobox [ref=e53] [cursor=pointer]:
+              - generic: 30 hari
+              - img [ref=e54]
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - heading "Tren Laporan (30 hari)" [level=3] [ref=e59]
+              - img [ref=e65]:
+                - generic [ref=e70]:
+                  - generic [ref=e72]: 10/01
+                  - generic [ref=e74]: 13/01
+                  - generic [ref=e76]: 16/01
+                  - generic [ref=e78]: 19/01
+                  - generic [ref=e80]: 22/01
+                  - generic [ref=e82]: 25/01
+                  - generic [ref=e84]: 28/01
+                  - generic [ref=e86]: 31/01
+                  - generic [ref=e88]: 03/02
+                  - generic [ref=e90]: 06/02
+                - generic [ref=e92]:
+                  - generic [ref=e94]: "0"
+                  - generic [ref=e96]: "1"
+                  - generic [ref=e98]: "2"
+            - generic [ref=e101]:
+              - heading "Kategori Terbanyak (30 hari)" [level=3] [ref=e103]
+              - img [ref=e109]:
+                - generic [ref=e116]: lainnya
+                - generic [ref=e118]:
+                  - generic [ref=e120]: "0"
+                  - generic [ref=e122]: "1"
+                  - generic [ref=e124]: "2"
+        - generic [ref=e131]:
+          - heading "Fitur Unggulan" [level=2] [ref=e132]
+          - generic [ref=e133]:
+            - generic [ref=e135]:
+              - img [ref=e137]
+              - heading "Laporan Mudah" [level=3] [ref=e140]
+              - paragraph [ref=e141]: Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.
+            - generic [ref=e143]:
+              - img [ref=e145]
+              - heading "Peta Interaktif" [level=3] [ref=e147]
+              - paragraph [ref=e148]: Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.
+            - generic [ref=e150]:
+              - img [ref=e152]
+              - heading "Dashboard Admin" [level=3] [ref=e157]
+              - paragraph [ref=e158]: Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.
+        - generic [ref=e160]:
+          - heading "Cara Kerja" [level=2] [ref=e161]
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - generic [ref=e164]: "1"
+              - heading "Daftar & Masuk" [level=3] [ref=e165]
+              - paragraph [ref=e166]: Buat akun gratis untuk mulai membuat laporan
+            - generic [ref=e167]:
+              - generic [ref=e168]: "2"
+              - heading "Buat Laporan" [level=3] [ref=e169]
+              - paragraph [ref=e170]: Ambil foto, tandai lokasi, dan kirim laporan
+            - generic [ref=e171]:
+              - generic [ref=e172]: "3"
+              - heading "Pantau Progress" [level=3] [ref=e173]
+              - paragraph [ref=e174]: Lihat status perbaikan secara real-time di peta
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e180]:
+                - heading "Laporan Terbaru" [level=3] [ref=e181]
+                - link "Lihat semua" [ref=e182] [cursor=pointer]:
+                  - /url: /map
+              - list [ref=e184]:
+                - listitem [ref=e185]:
+                  - generic [ref=e186]:
+                    - generic [ref=e187]:
+                      - generic [ref=e188]:
+                        - generic [ref=e189]: Genangan air di perumahan
+                        - generic [ref=e190]: Lainnya
+                      - generic [ref=e191]:
+                        - img [ref=e192]
+                        - generic [ref=e195]: Panyingkiran, Ciamis
+                    - generic [ref=e196]:
+                      - generic [ref=e197]: Ringan
+                      - generic [ref=e198]: Diproses
+                  - generic [ref=e199]:
+                    - img [ref=e200]
+                    - generic [ref=e203]: 07 Feb 2026, 12.33
+                - listitem [ref=e204]:
+                  - generic [ref=e205]:
+                    - generic [ref=e206]:
+                      - generic [ref=e207]:
+                        - generic [ref=e208]: Irigasi jebol di Cipalih
+                        - generic [ref=e209]: Irigasi
+                      - generic [ref=e210]:
+                        - img [ref=e211]
+                        - generic [ref=e214]: Imbanagara, Ciamis
+                    - generic [ref=e215]:
+                      - generic [ref=e216]: Sedang
+                      - generic [ref=e217]: Selesai
+                  - generic [ref=e218]:
+                    - img [ref=e219]
+                    - generic [ref=e222]: 17 Okt 2025, 10.01
+                - listitem [ref=e223]:
+                  - generic [ref=e224]:
+                    - generic [ref=e225]:
+                      - generic [ref=e226]:
+                        - generic [ref=e227]: sungai banyak sampah
+                        - generic [ref=e228]: Sungai
+                      - generic [ref=e229]:
+                        - img [ref=e230]
+                        - generic [ref=e233]: Sukamulya, Baregbeg
+                    - generic [ref=e234]:
+                      - generic [ref=e235]: Ringan
+                      - generic [ref=e236]: Diproses
+                  - generic [ref=e237]:
+                    - img [ref=e238]
+                    - generic [ref=e241]: 09 Okt 2025, 10.46
+                - listitem [ref=e242]:
+                  - generic [ref=e243]:
+                    - generic [ref=e244]:
+                      - generic [ref=e245]:
+                        - generic [ref=e246]: talang irigasi jebol
+                        - generic [ref=e247]: Irigasi
+                      - generic [ref=e248]:
+                        - img [ref=e249]
+                        - generic [ref=e252]: Imbanagara Raya, Ciamis
+                    - generic [ref=e253]:
+                      - generic [ref=e254]: Berat
+                      - generic [ref=e255]: Selesai
+                  - generic [ref=e256]:
+                    - img [ref=e257]
+                    - generic [ref=e260]: 08 Okt 2025, 21.43
+                - listitem [ref=e261]:
+                  - generic [ref=e262]:
+                    - generic [ref=e263]:
+                      - generic [ref=e264]:
+                        - generic [ref=e265]: sungai luapan
+                        - generic [ref=e266]: Sungai
+                      - generic [ref=e267]:
+                        - img [ref=e268]
+                        - generic [ref=e271]: Utama, Cijeungjing
+                    - generic [ref=e272]:
+                      - generic [ref=e273]: Berat
+                      - generic [ref=e274]: Baru
+                  - generic [ref=e275]:
+                    - img [ref=e276]
+                    - generic [ref=e279]: 08 Okt 2025, 21.23
+            - generic [ref=e280]:
+              - heading "Kategori Laporan" [level=3] [ref=e281]
+              - generic [ref=e282]:
+                - generic [ref=e283]:
+                  - generic [ref=e284]: Irigasi
+                  - generic [ref=e285]: Saluran, pintu air, dan kelengkapannya.
+                - generic [ref=e286]:
+                  - generic [ref=e287]: Sungai
+                  - generic [ref=e288]: Tanggul, erosi, atau sampah pada sungai.
+                - generic [ref=e289]:
+                  - generic [ref=e290]: Lainnya
+                  - generic [ref=e291]: Kategori umum lain yang relevan.
+          - generic [ref=e292]:
+            - generic [ref=e293]:
+              - heading "Status Laporan" [level=3] [ref=e294]
+              - list [ref=e295]:
+                - listitem [ref=e296]:
+                  - generic [ref=e297]: Baru
+                  - generic [ref=e298]: Laporan baru dibuat dan menunggu peninjauan.
+                - listitem [ref=e299]:
+                  - generic [ref=e300]: Diproses
+                  - generic [ref=e301]: Sedang ditindaklanjuti oleh petugas.
+                - listitem [ref=e302]:
+                  - generic [ref=e303]: Selesai
+                  - generic [ref=e304]: Sudah ditangani atau dinyatakan tuntas.
+            - generic [ref=e305]:
+              - heading "Pertanyaan Umum" [level=3] [ref=e306]
+              - generic [ref=e307]:
+                - heading "Bagaimana cara membuat laporan?" [level=3] [ref=e309]:
+                  - button "Bagaimana cara membuat laporan?" [ref=e310] [cursor=pointer]:
+                    - text: Bagaimana cara membuat laporan?
+                    - img [ref=e311]
+                - heading "Informasi apa saja yang diperlukan?" [level=3] [ref=e314]:
+                  - button "Informasi apa saja yang diperlukan?" [ref=e315] [cursor=pointer]:
+                    - text: Informasi apa saja yang diperlukan?
+                    - img [ref=e316]
+                - heading "Bagaimana status laporan ditentukan?" [level=3] [ref=e319]:
+                  - button "Bagaimana status laporan ditentukan?" [ref=e320] [cursor=pointer]:
+                    - text: Bagaimana status laporan ditentukan?
+                    - img [ref=e321]
+        - generic [ref=e324]:
+          - heading "Siap berkontribusi?" [level=3] [ref=e325]
+          - paragraph [ref=e326]: Laporkan masalah infrastruktur di sekitar Anda atau lihat peta untuk memantau progres perbaikan.
+          - generic [ref=e327]:
+            - link "Buat Laporan" [ref=e328] [cursor=pointer]:
+              - /url: /report
+              - button "Buat Laporan" [ref=e329]:
+                - img
+                - text: Buat Laporan
+            - link "Lihat Peta" [ref=e330] [cursor=pointer]:
+              - /url: /map
+              - button "Lihat Peta" [ref=e331]:
+                - img
+                - text: Lihat Peta
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: SIPASDA
+              - paragraph [ref=e337]: SIPASDA (Sistem Informasi Pelaporan SDA) adalah aplikasi web untuk pelaporan dan pemantauan sumber daya air di daerah. Masyarakat dapat melaporkan kondisi infrastruktur seperti irigasi, sungai, dan lainnya secara langsung, dilengkapi foto dan data spasial. Instansi terkait dapat menindaklanjuti laporan dengan cepat dan transparan, sementara pengguna bisa memantau status penanganannya.
+            - generic [ref=e338]:
+              - generic [ref=e339]:
+                - generic [ref=e340]: Menu
+                - list [ref=e341]:
+                  - listitem [ref=e342]:
+                    - link "Beranda" [ref=e343] [cursor=pointer]:
+                      - /url: /
+                  - listitem [ref=e344]:
+                    - link "Peta" [ref=e345] [cursor=pointer]:
+                      - /url: /map
+                  - listitem [ref=e346]:
+                    - link "Buat Laporan" [ref=e347] [cursor=pointer]:
+                      - /url: /report
+                  - listitem [ref=e348]:
+                    - link "Dashboard" [ref=e349] [cursor=pointer]:
+                      - /url: /admin
+              - generic [ref=e350]:
+                - generic [ref=e351]: Bantuan
+                - list [ref=e352]:
+                  - listitem [ref=e353]:
+                    - link "Panduan" [ref=e354] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e355]:
+                    - link "Kebijakan Privasi" [ref=e356] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e357]:
+                    - link "Syarat Layanan" [ref=e358] [cursor=pointer]:
+                      - /url: "#"
+            - generic [ref=e359]:
+              - generic [ref=e360]: Kontak
+              - paragraph [ref=e361]: "Email: psdaciamis2025@gmail.com"
+              - generic [ref=e362]:
+                - link "Instagram" [ref=e363] [cursor=pointer]:
+                  - /url: "#"
+                - generic [ref=e364]: ·
+                - link "GitHub" [ref=e365] [cursor=pointer]:
+                  - /url: "#"
+          - generic [ref=e366]:
+            - generic [ref=e367]: © 2026 SIPASDA. Semua hak dilindungi.
+            - generic [ref=e368]: Dibuat dengan React, Vite, Tailwind, dan Leaflet.
+  - generic [ref=e369]: "0"
+```
