@@ -36,43 +36,43 @@ export const MapToolbar = ({
   const [scale, setScale] = useState(1);
   return (
     <div className="absolute top-4 left-4 z-[1000]">
-      <div className="map-toolbar-container flex items-center gap-2 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded-lg border shadow-lg">
+      <div className="map-toolbar-container flex items-center gap-2 glass-panel p-2 rounded-lg shadow-float">
         {!compact && (
           <Button
             onClick={onToggleSearch}
             variant={showSearch ? 'default' : 'outline'}
             size="sm"
-            className="shadow-none"
+            className="shadow-none btn-haptic"
           >
             <Search className="w-4 h-4 mr-2" />
             Cari
           </Button>
         )}
         {canLocate && (
-          <Button onClick={onLocate} size="sm" variant="outline" className="shadow-none">
+          <Button onClick={onLocate} size="sm" variant="outline" className="shadow-none btn-haptic">
             <Navigation className="w-4 h-4 mr-2" />
             Lokasi
           </Button>
         )}
         {!compact && <div className="w-px h-6 bg-border" />}
         {!compact && (
-          <Button onClick={onToggleFilters} variant="outline" size="sm" className="shadow-none">
+          <Button onClick={onToggleFilters} variant="outline" size="sm" className="shadow-none btn-haptic">
             <FilterIcon className="w-4 h-4 mr-2" />
             Filter
           </Button>
         )}
         {!compact && (
-          <Button onClick={onToggleOverlays} variant="outline" size="sm" className="shadow-none">
+          <Button onClick={onToggleOverlays} variant="outline" size="sm" className="shadow-none btn-haptic">
             <Layers className="w-4 h-4 mr-2" />
             Overlay
           </Button>
         )}
         <div className="w-px h-6 bg-border" />
-        <Button onClick={onShare} variant="outline" size="sm" className="shadow-none">
+        <Button onClick={onShare} variant="outline" size="sm" className="shadow-none btn-haptic">
           <Share2 className="w-4 h-4 mr-2" />
           Share
         </Button>
-        <Button onClick={() => setOpenExport(true)} variant="outline" size="sm" className="shadow-none">
+        <Button onClick={() => setOpenExport(true)} variant="outline" size="sm" className="shadow-none btn-haptic">
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>

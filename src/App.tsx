@@ -2,7 +2,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-// Removed TanStack Query per request
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -13,6 +12,11 @@ import { Suspense, lazy } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useOutboxSync } from "@/hooks/useOutboxSync";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BottomNav } from "@/components/BottomNav";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 const Home = lazy(() => import("./pages/Home"));
 const Auth = lazy(() => import("./pages/Auth"));
 const MapView = lazy(() => import("./pages/MapView"));
@@ -28,19 +32,19 @@ const GeoDataManager = lazy(() => import("./pages/GeoDataManager"));
 
 const AppInner = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   useOutboxSync(user?.id);
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
       <Navbar />
       <OfflineIndicator />
-      <main id="main-content" className="min-h-[calc(100vh-3.5rem)]">{/* 3.5rem ~ navbar height */}
+      <main id="main-content" className="min-h-[calc(100vh-3.5rem)]" style={{ paddingBottom: isMobile && user ? '72px' : '0' }}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
-              {/* Fallback for environments where basename is not applied (e.g., direct /state-track/ access) */}
               <Route path="/state-track" element={<Navigate to="/" replace />} />
               <Route path="/state-track/*" element={<Navigate to="/" replace />} />
               <Route path="/auth" element={<Auth />} />
@@ -57,6 +61,10 @@ const AppInner = () => {
           </Suspense>
         </ErrorBoundary>
       </main>
+      {isMobile && user && <BottomNav />}
+      <InstallPrompt />
+      <NotificationPrompt />
+      <KeyboardShortcuts />
       <CommandMenu />
     </>
   );

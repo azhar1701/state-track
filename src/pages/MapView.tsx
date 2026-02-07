@@ -21,7 +21,6 @@ import { MapSearch } from '@/components/map/MapSearch';
 import { FilterPanel } from '@/components/map/FilterPanel';
 import { OverlayToggle, type MapOverlays } from '@/components/map/OverlayToggle';
 import { TimeSlider } from '@/components/map/TimeSlider';
-// Overlays via sidebar are currently disabled
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
@@ -30,6 +29,8 @@ import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
 import { sanitizeText, sanitizeForLog } from '@/lib/security';
+import { MobileMapControls } from '@/components/map/MobileMapControls';
+import { ReportCardSkeleton } from '@/components/common/Skeleton';
 
 interface Report {
   id: string;
@@ -61,6 +62,34 @@ type AssetRow = {
 
 const MAP_PREFS_STORAGE_KEY = 'admin:mapPreferences';
 const MAP_OVERLAY_STORAGE_KEY = 'map:overlays';
+
+const createClusterCustomIcon = (cluster: L.MarkerCluster) => {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 40 : count < 100 ? 50 : 60;
+  
+  return L.divIcon({
+    html: `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        background: linear-gradient(135deg, hsl(215 70% 50%), hsl(215 70% 60%));
+        border: 3px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-weight: 700;
+        color: white;
+        font-size: ${count < 100 ? '14px' : '12px'};
+      ">
+        ${count}
+      </div>
+    `,
+    className: 'custom-cluster-icon',
+    iconSize: [size, size],
+  });
+};
 
 const createCustomIcon = (category: string, status: string, severity?: Report['severity']) => {
   const colors = {
@@ -1105,9 +1134,10 @@ const MapView = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mcg = new (L as any).MarkerClusterGroup({
       chunkedLoading: true,
-      maxClusterRadius: 48,
-      showCoverageOnHover: false,
+      maxClusterRadius: 60,
+      showCoverageOnHover: true,
       spiderfyOnMaxZoom: true,
+      iconCreateFunction: createClusterCustomIcon,
     }) as L.MarkerClusterGroup;
     filteredReports.forEach((r) => {
       const marker = L.marker([r.latitude, r.longitude], {
@@ -1191,7 +1221,7 @@ const MapView = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-transition">
       <div className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Peta Laporan dan Infrastruktur SDA</h1>
@@ -1202,7 +1232,7 @@ const MapView = () => {
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-6">
           {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
-            <Card key={key} className="border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm">
+            <Card key={key} className="border border-border/60 glass-panel shadow-soft">
               <CardContent className="py-3 px-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -1225,9 +1255,16 @@ const MapView = () => {
             ref={setMapInstance}
           >
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
-            {/* Top-right basemap switcher */}
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
-            {/* Legend tagged for measurement to stack scale/coords above */}
+            
+            {isMobile && (
+              <MobileMapControls
+                onZoomIn={() => mapInstance?.zoomIn()}
+                onZoomOut={() => mapInstance?.zoomOut()}
+                onLocate={goToUserLocation}
+              />
+            )}
+            
             <div className="legend-container absolute bottom-4 right-4 z-[1200]">
               <Legend overlays={legendOverlays} />
             </div>

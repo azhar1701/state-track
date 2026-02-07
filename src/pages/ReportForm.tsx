@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { MapPin, Upload, Navigation, Loader as Loader2, Search } from 'lucide-react';
+import { MapPin, Upload, Navigation, Loader as Loader2, Search, Camera } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,6 +19,7 @@ import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } from '@/lib/geocoding';
 import { enqueueReportForSync } from '@/hooks/useOutboxSync';
 import { sanitizeForLog } from '@/lib/security';
+import { LiveCamera } from '@/components/common/LiveCamera';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
 type Category = 'irigasi' | 'sungai' | 'lainnya';
@@ -121,6 +122,7 @@ const ReportForm = () => {
   const [loading, setLoading] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [showCamera, setShowCamera] = useState(false);
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -317,6 +319,20 @@ const ReportForm = () => {
     getLocationName(lat, lng);
   };
 
+  const handleCameraCapture = async (file: File) => {
+    try {
+      const opts = { maxSizeMB: 1.5, maxWidthOrHeight: 1600, useWebWorker: true, initialQuality: 0.7 } as const;
+      const compressed = await imageCompression(file, opts);
+      const preview = await imageCompression.getDataUrlFromFile(compressed);
+      
+      setPhotoFiles((prev) => [...prev, new File([compressed], file.name, { type: 'image/jpeg' })]);
+      setPhotoPreviews((prev) => [...prev, preview]);
+      toast.success('Foto berhasil ditambahkan');
+    } catch (err) {
+      toast.error('Gagal memproses foto');
+    }
+  };
+
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -344,7 +360,9 @@ const ReportForm = () => {
       }
       setPhotoFiles(compressed);
       setPhotoPreviews(previews);
-      toast.success(`Foto siap diunggah (${compressed.length})`);
+      toast.success(`Foto siap diunggah (${compressed.length})`, {
+        description: 'Foto telah dikompres untuk menghemat data',
+      });
     } catch (err) {
       console.error('Compression failed', err);
       toast.error('Gagal memproses foto');
@@ -413,7 +431,9 @@ const ReportForm = () => {
           desa: formData.desa,
           location: { latitude: location.latitude, longitude: location.longitude, name: location.name ?? null },
         }, photoFiles);
-        toast.message('Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.');
+        toast.message('Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.', {
+          description: 'Anda dapat melihat status di halaman Laporan Saya',
+        });
   try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
         navigate('/report/success');
         return;
@@ -431,7 +451,9 @@ const ReportForm = () => {
           if (uploadError) {
             const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
             if (msg.includes('bucket') && msg.includes('not')) {
-              toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".');
+              toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".', {
+              description: 'Laporan tetap akan tersimpan',
+            });
               break;
             } else {
               throw uploadError;
@@ -486,8 +508,9 @@ const ReportForm = () => {
 
       if (insertError) throw insertError;
 
-      toast.success('Laporan berhasil dikirim!');
-      // Clear draft
+      toast.success('Laporan berhasil dikirim!', {
+        description: 'Tim kami akan segera meninjau laporan Anda',
+      });
       try { localStorage.removeItem(DRAFT_KEY); } catch {
         // ignore removeItem failures
       }
@@ -515,7 +538,9 @@ const ReportForm = () => {
             desa: formData.desa,
             location: { latitude: location!.latitude, longitude: location!.longitude, name: location!.name ?? null },
           }, photoFiles);
-          toast.message('Koneksi terputus. Laporan disimpan offline dan akan dikirim otomatis.');
+          toast.message('Koneksi terputus. Laporan disimpan offline dan akan dikirim otomatis.', {
+            description: 'Periksa status di Laporan Saya setelah online',
+          });
           try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
           navigate('/report/success');
           return;
@@ -553,6 +578,7 @@ const ReportForm = () => {
   if (!user) return null;
 
   return (
+    <>
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 fade-in">
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
           <Card className="shadow-2xl rounded-2xl border border-border transition-all duration-300 scale-in">
@@ -750,15 +776,25 @@ const ReportForm = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="photo">Foto (Opsional)</Label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCamera(true)}
+                    className="btn-haptic"
+                  >
+                    <Camera className="icon-sm mr-2" />
+                    Ambil Foto
+                  </Button>
                   <Input id="photo" type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => document.getElementById('photo')?.click()}
+                    className="btn-haptic"
                   >
                     <Upload className="icon-sm mr-2" />
-                    {photoFiles.length > 0 ? `Ganti Foto (${photoFiles.length})` : 'Upload Foto'}
+                    {photoFiles.length > 0 ? `Ganti (${photoFiles.length})` : 'Upload'}
                   </Button>
                   {photoFiles.length > 0 && <span className="text-sm text-muted-foreground">{photoFiles.slice(0,3).map(f=>f.name).join(', ')}{photoFiles.length>3 ? ` +${photoFiles.length-3} lagi` : ''}</span>}
                 </div>
@@ -902,6 +938,14 @@ const ReportForm = () => {
         </Card>
       </div>
     </div>
+
+    {showCamera && (
+      <LiveCamera
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+      />
+    )}
+    </>
   );
 };
 

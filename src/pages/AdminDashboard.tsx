@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/drawer";
 import { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { FileText, Clock, CheckCircle, Loader2, X } from "lucide-react";
+import { FileText, Clock, CheckCircle, Loader2, X, Trash2 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 
@@ -143,6 +143,9 @@ const AdminDashboard = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [fullReport, setFullReport] = useState<ReportDetail | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const renderSeverityBadge = (sev?: ReportSeverity | null) => {
     if (!sev) return <span className="text-muted-foreground">-</span>;
@@ -902,6 +905,25 @@ const AdminDashboard = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [reports]);
 
+  const deleteReport = async (reportId: string) => {
+    try {
+      setDeleting(true);
+      const { error } = await supabase.from('reports').delete().eq('id', reportId);
+      if (error) throw error;
+      
+      toast.success('Laporan berhasil dihapus');
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
+      await fetchReports();
+      await fetchStats();
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal menghapus laporan');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const updateStatus = async (id: string, newStatus: ReportStatus) => {
     setUpdatingId(id);
     const prevStatus = reports.find((r) => r.id === id)?.status;
@@ -1259,6 +1281,7 @@ const AdminDashboard = () => {
                       <TableHead>Respon</TableHead>
                       <TableHead>Tanggal</TableHead>
                       <TableHead className="text-right">Status</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1311,6 +1334,19 @@ const AdminDashboard = () => {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setReportToDelete(report.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1357,6 +1393,28 @@ const AdminDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Laporan</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => reportToDelete && deleteReport(reportToDelete)}
+                disabled={deleting}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {deleting ? 'Menghapus...' : 'Hapus'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Detail Drawer */}
         <Drawer open={detailOpen} onOpenChange={setDetailOpen}>

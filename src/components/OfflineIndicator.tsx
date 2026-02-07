@@ -20,8 +20,8 @@ export const OfflineIndicator = () => {
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
-      <WifiOff className="w-4 h-4" />
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 glass-panel px-4 py-2 rounded-full shadow-float flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
+      <WifiOff className="w-4 h-4 text-amber-600" />
       <span className="text-sm font-medium">Mode Offline</span>
     </div>
   );

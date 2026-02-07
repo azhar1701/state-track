@@ -46,7 +46,7 @@ const Navbar = () => {
                   <Button
                     variant={isActive("/map") ? "secondary" : "ghost"}
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 btn-haptic"
                     onMouseEnter={prefetchMap}
                     onFocus={prefetchMap}
                   >
@@ -58,7 +58,7 @@ const Navbar = () => {
                   <Button
                     variant={isActive("/me/reports") ? "secondary" : "ghost"}
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 btn-haptic"
                     onMouseEnter={prefetchMyReports}
                     onFocus={prefetchMyReports}
                   >
@@ -70,7 +70,7 @@ const Navbar = () => {
                   <Button
                     variant={isActive("/report") ? "secondary" : "ghost"}
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 btn-haptic"
                     onMouseEnter={prefetchReport}
                     onFocus={prefetchReport}
                   >
@@ -84,7 +84,7 @@ const Navbar = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 btn-haptic"
                     disabled
                   >
                     <LayoutDashboard className="icon-sm animate-pulse" />
@@ -95,7 +95,7 @@ const Navbar = () => {
                     <Button
                       variant={isActive("/admin") ? "secondary" : "ghost"}
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 btn-haptic"
                       onMouseEnter={prefetchAdmin}
                       onFocus={prefetchAdmin}
                     >
@@ -108,7 +108,7 @@ const Navbar = () => {
                     <Button
                       variant={isActive("/help") ? "secondary" : "ghost"}
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 btn-haptic"
                       onMouseEnter={prefetchHelp}
                       onFocus={prefetchHelp}
                     >
@@ -175,7 +175,7 @@ const Navbar = () => {
                   variant="ghost"
                   size="sm"
                   onClick={signOut}
-                  className="gap-2"
+                  className="gap-2 btn-haptic"
                 >
                   <LogOut className="icon-sm" />
                   Keluar
@@ -186,7 +186,7 @@ const Navbar = () => {
             {!user && (
               <div className="flex items-center gap-2">
                 <Link to="/auth">
-                  <Button size="sm">Masuk / Daftar</Button>
+                  <Button size="sm" className="btn-haptic">Masuk / Daftar</Button>
                 </Link>
                 <ThemeToggle />
               </div>

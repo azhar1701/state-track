@@ -19,7 +19,7 @@ export const Legend = ({ overlays }: { overlays?: LegendOverlayItem[] }) => {
   ];
 
   return (
-    <Card className="w-56 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-md p-3">
+    <Card className="w-56 glass-panel p-3">
       <div className="text-[11px] text-muted-foreground space-y-2">
         <div>
           <div className="text-foreground font-medium mb-1 leading-none">Status</div>

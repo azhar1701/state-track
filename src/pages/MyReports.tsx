@@ -272,6 +272,7 @@ export default function MyReports() {
             <EmptyState
               title="Belum ada laporan"
               description="Buat laporan pertama Anda untuk mulai memantau perbaikan."
+              illustration="reports"
               action={{ label: 'Buat Laporan', onClick: () => navigate('/report') }}
               secondaryAction={{ label: 'Lihat Peta', onClick: () => navigate('/map') }}
             />
