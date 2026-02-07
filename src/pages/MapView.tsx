@@ -1374,31 +1374,47 @@ const MapView = () => {
                     data={dynamicData[key]!}
                     style={(feat) => {
                       const t = feat?.geometry?.type;
+                      const keyLower = key.toLowerCase();
                       const styLine = dynamicStyle[key]?.line;
                       const styPoly = dynamicStyle[key]?.polygon;
-                      // If key hints irrigation
-                      if (key.toLowerCase().includes('irigasi') || key.toLowerCase().includes('irrigation')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#0ea5e9', weight: styLine?.weight ?? 3, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                      
+                      // Sungai - PRIORITAS PERTAMA (biru langit)
+                      if (keyLower.includes('sungai') || keyLower.includes('river')) {
+                        if (t === 'LineString' || t === 'MultiLineString') {
+                          return { color: styLine?.color ?? '#38bdf8', weight: styLine?.weight ?? 2.5, opacity: styLine?.opacity ?? 0.95, dashArray: styLine?.dashArray };
+                        }
+                        return { color: styPoly?.color ?? '#38bdf8', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.85, fillColor: styPoly?.fillColor ?? '#7dd3fc', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
+                      }
+                      
+                      // Irigasi - biru cerah
+                      if (keyLower.includes('irigasi') || keyLower.includes('irrigation')) {
+                        if (t === 'LineString' || t === 'MultiLineString') {
+                          return { color: styLine?.color ?? '#0ea5e9', weight: styLine?.weight ?? 3, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                        }
                         return { color: styPoly?.color ?? '#0ea5e9', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#38bdf8', fillOpacity: styPoly?.fillOpacity ?? 0.15 };
                       }
-                      // If key hints flood zones / hazard
-                      if (key.toLowerCase().includes('banjir') || key.toLowerCase().includes('flood')) {
-                        return { color: styPoly?.color ?? '#ef4444', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.7, fillColor: styPoly?.fillColor ?? '#f87171', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
+                      
+                      // Banjir - merah
+                      if (keyLower.includes('banjir') || keyLower.includes('flood')) {
+                        return { color: styPoly?.color ?? '#ef4444', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#f87171', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
                       }
-                      // If key hints rivers
-                      if (key.toLowerCase().includes('sungai') || key.toLowerCase().includes('river')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#38bdf8', weight: styLine?.weight ?? 2.5, opacity: styLine?.opacity ?? 0.95, dashArray: styLine?.dashArray };
-                        return { color: styPoly?.color ?? '#38bdf8', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.85, fillColor: styPoly?.fillColor ?? '#7dd3fc', fillOpacity: styPoly?.fillOpacity ?? 0.18 };
+                      
+                      // Sawah - hijau
+                      if (keyLower.includes('sawah') || keyLower.includes('paddy')) {
+                        if (t === 'LineString' || t === 'MultiLineString') {
+                          return { color: styLine?.color ?? '#16a34a', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
+                        }
+                        return { color: styPoly?.color ?? '#16a34a', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.9, fillColor: styPoly?.fillColor ?? '#86efac', fillOpacity: styPoly?.fillOpacity ?? 0.3 };
                       }
-                      // If key hints paddy fields (sawah)
-                      if (key.toLowerCase().includes('sawah') || key.toLowerCase().includes('paddy')) {
-                        if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#16a34a', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
-                        return { color: styPoly?.color ?? '#16a34a', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.9, fillColor: styPoly?.fillColor ?? '#86efac', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
+                      
+                      // Default berdasarkan geometri
+                      if (t === 'LineString' || t === 'MultiLineString') {
+                        return { color: styLine?.color ?? '#334155', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
                       }
-                      // Defaults by geometry
-                      if (t === 'LineString' || t === 'MultiLineString') return { color: styLine?.color ?? '#334155', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
-                      if (t === 'Point' || t === 'MultiPoint') return { color: (dynamicStyle[key]?.point?.color) ?? '#16a34a', weight: (dynamicStyle[key]?.point?.weight) ?? 2, opacity: 0.9 };
-                      return { color: styPoly?.color ?? '#475569', weight: styPoly?.weight ?? 1, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#cbd5e1', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
+                      if (t === 'Point' || t === 'MultiPoint') {
+                        return { color: dynamicStyle[key]?.point?.color ?? '#16a34a', weight: dynamicStyle[key]?.point?.weight ?? 2, opacity: 0.9 };
+                      }
+                      return { color: styPoly?.color ?? '#475569', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#cbd5e1', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
                     }}
                     pointToLayer={(feature, latlng) => {
                       if (key === 'assets') {

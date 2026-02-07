@@ -8,6 +8,45 @@
 All colors MUST be HSL.
 */
 
+@layer utilities {
+  /* Fluid Padding */
+  .p-fluid {
+    padding: clamp(1rem, 2vw, 2rem);
+  }
+  
+  .px-fluid {
+    padding-left: clamp(1rem, 2vw, 2rem);
+    padding-right: clamp(1rem, 2vw, 2rem);
+  }
+  
+  .py-fluid {
+    padding-top: clamp(1rem, 2vw, 2rem);
+    padding-bottom: clamp(1rem, 2vw, 2rem);
+  }
+
+  /* Fluid Gap */
+  .gap-fluid {
+    gap: clamp(0.5rem, 1vw, 1.5rem);
+  }
+
+  /* Safe Area Padding */
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+All colors MUST be HSL.
+*/
+
 @layer base {
   :root {
     --background: 210 40% 98%;
