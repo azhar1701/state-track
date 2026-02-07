@@ -17,10 +17,16 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
   const [captured, setCaptured] = useState<string | null>(null);
 
   useEffect(() => {
+    let mediaStream: MediaStream | null = null;
+
     const start = async () => {
       try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
           audio: false,
         });
         setStream(mediaStream);
@@ -38,11 +44,11 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
     start();
     
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [facingMode, onClose, stream]);
+  }, [facingMode, onClose]);
 
 
 
@@ -82,6 +88,9 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
   };
 
   const switchCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
     setCaptured(null);
   };
