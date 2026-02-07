@@ -22,7 +22,7 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       return;
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
     recognition.lang = language;
@@ -36,7 +36,7 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       });
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       onTranscript(transcript);
       toast.success('Teks berhasil dikenali', {
@@ -44,7 +44,7 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       });
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
       toast.error('Gagal mengenali suara', {
         description: 'Coba lagi atau ketik manual',

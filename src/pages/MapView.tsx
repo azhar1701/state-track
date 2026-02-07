@@ -1246,7 +1246,7 @@ const MapView = () => {
           ))}
         </div>
 
-        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-180px)]' : 'h-[calc(100vh-220px)]'}`}>
+        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-120px)]' : 'h-[calc(100vh-180px)]'}`}>
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -1579,7 +1579,7 @@ const MapView = () => {
           )}
 
           {/* Coordinates readout above scale and legend (bottom-right stack) */}
-          {cursorLatLng && (
+          {cursorLatLng && !selectedReport && (
             <div
               className="absolute right-4 z-[1300] bg-background/90 border rounded px-2 py-1 text-[11px] font-mono shadow pointer-events-none"
               style={{ bottom: coordBottomOffset }}

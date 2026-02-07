@@ -15,7 +15,7 @@ export const ConnectionIndicator = () => {
         return;
       }
 
-      const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+      const connection = (navigator as unknown as { connection?: { effectiveType?: string; downlink?: number; addEventListener?: (event: string, handler: () => void) => void; removeEventListener?: (event: string, handler: () => void) => void } }).connection || (navigator as unknown as { mozConnection?: unknown }).mozConnection || (navigator as unknown as { webkitConnection?: unknown }).webkitConnection;
       
       if (connection) {
         const effectiveType = connection.effectiveType;
@@ -38,7 +38,7 @@ export const ConnectionIndicator = () => {
     window.addEventListener('online', updateConnection);
     window.addEventListener('offline', updateConnection);
     
-    const connection = (navigator as any).connection;
+    const connection = (navigator as unknown as { connection?: { addEventListener?: (event: string, handler: () => void) => void; removeEventListener?: (event: string, handler: () => void) => void } }).connection;
     if (connection) {
       connection.addEventListener('change', updateConnection);
     }

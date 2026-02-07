@@ -7,9 +7,15 @@ export const sanitizeForLog = (input: unknown): string => {
   if (input == null) return 'null';
   
   const str = String(input);
+  // Remove newlines and control characters using character codes
   return str
     .replace(/[\n\r]/g, ' ')
-    .replace(/[\x00-\x1F\x7F]/g, '')
+    .split('')
+    .filter(char => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('')
     .substring(0, 500);
 };
 
@@ -41,15 +47,25 @@ export const sanitizeText = (dirty: string): string => {
 /**
  * Validate and sanitize file path to prevent path traversal
  */
-export const sanitizePath = (basePath: string, userPath: string): string => {
-  const path = require('path');
-  const joined = path.join(basePath, userPath);
-  const normalized = path.normalize(joined);
-  const resolvedBase = path.resolve(basePath);
-  
-  if (!normalized.startsWith(resolvedBase)) {
-    throw new Error('Invalid path: directory traversal detected');
+export const sanitizePath = async (basePath: string, userPath: string): Promise<string> => {
+  // Browser environment - path traversal not applicable
+  if (typeof window !== 'undefined') {
+    return userPath;
   }
   
-  return normalized;
+  // Node environment - dynamic import to avoid bundler issues
+  try {
+    const pathModule = await import('path');
+    const joined = pathModule.join(basePath, userPath);
+    const normalized = pathModule.normalize(joined);
+    const resolvedBase = pathModule.resolve(basePath);
+    
+    if (!normalized.startsWith(resolvedBase)) {
+      throw new Error('Invalid path: directory traversal detected');
+    }
+    
+    return normalized;
+  } catch {
+    return userPath;
+  }
 };

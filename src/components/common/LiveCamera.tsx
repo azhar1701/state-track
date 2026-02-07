@@ -17,33 +17,34 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
   const [captured, setCaptured] = useState<string | null>(null);
 
   useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, [facingMode]);
-
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+    const start = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (err) {
+        toast.error('Gagal mengakses kamera', {
+          description: 'Pastikan izin kamera telah diberikan',
+        });
+        onClose();
       }
-    } catch (err) {
-      toast.error('Gagal mengakses kamera', {
-        description: 'Pastikan izin kamera telah diberikan',
-      });
-      onClose();
-    }
-  };
+    };
+    
+    start();
+    
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [facingMode, onClose, stream]);
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-    }
-  };
+
 
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -69,7 +70,9 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
       .then((blob) => {
         const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
         onCapture(file);
-        stopCamera();
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
         onClose();
       });
   };

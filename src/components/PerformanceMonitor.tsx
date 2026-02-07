@@ -44,7 +44,7 @@ export const PerformanceMonitor = () => {
     // Memory usage
     if ('memory' in performance) {
       const updateMemory = () => {
-        const mem = (performance as any).memory;
+        const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
         setMetrics((prev) => ({
           ...prev,
           memory: Math.round(mem.usedJSHeapSize / 1048576),
