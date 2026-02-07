@@ -270,6 +270,14 @@ All colors MUST be HSL.
     @apply glass-strong h-full backdrop-blur-2xl;
   }
 
+  /* Glass Panel - For toolbars and bottom navigation */
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-lifted;
+  }
+  .dark .glass-panel {
+    @apply bg-slate-900/80 border-white/20;
+  }
+
   /* Button haptic feedback */
   .btn-haptic {
     @apply active:scale-95 active:brightness-95 transition-all duration-100;
