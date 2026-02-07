@@ -29,7 +29,7 @@ import * as turf from '@turf/turf';
 import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
-import { sanitizeForLog } from '@/lib/security';
+import { sanitizeText, sanitizeForLog } from '@/lib/security';
 
 interface Report {
   id: string;
@@ -1263,11 +1263,13 @@ const MapView = () => {
                     }
                     const desa = (p?.DESA_1 as string) || (p?.DESA as string) || (p?.name as string);
                     const kec = (p?.KECAMATAN as string) || (p?.Kecamatan as string);
+                    const safeDesa = sanitizeText(desa ?? '-');
+                    const safeKec = sanitizeText(kec ?? '-');
                     layer.bindPopup(
                       `<div style="min-width:200px">
                         <div style="font-weight:600;margin-bottom:4px">Detail Wilayah</div>
-                        <div><strong>Desa:</strong> ${desa ?? '-'}</div>
-                        <div><strong>Kecamatan:</strong> ${kec ?? '-'}</div>
+                        <div><strong>Desa:</strong> ${safeDesa}</div>
+                        <div><strong>Kecamatan:</strong> ${safeKec}</div>
                       </div>`
                     );
                     layer.on('mouseover', () => {
@@ -1361,22 +1363,32 @@ const MapView = () => {
                         const cat = p?.category as string | undefined;
                         const status = p?.status as string | undefined;
                         const ket = p?.keterangan as string | undefined;
+                        const safeTitle = sanitizeText(title);
+                        const safeCode = sanitizeText(code ?? '-');
+                        const safeCat = sanitizeText(cat ?? '-');
+                        const safeStatus = sanitizeText(status ?? '-');
+                        const safeKet = sanitizeText(ket ?? '-');
                         layer.bindPopup(`
                           <div style="min-width:200px">
-                            <div style="font-weight:600;margin-bottom:4px">${title}</div>
-                            <div><strong>Kode:</strong> ${code ?? '-'}</div>
-                            <div><strong>Kategori:</strong> ${cat ?? '-'}</div>
-                            <div><strong>Status:</strong> ${status ?? '-'}</div>
-                            <div><strong>Keterangan:</strong> ${ket ?? '-'}</div>
+                            <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
+                            <div><strong>Kode:</strong> ${safeCode}</div>
+                            <div><strong>Kategori:</strong> ${safeCat}</div>
+                            <div><strong>Status:</strong> ${safeStatus}</div>
+                            <div><strong>Keterangan:</strong> ${safeKet}</div>
                           </div>
                         `);
                       } else if (p) {
                         // Generic popup showing first few properties
                         const entries = Object.entries(p).slice(0, 8);
-                        const rows = entries.map(([k, v]) => `<div><strong>${k}:</strong> ${v as string ?? '-'}</div>`).join('');
+                        const rows = entries.map(([k, v]) => {
+                          const safeKey = sanitizeText(k);
+                          const safeVal = sanitizeText(String(v ?? '-'));
+                          return `<div><strong>${safeKey}:</strong> ${safeVal}</div>`;
+                        }).join('');
+                        const safeTitle = sanitizeText(title);
                         const html = `
                           <div style="min-width:220px">
-                            <div style="font-weight:600;margin-bottom:4px">${title}</div>
+                            <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
                             ${rows}
                           </div>
                         `;

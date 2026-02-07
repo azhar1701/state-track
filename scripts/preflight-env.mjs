@@ -2,6 +2,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+function sanitizePath(basePath, userPath) {
+  const joined = path.join(basePath, userPath);
+  const normalized = path.normalize(joined);
+  const resolvedBase = path.resolve(basePath);
+  
+  if (!normalized.startsWith(resolvedBase)) {
+    throw new Error('Invalid path: directory traversal detected');
+  }
+  
+  return normalized;
+}
+
 function readEnvFile(file) {
   try {
     return fs.readFileSync(file, 'utf-8');
@@ -16,10 +28,10 @@ function hasVar(text, key) {
 }
 
 const root = process.cwd();
-const envLocalPath = path.join(root, '.env.local');
-const envPath = path.join(root, '.env');
-const envLocalExample = path.join(root, '.env.local.example');
-const envExample = path.join(root, '.env.example');
+const envLocalPath = sanitizePath(root, '.env.local');
+const envPath = sanitizePath(root, '.env');
+const envLocalExample = sanitizePath(root, '.env.local.example');
+const envExample = sanitizePath(root, '.env.example');
 
 function copyIfMissing(src, dest) {
   try {

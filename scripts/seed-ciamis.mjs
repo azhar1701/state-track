@@ -3,6 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
+function sanitizePath(basePath, userPath) {
+  const joined = path.join(basePath, userPath);
+  const normalized = path.normalize(joined);
+  const resolvedBase = path.resolve(basePath);
+  
+  if (!normalized.startsWith(resolvedBase)) {
+    throw new Error('Invalid path: directory traversal detected');
+  }
+  
+  return normalized;
+}
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -67,8 +79,8 @@ function* chunked(arr, size) {
 
 async function main() {
   const root = process.cwd();
-  const kecPath = path.join(root, 'supabase', 'seed', 'ciamis', 'kecamatan.csv');
-  const desaPath = path.join(root, 'supabase', 'seed', 'ciamis', 'desa.csv');
+  const kecPath = sanitizePath(root, path.join('supabase', 'seed', 'ciamis', 'kecamatan.csv'));
+  const desaPath = sanitizePath(root, path.join('supabase', 'seed', 'ciamis', 'desa.csv'));
 
   if (fs.existsSync(kecPath)) {
     await upsertKecamatan(kecPath);

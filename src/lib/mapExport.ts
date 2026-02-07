@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { Map } from 'leaflet';
-import { sanitizeForInnerHTML } from './security';
+import { sanitizeText } from './security';
 
 export type ExportOptions = {
   filename?: string;
@@ -42,7 +42,7 @@ export const exportMapToPNG = async (map: Map, options: ExportOptions = {}): Pro
       if (blob) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        const safeFilename = sanitizeForInnerHTML(options.filename || 'map-export.png');
+        const safeFilename = sanitizeText(options.filename || 'map-export.png');
         link.download = safeFilename;
         link.href = url;
         link.click();

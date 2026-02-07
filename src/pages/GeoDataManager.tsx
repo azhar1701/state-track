@@ -597,7 +597,7 @@ export default function GeoDataManager() {
                   .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell>{sanitizeHTML(r.key)}</TableCell>
+                    <TableCell>{r.key}</TableCell>
                     <TableCell>
                       <InlineEditableText
                         value={r.name}
