@@ -76,11 +76,11 @@ export default function MyReports() {
     setLoading(true);
     setError(null);
     try {
-      // Primary query with extended columns
+      // Primary query with extended columns (location_name removed due to schema mismatch)
       let query = supabase
         .from('reports')
         .select(
-          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,location_name,photo_url,photo_urls,severity,resolution',
+          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution',
           { count: 'exact' }
         )
         .eq('user_id', user.id)
@@ -96,7 +96,7 @@ export default function MyReports() {
 
       let { data, error, count } = await query;
       if (error) {
-        // If column not found (e.g., location_name), retry without it and other optional fields
+        // Retry with fallback fields if error occurs
         const lower = (error.message || '').toLowerCase();
         const missingColumn =
           (lower.includes('column') && lower.includes('does not exist')) ||
@@ -127,42 +127,41 @@ export default function MyReports() {
           error = attempt.error as unknown as Error | null;
           count = attempt.count ?? 0;
           if (error) throw error;
-          // Map to ReportRow with safe defaults for missing fields
-          type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
-            id: string;
-            created_at: string;
-            user_id: string;
-            latitude: number | string;
-            longitude: number | string;
-          };
-          const mapped = (data || []).map((r) => {
-            const rr = r as PartialRow;
-            const row: ReportRow = {
-              id: rr.id,
-              title: (rr.title as string) ?? null,
-              description: (rr.description as string) ?? null,
-              category: (rr.category as string) ?? null,
-              status: (rr.status as string) ?? null,
-              incident_date: (rr.incident_date as string) ?? null,
-              created_at: rr.created_at,
-              user_id: rr.user_id,
-              latitude: typeof rr.latitude === 'string' ? Number(rr.latitude) : (rr.latitude as number),
-              longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
-              location_name: null,
-              photo_url: (rr.photo_url as string) ?? null,
-              photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
-              severity: (rr.severity as ReportRow['severity']) ?? null,
-              resolution: (rr.resolution as string | null | undefined) ?? null,
-            };
-            return row;
-          });
-          setRows(mapped);
-          setTotal(count ?? 0);
-          return;
+        } else {
+          throw error;
         }
-        throw error;
       }
-      setRows((data ?? []) as ReportRow[]);
+
+      // Map to ReportRow with safe defaults for missing fields (location_name always null)
+      type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
+        id: string;
+        created_at: string;
+        user_id: string;
+        latitude: number | string;
+        longitude: number | string;
+      };
+      const mapped = (data || []).map((r) => {
+        const rr = r as PartialRow;
+        const row: ReportRow = {
+          id: rr.id,
+          title: (rr.title as string) ?? null,
+          description: (rr.description as string) ?? null,
+          category: (rr.category as string) ?? null,
+          status: (rr.status as string) ?? null,
+          incident_date: (rr.incident_date as string) ?? null,
+          created_at: rr.created_at,
+          user_id: rr.user_id,
+          latitude: typeof rr.latitude === 'string' ? Number(rr.latitude) : (rr.latitude as number),
+          longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
+          location_name: null,
+          photo_url: (rr.photo_url as string) ?? null,
+          photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
+          severity: (rr.severity as ReportRow['severity']) ?? null,
+          resolution: (rr.resolution as string | null | undefined) ?? null,
+        };
+        return row;
+      });
+      setRows(mapped);
       setTotal(count ?? 0);
     } catch (e: unknown) {
       const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message) : undefined;

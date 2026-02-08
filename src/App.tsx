@@ -79,7 +79,7 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
   <Sonner />
-  <BrowserRouter basename={basename}>
+  <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <AppInner />
           </AuthProvider>

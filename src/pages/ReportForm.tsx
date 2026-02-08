@@ -621,6 +621,7 @@ const ReportForm = () => {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                   className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  autoComplete="off"
                 />
                 {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
               </div>
@@ -633,7 +634,7 @@ const ReportForm = () => {
                     onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
                     required
                   >
-                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -648,7 +649,7 @@ const ReportForm = () => {
                 <div className="space-y-2">
                   <Label htmlFor="severity">Tingkat Keparahan *</Label>
                   <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                       <SelectValue placeholder="Pilih tingkat" />
                     </SelectTrigger>
                     <SelectContent>
@@ -672,6 +673,7 @@ const ReportForm = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                   className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  autoComplete="off"
                 />
                 {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
               </div>
@@ -709,7 +711,7 @@ const ReportForm = () => {
                       }
                     }}
                   >
-                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                       <SelectValue placeholder="Pilih kecamatan" />
                     </SelectTrigger>
                     <SelectContent>
@@ -734,7 +736,7 @@ const ReportForm = () => {
                     }}
                     disabled={!selectedKecamatanId}
                   >
-                    <SelectTrigger className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                       <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
                     </SelectTrigger>
                     <SelectContent>
@@ -755,6 +757,7 @@ const ReportForm = () => {
                     value={formData.reporterName}
                     onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                    autoComplete="name"
                   />
                   {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
                 </div>
@@ -767,6 +770,7 @@ const ReportForm = () => {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                    autoComplete="tel"
                   />
                   {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                 </div>
@@ -813,6 +817,7 @@ const ReportForm = () => {
                   <div className="flex gap-2">
                     <div className="relative w-full">
                       <Input
+                        id="location-search"
                         placeholder="Cari alamat (min 3 huruf)..."
                         value={searchQuery}
                         onChange={(e) => {
@@ -832,6 +837,8 @@ const ReportForm = () => {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); }
                         }}
+                        autoComplete="off"
+                        aria-label="Cari alamat lokasi laporan"
                       />
                       {searchQuery && searchResults.length > 0 && (
                         <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">

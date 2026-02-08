@@ -64,7 +64,7 @@ type CategoryFilter = "semua" | ReportCategory;
 type SortOption = "created_at_desc" | "severity_desc" | "category_asc";
 
 const REPORT_LIST_COLUMNS =
-  "id,title,category,status,created_at,location_name,severity,kecamatan,desa,resolution";
+  "id,title,category,status,created_at,severity,kecamatan,desa,resolution";
 const REPORT_DETAIL_COLUMNS =
   "description,reporter_name,phone,latitude,longitude,photo_url,photo_urls";
 const SEVERITY_WEIGHT: Record<ReportSeverity, number> = {

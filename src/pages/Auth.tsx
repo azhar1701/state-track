@@ -203,6 +203,7 @@ const Auth = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -216,6 +217,7 @@ const Auth = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
+                    autoComplete="current-password"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -237,6 +239,7 @@ const Auth = () => {
                       setFormData({ ...formData, fullName: e.target.value })
                     }
                     required
+                    autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -250,6 +253,7 @@ const Auth = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -263,6 +267,7 @@ const Auth = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
+                    autoComplete="new-password"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>

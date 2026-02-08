@@ -115,7 +115,7 @@ export default function RecentReports() {
 
       setError(null);
       const selectFields =
-        "id,title,status,severity,location_name,created_at,category,kecamatan,desa";
+        "id,title,status,severity,created_at,category,kecamatan,desa";
 
       let { data, error } = await supabase
         .from("reports")
@@ -123,29 +123,38 @@ export default function RecentReports() {
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (
-        error &&
-        typeof error.message === "string" &&
-        error.message.toLowerCase().includes("column") &&
-        error.message.toLowerCase().includes("does not exist")
-      ) {
-        const retry = await supabase
-          .from("reports")
-          .select("id,title,status,severity,created_at,category,kecamatan,desa")
-          .order("created_at", { ascending: false })
-          .limit(5);
-        data = retry.data as typeof data;
-        error = retry.error as typeof error;
-        if (!error && data) {
-          type PartialRecent = Omit<RecentItem, "location_name">;
-          const list = data as unknown as PartialRecent[];
-          const mapped: RecentItem[] = list.map((d) => ({ ...d, location_name: null }));
-          setItems(mapped);
-          return;
+      // Fallback: if 400 error occurs, try minimal select
+      if (error) {
+        const is400 = error?.status === 400;
+        
+        if (is400) {
+          console.warn("Got 400 error, trying minimal select", error);
+          const minimal = await supabase
+            .from("reports")
+            .select("id,title,status,created_at")
+            .order("created_at", { ascending: false })
+            .limit(5);
+          data = minimal.data as typeof data;
+          error = minimal.error as typeof error;
+          if (!error && data) {
+            type MinimalRecent = Pick<RecentItem, "id" | "title" | "status" | "created_at">;
+            const list = data as unknown as MinimalRecent[];
+            const mapped: RecentItem[] = list.map((d) => ({
+              ...d,
+              severity: null,
+              category: null,
+              location_name: null,
+              kecamatan: undefined,
+              desa: undefined,
+            }));
+            setItems(mapped);
+            return;
+          }
         }
       }
 
       if (error) {
+        console.error("Failed to load recent reports:", error);
         setError("Gagal memuat data laporan.");
         setItems([]);
         return;

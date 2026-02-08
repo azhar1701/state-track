@@ -427,7 +427,14 @@ export default function HelpCenter() {
             <CardDescription>Gunakan pencarian di bawah untuk menemukan jawaban cepat sebelum menghubungi tim dukungan.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Input placeholder="Cari FAQ..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3" />
+            <Input 
+              id="faq-search"
+              placeholder="Cari FAQ..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              className="mb-3"
+              aria-label="Cari FAQ"
+            />
             <div className="space-y-3">
               {filteredFaqs.map((f, i) => (
                 <div key={i} className="rounded-lg border border-border/60 bg-background/80 p-3">
@@ -450,12 +457,24 @@ export default function HelpCenter() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label>Subjek</Label>
-                <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ringkas masalah Anda" />
+                <Label htmlFor="support-subject">Subjek</Label>
+                <Input 
+                  id="support-subject"
+                  value={subject} 
+                  onChange={(e) => setSubject(e.target.value)} 
+                  placeholder="Ringkas masalah Anda"
+                  autoComplete="off"
+                />
               </div>
               <div>
-                <Label>Pesan</Label>
-                <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Jelaskan masalah secara detail" rows={5} />
+                <Label htmlFor="support-message">Pesan</Label>
+                <Textarea 
+                  id="support-message"
+                  value={message} 
+                  onChange={(e) => setMessage(e.target.value)} 
+                  placeholder="Jelaskan masalah secara detail" 
+                  rows={5}
+                />
               </div>
               <Button onClick={submitTicket} disabled={loading}>{loading ? 'Mengirim...' : 'Kirim Tiket'}</Button>
             </CardContent>
