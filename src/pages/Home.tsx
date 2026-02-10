@@ -130,45 +130,50 @@ const Home = () => {
   // moved above
 
   return (
-  <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background Mesh */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-background to-teal-500/5" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
       {/* Hero Section */}
-  <section className="container py-12 md:py-16">
-  <div className="max-w-4xl mx-auto text-center space-y-8 px-2 md:px-0">
-          <div className="inline-flex p-3 bg-primary/10 rounded-full mb-4">
-            <MapPin className="icon-lg text-primary" />
+      <section className="container py-20 md:py-28">
+        <div className="max-w-4xl mx-auto text-center space-y-8 px-4">
+          <div className="inline-flex p-4 bg-gradient-to-br from-blue-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl mb-2 shadow-lg border border-white/10 animate-[page-enter_0.6s_ease-out]">
+            <MapPin className="w-12 h-12 text-blue-500" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out]">
             Sistem Informasi Pelaporan SDA
           </h1>
-          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
+            Aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6 animate-[page-enter_1.2s_ease-out]">
             {authLoading ? null : !user ? (
-              // Anonymous: only show Login/Signup entry point
               <Link to="/auth">
-                <Button size="lg" className="gap-2 shadow-lg rounded-xl py-3 px-6">
+                <Button size="lg" className="gap-2 shadow-xl rounded-xl py-6 px-8 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:shadow-blue-500/50 hover:scale-105">
                   Masuk / Daftar
                 </Button>
               </Link>
             ) : (
-              // Authenticated: show actions based on role
               <>
                 <Link to="/report">
-                  <Button size="lg" className="gap-2 shadow-lg">
+                  <Button size="lg" className="gap-2 shadow-xl rounded-xl py-6 px-8 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:shadow-blue-500/50 hover:scale-105">
                     <FileText className="w-5 h-5" />
                     Buat Laporan
                   </Button>
                 </Link>
                 <Link to="/map">
-                  <Button size="lg" variant="outline" className="gap-2">
+                  <Button size="lg" variant="outline" className="gap-2 rounded-xl py-6 px-8 text-base border-2 hover:bg-white/5 hover:scale-105 transition-all">
                     <MapIcon className="w-5 h-5" />
                     Lihat Peta
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button size="lg" variant="outline" className="gap-2">
+                    <Button size="lg" variant="outline" className="gap-2 rounded-xl py-6 px-8 text-base border-2 hover:bg-white/5 hover:scale-105 transition-all">
                       Dashboard Admin
                     </Button>
                   </Link>
@@ -180,203 +185,228 @@ const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="container py-10">
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
-          <Card className="glass-card text-center border-none">
-            <CardHeader className="pb-3 rounded-xl shadow-md">
-              <CardTitle className="text-2xl font-bold text-primary">{stats.total}</CardTitle>
-              <CardDescription>Total Laporan</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="glass-card text-center border-none">
-            <CardHeader className="pb-3 rounded-xl shadow-md">
-              <CardTitle className="text-2xl font-bold text-accent">{stats.baru}</CardTitle>
-              <CardDescription>Laporan Baru</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="glass-card text-center border-none">
-            <CardHeader className="pb-3 rounded-xl shadow-md">
-              <CardTitle className="text-2xl font-bold text-secondary">{stats.diproses}</CardTitle>
-              <CardDescription>Diproses</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="glass-card text-center border-none">
-            <CardHeader className="pb-3 rounded-xl shadow-md">
-              <CardTitle className="text-2xl font-bold text-green-600">{stats.selesai}</CardTitle>
-              <CardDescription>Selesai</CardDescription>
-            </CardHeader>
-          </Card>
+      <section className="container py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto px-4">
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-blue-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-xl">
+                <FileText className="w-8 h-8 text-blue-500" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <div className="text-4xl font-bold text-blue-500">{stats.total}</div>
+              <div className="text-sm text-muted-foreground">Total Laporan</div>
+            </div>
+          </div>
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-amber-500/20 rounded-xl">
+                <Clock className="w-8 h-8 text-amber-500" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <div className="text-4xl font-bold text-amber-500">{stats.baru}</div>
+              <div className="text-sm text-muted-foreground">Laporan Baru</div>
+            </div>
+          </div>
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-cyan-500/20 rounded-xl">
+                <Users className="w-8 h-8 text-cyan-500" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <div className="text-4xl font-bold text-cyan-500">{stats.diproses}</div>
+              <div className="text-sm text-muted-foreground">Diproses</div>
+            </div>
+          </div>
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-green-500/20 rounded-xl">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <div className="text-4xl font-bold text-green-500">{stats.selesai}</div>
+              <div className="text-sm text-muted-foreground">Selesai</div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Charts Section */}
-      <section className="container py-8">
-  <div className="max-w-5xl mx-auto px-2 md:px-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">Insight Laporan</h2>
+      <section className="container py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px] bg-white/5 backdrop-blur-md border-white/10 rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="7">7 hari</SelectItem>
                 <SelectItem value="30">30 hari</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <Card className="glass-card rounded-xl shadow-md border-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-muted-foreground">Tren Laporan ({chartDays} hari)</h3>
+              </div>
+              <div>
                 {chartDaily.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
                   <div className="relative">
                     <ChartContainer
-                      config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                      className="h-56 sm:h-64 md:h-72"
+                      config={{ reports: { label: 'Laporan', color: 'hsl(215 70% 55%)' } }}
+                      className="h-64 md:h-72"
                       withAspect={false}
                     >
                       <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                        <defs>
+                          <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(215 70% 55%)" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(215 70% 55%)" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                         <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
                         <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                         <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="count" stroke="hsl(215 70% 55%)" strokeWidth={3} dot={false} fill="url(#colorReports)" />
                       </LineChart>
                     </ChartContainer>
                     <LoadingOverlay show={chartLoading} text="Memuat data..." />
                   </div>
                 )}
-              </CardContent>
-            </Card>
-            <Card className="glass-card rounded-xl shadow-md border-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
-              </CardHeader>
-              <CardContent>
+              </div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
+              </div>
+              <div>
                 {chartByCategory.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Memuat chart...</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
                   <div className="relative">
                     <ChartContainer
-                      config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                      className="h-56 sm:h-64 md:h-72"
+                      config={{ count: { label: 'Jumlah', color: 'hsl(142 65% 50%)' } }}
+                      className="h-64 md:h-72"
                       withAspect={false}
                     >
-                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                         <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
                         <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                         <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                        <Bar dataKey="count" fill="hsl(142 65% 50%)" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ChartContainer>
                     <LoadingOverlay show={chartLoading} text="Memuat data..." />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="container py-10">
-  <div className="max-w-5xl mx-auto px-2 md:px-0">
-          <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Fitur Unggulan</h2>
-          <div className="grid md:grid-cols-3 gap-4 md:gap-6 items-stretch">
-            <Card className="glass-card border-2 border-white/20 hover:border-primary/40 transition-all duration-300 h-full rounded-xl shadow-md">
-              <CardHeader>
-                <div className="p-2.5 bg-primary/10 rounded-lg w-fit mb-3">
-                  <FileText className="icon-lg text-primary" />
-                </div>
-                <CardTitle>Laporan Mudah</CardTitle>
-                <CardDescription>
-                  Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+      <section className="container py-20">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-16">Fitur Unggulan</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-blue-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+              <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
+                <FileText className="w-10 h-10 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Laporan Mudah</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.
+              </p>
+            </div>
 
-            <Card className="glass-card border-2 border-white/20 hover:border-secondary/40 transition-all duration-300 h-full rounded-xl shadow-md">
-              <CardHeader>
-                <div className="p-2.5 bg-secondary/10 rounded-lg w-fit mb-3">
-                  <MapIcon className="icon-lg text-secondary" />
-                </div>
-                <CardTitle>Peta Interaktif</CardTitle>
-                <CardDescription>
-                  Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-teal-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+              <div className="p-4 bg-gradient-to-br from-teal-500/20 to-teal-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
+                <MapIcon className="w-10 h-10 text-teal-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Peta Interaktif</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.
+              </p>
+            </div>
 
-            <Card className="glass-card border-2 border-white/20 hover:border-accent/40 transition-all duration-300 h-full rounded-xl shadow-md">
-              <CardHeader>
-                <div className="p-2.5 bg-accent/10 rounded-lg w-fit mb-3">
-                  <Users className="icon-lg text-accent" />
-                </div>
-                <CardTitle>Dashboard Admin</CardTitle>
-                <CardDescription>
-                  Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-amber-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+              <div className="p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Users className="w-10 h-10 text-amber-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Dashboard Admin</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="container py-10 mb-12">
-  <div className="max-w-4xl mx-auto px-2 md:px-0">
-          <h2 className="text-3xl font-bold text-center mb-8 md:mb-10">Cara Kerja</h2>
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold">
-                1
+      <section className="container py-20">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-16">Cara Kerja</h2>
+          <div className="relative">
+            {/* Connection Line */}
+            <div className="hidden md:block absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 opacity-30" style={{ top: '2rem' }} />
+            
+            <div className="grid md:grid-cols-3 gap-12 relative">
+              <div className="text-center space-y-6 relative">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-2xl font-bold shadow-xl shadow-blue-500/50 relative z-10">
+                  1
+                </div>
+                <h3 className="text-2xl font-bold">Daftar & Masuk</h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  Buat akun gratis untuk mulai membuat laporan
+                </p>
               </div>
-              <h3 className="text-xl font-semibold">Daftar & Masuk</h3>
-              <p className="text-muted-foreground">
-                Buat akun gratis untuk mulai membuat laporan
-              </p>
-            </div>
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary text-secondary-foreground text-2xl font-bold">
-                2
+              <div className="text-center space-y-6 relative">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-2xl font-bold shadow-xl shadow-teal-500/50 relative z-10">
+                  2
+                </div>
+                <h3 className="text-2xl font-bold">Buat Laporan</h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  Ambil foto, tandai lokasi, dan kirim laporan
+                </p>
               </div>
-              <h3 className="text-xl font-semibold">Buat Laporan</h3>
-              <p className="text-muted-foreground">
-                Ambil foto, tandai lokasi, dan kirim laporan
-              </p>
-            </div>
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent text-accent-foreground text-2xl font-bold">
-                3
+              <div className="text-center space-y-6 relative">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white text-2xl font-bold shadow-xl shadow-green-500/50 relative z-10">
+                  3
+                </div>
+                <h3 className="text-2xl font-bold">Pantau Progress</h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  Lihat status perbaikan secara real-time di peta
+                </p>
               </div>
-              <h3 className="text-xl font-semibold">Pantau Progress</h3>
-              <p className="text-muted-foreground">
-                Lihat status perbaikan secara real-time di peta
-              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Information Blocks */}
-      <section className="container py-8">
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto px-2 md:px-0">
-          <div className="lg:col-span-2 flex flex-col gap-6 md:gap-8">
+      <section className="container py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
+          <div className="lg:col-span-2 flex flex-col gap-8">
             <RecentReports />
             <CategoryLegend />
           </div>
-          <div className="flex flex-col gap-6 md:gap-8">
+          <div className="flex flex-col gap-8">
             <StatusLegend />
             <FAQ />
           </div>

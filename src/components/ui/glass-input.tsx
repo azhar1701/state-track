@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { type InputHTMLAttributes, forwardRef } from "react";
 
-export interface GlassInputProps extends InputHTMLAttributes<HTMLInputElement> {}
+type GlassInputProps = InputHTMLAttributes<HTMLInputElement>;
 
 const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
   ({ className, type = "text", ...props }, ref) => {

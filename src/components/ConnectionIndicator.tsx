@@ -17,9 +17,9 @@ export const ConnectionIndicator = () => {
 
       const connection = (navigator as unknown as { connection?: { effectiveType?: string; downlink?: number; addEventListener?: (event: string, handler: () => void) => void; removeEventListener?: (event: string, handler: () => void) => void } }).connection || (navigator as unknown as { mozConnection?: unknown }).mozConnection || (navigator as unknown as { webkitConnection?: unknown }).webkitConnection;
       
-      if (connection) {
-        const effectiveType = connection.effectiveType;
-        const downlink = connection.downlink;
+      if (connection && typeof connection === 'object') {
+        const effectiveType = (connection as { effectiveType?: string }).effectiveType as string | undefined;
+        const downlink = (connection as { downlink?: number }).downlink as number | undefined;
         
         setSpeed(downlink ? `${downlink.toFixed(1)} Mbps` : '');
         

@@ -1,69 +1,29 @@
 import { ReactNode } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 interface MainLayoutProps {
   children: ReactNode;
-  sidebar?: ReactNode;
-  sidebarOpen?: boolean;
-  onSidebarToggle?: () => void;
-  sidebarPosition?: 'left' | 'right';
-  className?: string;
 }
 
-export function MainLayout({
-  children,
-  sidebar,
-  sidebarOpen = false,
-  onSidebarToggle,
-  sidebarPosition = 'left',
-  className,
-}: MainLayoutProps) {
-  const isMobile = useIsMobile();
-
+export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className={cn('flex h-dvh w-full overflow-hidden', className)}>
-      {/* Desktop/Tablet Sidebar */}
-      {sidebar && !isMobile && (
-        <aside
-          className={cn(
-            'flex-shrink-0 transition-all duration-300 ease-in-out overflow-y-auto',
-            sidebarOpen ? 'w-80 lg:w-96' : 'w-0',
-            sidebarPosition === 'left' ? 'order-1' : 'order-3'
-          )}
-        >
-          {sidebarOpen && (
-            <div className="h-full glass-strong border-r border-white/10">
-              {sidebar}
-            </div>
-          )}
-        </aside>
-      )}
-
-      {/* Main Content (Map) */}
-      <main className="flex-1 relative order-2 overflow-hidden">
+    <div className="min-h-screen bg-slate-950 relative">
+      {/* Radial Gradient Background */}
+      <div className="fixed inset-0 bg-gradient-radial from-blue-900/20 via-transparent to-transparent pointer-events-none" />
+      
+      {/* Sticky Navbar */}
+      <div className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-white/5">
+        <Navbar />
+      </div>
+      
+      {/* Main Content Area */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
-
-      {/* Mobile Bottom Sheet Sidebar */}
-      {sidebar && isMobile && sidebarOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/30 z-[1400] animate-fade-in"
-            onClick={onSidebarToggle}
-          />
-          
-          {/* Bottom Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-[1500] max-h-[80dvh] glass-strong rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.15)] animate-slide-up overflow-y-auto pb-safe-bottom">
-            {/* Drag Handle */}
-            <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-inherit z-10">
-              <div className="w-12 h-1 rounded-full bg-white/30" />
-            </div>
-            {sidebar}
-          </div>
-        </>
-      )}
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

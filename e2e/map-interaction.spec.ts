@@ -287,7 +287,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
     // Verify semua tile sudah load (tidak ada pending request)
     const networkState = await page.evaluate(() => {
       // Check jika ada pending fetch/xhr
-      return (window as any).__networkActive ?? false;
+      return (window as Record<string, unknown>).__networkActive ?? false;
     });
     
     console.log('✅ Tile loading strategy validated');
@@ -359,18 +359,18 @@ test.describe('🔧 Troubleshooting Map Tests', () => {
     await waitForMapReady(page);
     
     const mapInfo = await page.evaluate(() => {
-      const map = (window as any).map;
-      const L = (window as any).L;
+      const map = (window as Record<string, unknown>).map as Record<string, unknown> | undefined;
+      const L = (window as Record<string, unknown>).L as Record<string, unknown> | undefined;
       
       return {
         mapExists: !!map,
         leafletVersion: L?.version,
-        zoom: map?.getZoom(),
-        bounds: map?.getBounds(),
-        center: map?.getCenter(),
+        zoom: typeof map?.getZoom === 'function' ? map.getZoom() : undefined,
+        bounds: typeof map?.getBounds === 'function' ? map.getBounds() : undefined,
+        center: typeof map?.getCenter === 'function' ? map.getCenter() : undefined,
         containerSize: {
-          width: map?._container?.clientWidth,
-          height: map?._container?.clientHeight,
+          width: (map?._container as HTMLElement | undefined)?.clientWidth,
+          height: (map?._container as HTMLElement | undefined)?.clientHeight,
         },
       };
     });
@@ -383,16 +383,16 @@ test.describe('🔧 Troubleshooting Map Tests', () => {
     await waitForMapReady(page);
     
     const tileInfo = await page.evaluate(() => {
-      const map = (window as any).map;
-      const layers = map?.getLayers?.() ?? [];
+      const map = (window as Record<string, unknown>).map as Record<string, unknown> | undefined;
+      const layers = (typeof map?.getLayers === 'function' ? map.getLayers() : []) as Array<Record<string, unknown>>;
       
       return {
         totalLayers: layers.length,
         tileLayer: layers
-          .filter((l: any) => l._url)
-          .map((l: any) => ({
+          .filter((l: Record<string, unknown>) => l._url)
+          .map((l: Record<string, unknown>) => ({
             url: l._url,
-            name: l.options?.attribution,
+            name: (l.options as Record<string, unknown> | undefined)?.attribution,
           })),
       };
     });

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Bell, X } from 'lucide-react';
 
-export const NotificationPrompt = () => {
+const NotificationPrompt = () => {
   const [show, setShow] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
@@ -78,12 +78,4 @@ export const NotificationPrompt = () => {
   );
 };
 
-export const sendNotification = (title: string, options?: NotificationOptions) => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, {
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      ...options,
-    });
-  }
-};
+export { NotificationPrompt };

@@ -41,6 +41,11 @@ All colors MUST be HSL.
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Radial Gradient Background */
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle at top center, var(--tw-gradient-stops));
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.

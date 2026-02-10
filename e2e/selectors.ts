@@ -29,5 +29,5 @@ export const selectors = {
  * Helper function untuk membuat selector yang lebih readable
  */
 export const createSelector = (attribute: string, value: string) => {
-  return `[data-testid="${attribute}"]` || `[${attribute}="${value}"]`;
+  return `[data-testid="${attribute}"]`;
 };

@@ -5,11 +5,15 @@ import L from 'leaflet';
 
 interface Report {
   id: string;
-  latitude: number;
-  longitude: number;
+  title: string;
+  description: string;
   category: string;
   status: string;
   severity?: 'ringan' | 'sedang' | 'berat' | null;
+  latitude: number;
+  longitude: number;
+  created_at: string;
+  photo_url?: string | null;
   [key: string]: unknown;
 }
 

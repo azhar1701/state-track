@@ -22,7 +22,18 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       return;
     }
 
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    type SpeechRecognitionType = new () => {
+      lang: string;
+      continuous: boolean;
+      interimResults: boolean;
+      onstart: (() => void) | null;
+      onresult: ((event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => void) | null;
+      onerror: ((event: { error: string }) => void) | null;
+      onend: (() => void) | null;
+      start: () => void;
+    };
+
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: SpeechRecognitionType; webkitSpeechRecognition?: SpeechRecognitionType }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionType }).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
     recognition.lang = language;
@@ -36,7 +47,7 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       });
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       onTranscript(transcript);
       toast.success('Teks berhasil dikenali', {
@@ -44,7 +55,7 @@ export const VoiceInput = ({ onTranscript, language = 'id-ID' }: VoiceInputProps
       });
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
       toast.error('Gagal mengenali suara', {
         description: 'Coba lagi atau ketik manual',

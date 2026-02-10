@@ -73,11 +73,11 @@ export const StatusTimeline = ({ logs }: { logs: ReportLogEntry[] }) => {
                 oleh {log.actor_email.split('@')[0]}
               </p>
             )}
-            {log.details && (
+            {(log as { details?: string | Record<string, unknown> }).details && (
               <p className="text-xs mt-1 text-foreground">
-                {typeof log.details === 'string'
-                  ? log.details
-                  : JSON.stringify(log.details)}
+                {typeof (log as { details?: string | Record<string, unknown> }).details === 'string'
+                  ? (log as { details?: string }).details
+                  : JSON.stringify((log as { details?: Record<string, unknown> }).details)}
               </p>
             )}
           </div>

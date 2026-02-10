@@ -3,6 +3,11 @@ import L from 'leaflet';
 
 export function useMapResize(map: L.Map | null, dependencies: unknown[] = []) {
   const timeoutRef = useRef<number | null>(null);
+  const depsRef = useRef(dependencies);
+
+  useEffect(() => {
+    depsRef.current = dependencies;
+  }, [dependencies]);
 
   useEffect(() => {
     if (!map) return;
@@ -33,7 +38,7 @@ export function useMapResize(map: L.Map | null, dependencies: unknown[] = []) {
       window.removeEventListener('resize', invalidateMap);
       window.removeEventListener('orientationchange', invalidateMap);
     };
-  }, [map, ...dependencies]);
+  }, [map]);
 
   // Manual trigger function
   const invalidateSize = () => {

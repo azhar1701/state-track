@@ -168,10 +168,10 @@ export default function OptimizedMapView() {
           
           {mapBounds && (
             <SuperClusterMap
-              reports={reports}
+              reports={reports as unknown as Array<{ id: string; title: string; description: string; category: string; status: string; severity?: 'ringan' | 'sedang' | 'berat' | null; latitude: number; longitude: number; created_at: string; photo_url?: string | null; [key: string]: unknown }>}
               bounds={mapBounds}
               zoom={mapZoom}
-              onMarkerClick={setSelectedReport}
+              onMarkerClick={(report) => setSelectedReport(report as Report)}
               createIcon={createCustomIcon}
               createClusterIcon={createClusterCustomIcon}
             />

@@ -66,10 +66,10 @@ export async function debugPageState(page: Page, context: string = 'Debug') {
     
     // 6. Check network activity
     const requests = await page.evaluate(() => {
-      const nav = performance.getEntriesByType('navigation')[0] as any;
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       return {
-        domContentLoaded: nav?.domContentLoadedEventEnd - nav?.domContentLoadedEventStart,
-        pageLoadTime: nav?.loadEventEnd - nav?.loadEventStart,
+        domContentLoaded: nav ? nav.domContentLoadedEventEnd - nav.domContentLoadedEventStart : 'N/A',
+        pageLoadTime: nav ? nav.loadEventEnd - nav.loadEventStart : 'N/A',
         totalTime: nav?.duration || 'N/A',
       };
     });
@@ -267,7 +267,7 @@ export async function waitForMapElement(
   ].filter(Boolean) as string[];
   
   const startTime = Date.now();
-  let lastError: any;
+  let lastError: unknown;
   
   for (const selector of selectors) {
     try {
@@ -357,7 +357,7 @@ export async function waitForMapStable(
       
       try {
         // Check untuk transform/animation
-        const styles = await mapPane.evaluate((el: any) => {
+        const styles = await mapPane.evaluate((el: Element) => {
           const computed = window.getComputedStyle(el);
           return {
             transform: computed.transform,
@@ -414,7 +414,7 @@ export async function dragMapToLocation(
   
   console.log(`🖱️  [DRAG] dari (${fromX}, ${fromY}) → (${toX}, ${toY})...`);
   
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -600,8 +600,9 @@ export async function getMapBounds(page: Page) {
   
   try {
     const bounds = await page.evaluate(() => {
-      if ((window as any).map?.getBounds) {
-        const b = (window as any).map.getBounds();
+      const map = (window as Record<string, unknown>).map as Record<string, unknown> | undefined;
+      if (map && typeof map.getBounds === 'function') {
+        const b = map.getBounds() as { _northEast: { lat: number; lng: number }; _southWest: { lat: number; lng: number } };
         return {
           northEast: { lat: b._northEast.lat, lng: b._northEast.lng },
           southWest: { lat: b._southWest.lat, lng: b._southWest.lng },
@@ -633,7 +634,8 @@ export async function getMapBounds(page: Page) {
 export async function getMapZoomLevel(page: Page): Promise<number | null> {
   try {
     const zoomLevel = await page.evaluate(() => {
-      return (window as any).map?.getZoom() ?? null;
+      const map = (window as Record<string, unknown>).map as Record<string, unknown> | undefined;
+      return (map && typeof map.getZoom === 'function' ? map.getZoom() : null) as number | null;
     });
     
     if (zoomLevel !== null) {
@@ -662,14 +664,15 @@ export async function clickOnMapCoordinate(
     
     await page.evaluate(
       ({ lat, lng }) => {
-        const L = (window as any).L;
-        const map = (window as any).map;
+        const L = (window as Record<string, unknown>).L as Record<string, unknown> | undefined;
+        const map = (window as Record<string, unknown>).map as Record<string, unknown> | undefined;
         
         if (!map || !L) {
           throw new Error('Map atau Leaflet library tidak ditemukan');
         }
         
-        const point = map.latLngToContainerPoint(L.latLng(lat, lng));
+        const latLng = (L.latLng as (lat: number, lng: number) => { lat: number; lng: number })(lat, lng);
+        const point = (map.latLngToContainerPoint as (latlng: { lat: number; lng: number }) => { x: number; y: number })(latLng);
         const event = new MouseEvent('click', {
           bubbles: true,
           cancelable: true,

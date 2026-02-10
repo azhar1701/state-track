@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, FileText } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
 interface RecentItem {
@@ -167,72 +166,74 @@ export default function RecentReports() {
   }, []);
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-lg">Laporan Terbaru</CardTitle>
-          <Link to="/map" className="text-sm text-primary hover:underline">
-            Lihat semua
-          </Link>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold">Laporan Terbaru</h3>
+        <Link to="/map" className="text-sm text-blue-500 hover:text-blue-400 font-medium transition-colors">
+          Lihat semua →
+        </Link>
+      </div>
+      <div className="space-y-3">
         {items === null ? (
-          <div className="rounded-md border px-4 py-6 text-sm text-muted-foreground">
+          <div className="bg-white/5 rounded-xl px-4 py-8 text-center text-muted-foreground">
             Memuat...
           </div>
         ) : error ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-6 text-sm text-destructive">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-8 text-center text-red-400">
             {error}
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-md border px-4 py-6 text-sm text-muted-foreground">
+          <div className="bg-white/5 rounded-xl px-4 py-8 text-center text-muted-foreground">
             Belum ada laporan.
           </div>
         ) : (
-          <ul className="divide-y rounded-md border">
+          <div className="space-y-3">
             {items.map((it) => {
               const categoryLabel = formatCategory(it.category);
               const locationLabel = formatLocation(it);
               const createdLabel = formatDateTime(it.created_at);
 
               return (
-                <li key={it.id} className="flex flex-col gap-2 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-sm leading-tight line-clamp-2">
-                          {it.title || "(Tanpa judul)"}
-                        </span>
-                        {categoryLabel ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-muted text-muted-foreground capitalize"
-                          >
+                <div key={it.id} className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/30 rounded-xl p-4 transition-all duration-300 cursor-pointer hover:scale-[1.02]">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 flex-1">
+                          <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-blue-500 transition-colors">
+                            {it.title || "(Tanpa judul)"}
+                          </h4>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            <span className="line-clamp-1">{locationLabel}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <SevPill s={it.severity} />
+                          <StatusPill s={it.status} />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{createdLabel}</span>
+                        </div>
+                        {categoryLabel && (
+                          <Badge variant="outline" className="bg-white/5 text-xs capitalize border-white/10">
                             {categoryLabel}
                           </Badge>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
-                        <span className="line-clamp-1">{locationLabel}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 text-xs">
-                      <SevPill s={it.severity} />
-                      <StatusPill s={it.status} />
-                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5 shrink-0" />
-                    <span>{createdLabel}</span>
-                  </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

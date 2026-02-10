@@ -385,7 +385,7 @@ const MapView = () => {
   useEffect(() => {
     setFilters((prev) => ({
       ...prev,
-      dateTo: timeFilterDate,
+      dateTo: format(timeFilterDate, 'yyyy-MM-dd'),
     }));
   }, [timeFilterDate]);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);

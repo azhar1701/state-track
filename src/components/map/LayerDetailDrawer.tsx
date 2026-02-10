@@ -2,16 +2,14 @@ import { X, ZoomIn, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEffect } from 'react';
+import type { Geometry } from 'geojson';
 
 interface LayerDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   feature: {
     properties: Record<string, unknown>;
-    geometry?: {
-      type: string;
-      coordinates: unknown;
-    };
+    geometry?: Geometry;
   } | null;
   onZoomToFeature?: () => void;
   allowList?: string[];

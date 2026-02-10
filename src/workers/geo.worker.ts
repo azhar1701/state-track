@@ -12,10 +12,10 @@ const transformCoord = (pt: number[], fromCrs: string): [number, number] => {
   return [lon, lat];
 };
 
-const reprojectGeometry = (geom: any, fromCrs: string): any => {
+const reprojectGeometry = (geom: Geometry, fromCrs: string): Geometry => {
   if (!geom) return geom;
   const t = geom.type;
-  const coords = geom.coordinates;
+  const coords = (geom as { coordinates?: unknown }).coordinates;
   
   const mapCoords = (arr: unknown): unknown => {
     if (!Array.isArray(arr)) return arr;
@@ -24,13 +24,13 @@ const reprojectGeometry = (geom: any, fromCrs: string): any => {
   };
   
   if (t === 'GeometryCollection') {
-    return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g, fromCrs)) };
+    return { type: 'GeometryCollection', geometries: (geom as { geometries: Geometry[] }).geometries.map((g: Geometry) => reprojectGeometry(g, fromCrs)) };
   }
-  return { type: t, coordinates: mapCoords(coords) };
+  return { type: t, coordinates: mapCoords(coords) } as Geometry;
 };
 
 const detectCRS = (data: FeatureCollection<Geometry>): string | null => {
-  const embeddedCrsName = (data as any)?.crs?.properties?.name || '';
+  const embeddedCrsName = (data as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name || '';
   const srcName = embeddedCrsName.toUpperCase();
   
   if (srcName.includes('EPSG:4326')) return null;
@@ -40,7 +40,7 @@ const detectCRS = (data: FeatureCollection<Geometry>): string | null => {
   const sample = data.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
   if (!sample) return null;
   
-  const peek = (coords: any): [number, number] | null => {
+  const peek = (coords: unknown): [number, number] | null => {
     if (!Array.isArray(coords)) return null;
     if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
       return [coords[0], coords[1]];
@@ -52,7 +52,7 @@ const detectCRS = (data: FeatureCollection<Geometry>): string | null => {
     return null;
   };
   
-  const coord = peek((sample.geometry as any).coordinates);
+  const coord = peek((sample.geometry as { coordinates?: unknown }).coordinates);
   if (coord && (Math.abs(coord[0]) > 1000 || Math.abs(coord[1]) > 1000)) {
     return 'EPSG:32749';
   }
