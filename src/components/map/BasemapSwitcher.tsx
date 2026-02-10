@@ -1,30 +1,36 @@
 import { useMap } from 'react-leaflet';
 import { TileLayer } from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Map, Satellite } from 'lucide-react';
+import { Map, Satellite, Mountain, Moon, Sun, ChevronDown } from 'lucide-react';
 import { basemaps, type BasemapType } from './basemap-config';
+import { cn } from '@/lib/utils';
 
 interface BasemapSwitcherProps {
   onBasemapChange?: (basemap: BasemapType) => void;
   initialBasemap?: BasemapType;
 }
 
+const basemapIcons: Record<BasemapType, React.ReactNode> = {
+  osm: <Map className="w-4 h-4" />,
+  satellite: <Satellite className="w-4 h-4" />,
+  terrain: <Mountain className="w-4 h-4" />,
+  dark: <Moon className="w-4 h-4" />,
+  light: <Sun className="w-4 h-4" />,
+};
+
 export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: BasemapSwitcherProps) => {
   const map = useMap();
   const [currentBasemap, setCurrentBasemap] = useState<BasemapType>(initialBasemap);
+  const [isOpen, setIsOpen] = useState(false);
   const tileLayerRef = useRef<TileLayer | null>(null);
 
-  // Initialize and update basemap layer when map or currentBasemap changes
   useEffect(() => {
     if (!map) return;
 
-    // Remove existing layer
     if (tileLayerRef.current) {
       map.removeLayer(tileLayerRef.current);
     }
 
-    // Add new layer
     const layer = new TileLayer(basemaps[currentBasemap].url, {
       attribution: basemaps[currentBasemap].attribution,
       maxZoom: 19,
@@ -43,32 +49,45 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
   const switchBasemap = (basemap: BasemapType) => {
     setCurrentBasemap(basemap);
     onBasemapChange?.(basemap);
+    setIsOpen(false);
   };
 
   return (
-    <Card className="absolute top-4 right-4 z-[1000] shadow-lg">
-      <CardContent className="p-2 grid grid-cols-2 gap-2 w-[200px]">
+    <div className="absolute top-4 right-4 z-[1000]">
+      <div className="relative">
         <button
-          onClick={() => switchBasemap('osm')}
-          className={`relative rounded-md overflow-hidden border text-left ${currentBasemap === 'osm' ? 'ring-2 ring-primary' : ''}`}
-          aria-label="Basemap Street"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 hover:bg-white transition-all text-gray-800"
+          aria-label="Basemap Switcher"
         >
-          <div className="h-16 bg-[url('https://tile.openstreetmap.org/5/27/15.png')] bg-cover bg-center" />
-          <div className="absolute top-1 left-1 bg-background/80 px-1.5 py-0.5 rounded text-xs flex items-center gap-1">
-            <Map className="w-3 h-3" /> Street
-          </div>
+          {basemapIcons[currentBasemap]}
+          <span className="text-sm font-medium text-gray-800">{basemaps[currentBasemap].name}</span>
+          <ChevronDown className={cn(
+            "w-4 h-4 transition-transform text-gray-600",
+            isOpen && "rotate-180"
+          )} />
         </button>
-        <button
-          onClick={() => switchBasemap('satellite')}
-          className={`relative rounded-md overflow-hidden border text-left ${currentBasemap === 'satellite' ? 'ring-2 ring-primary' : ''}`}
-          aria-label="Basemap Satellite"
-        >
-          <div className="h-16 bg-[url('https://mt1.google.com/vt/lyrs=y&x=104&y=64&z=8')] bg-cover bg-center" />
-          <div className="absolute top-1 left-1 bg-background/80 px-1.5 py-0.5 rounded text-xs flex items-center gap-1">
-            <Satellite className="w-3 h-3" /> Satellite
+
+        {isOpen && (
+          <div className="absolute top-full right-0 mt-2 w-40 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+            {(Object.keys(basemaps) as BasemapType[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => switchBasemap(key)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors text-left",
+                  currentBasemap === key
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "hover:bg-gray-50 text-gray-700"
+                )}
+              >
+                {basemapIcons[key]}
+                <span>{basemaps[key].name}</span>
+              </button>
+            ))}
           </div>
-        </button>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   );
 };
