@@ -235,6 +235,34 @@ const MapView = () => {
     return counts;
   }, [reports]);
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const report of reports) {
+      counts[report.category] = (counts[report.category] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  }, [reports]);
+
+  const locationCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const report of reports) {
+      // Coba berbagai field lokasi yang mungkin ada
+      const loc = report.location_name || report.kecamatan || report.desa || 'Lokasi Lain';
+      if (loc && loc !== 'Lokasi Lain') {
+        counts[loc] = (counts[loc] || 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  }, [reports]);
+
+  const recentReports = useMemo(() => {
+    return reports.slice(0, 3);
+  }, [reports]);
+
   const statusSummary = useMemo(
     () => [
       { key: 'total', label: 'Total', value: statusCounts.total, icon: FileText, tone: 'text-primary' },
@@ -1445,27 +1473,67 @@ const MapView = () => {
   return (
     <div className="min-h-screen bg-background page-transition">
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Peta Laporan dan Infrastruktur SDA</h1>
-          <p className="text-muted-foreground">
-            Lihat semua laporan dan sebaran infrastruktur SDA di peta interaktif
-          </p>
-        </div>
+        <div className="mb-6 space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Peta Laporan dan Infrastruktur SDA</h1>
+            <p className="text-muted-foreground">
+              Lihat semua laporan dan sebaran infrastruktur SDA di peta interaktif
+            </p>
+          </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-6">
-          {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
-            <Card key={key} className="glass-card border-none shadow-soft">
-              <CardContent className="py-3 px-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-                    <p className="text-xl font-semibold mt-1">{loading ? '...' : value}</p>
-                  </div>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
+              {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
+                <div key={key} className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg border shadow-sm">
                   <Icon className={`h-5 w-5 ${tone}`} />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <p className="text-lg font-bold">{loading ? '...' : value}</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {categoryCounts.length > 0 && (
+                <div className="px-4 py-2 bg-blue-50/80 dark:bg-blue-950/30 backdrop-blur-sm rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Kategori Teratas</p>
+                  <div className="flex gap-3">
+                    {categoryCounts.map(([cat, count]) => (
+                      <div key={cat} className="text-xs">
+                        <span className="font-semibold text-blue-900 dark:text-blue-100">{count}</span>
+                        <span className="text-blue-600 dark:text-blue-400 ml-1">{cat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {locationCounts.length > 0 && (
+                <div className="px-4 py-2 bg-purple-50/80 dark:bg-purple-950/30 backdrop-blur-sm rounded-lg border border-purple-200 dark:border-purple-800">
+                  <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Lokasi Teratas</p>
+                  <div className="flex gap-3">
+                    {locationCounts.map(([loc, count]) => (
+                      <div key={loc} className="text-xs">
+                        <span className="font-semibold text-purple-900 dark:text-purple-100">{count}</span>
+                        <span className="text-purple-600 dark:text-purple-400 ml-1">{loc.slice(0, 15)}{loc.length > 15 ? '...' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {recentReports.length > 0 && (
+                <div className="px-4 py-2 bg-green-50/80 dark:bg-green-950/30 backdrop-blur-sm rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Laporan Terbaru</p>
+                  <p className="text-xs text-green-900 dark:text-green-100">
+                    <span className="font-semibold">{recentReports[0].title.slice(0, 30)}{recentReports[0].title.length > 30 ? '...' : ''}</span>
+                    <span className="text-green-600 dark:text-green-400 ml-1">• {format(new Date(recentReports[0].created_at), 'HH:mm')}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-120px)]' : 'h-[calc(100vh-180px)]'}`}>
