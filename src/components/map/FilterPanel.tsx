@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -103,7 +102,6 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
     const name = presetName.trim();
     if (!name) return;
     const payload = { user_id: user.id, name, filters: localFilters } as unknown as Record<string, unknown>;
-    // Upsert to avoid duplicate names per user
     const { data, error } = await supabase
       .from('filter_presets')
       .upsert(payload, { onConflict: 'user_id,name' })
@@ -121,7 +119,6 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
       setPresetName('');
       return;
     }
-    // fallback: local only
     const next = { id: `${Date.now()}`, name, filters: localFilters };
     setPresets((prev) => {
       const exists = prev.some((p) => p.name === next.name);
@@ -141,25 +138,25 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
 
   const deletePreset = async (id: string) => {
     if (!user) return;
-  try { await supabase.from('filter_presets').delete().eq('id', id).eq('user_id', user.id); } catch { /* ignore */ }
+    try { await supabase.from('filter_presets').delete().eq('id', id).eq('user_id', user.id); } catch { /* ignore */ }
     setPresets((prev) => prev.filter((x) => x.id !== id));
-  try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify(presets.filter((x) => x.id !== id))); } catch { /* ignore */ }
+    try { localStorage.setItem(`filter_presets:${user.id}`, JSON.stringify(presets.filter((x) => x.id !== id))); } catch { /* ignore */ }
   };
 
   return (
-    <Card className="w-80 shadow-xl">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+    <div className="fixed inset-y-0 right-0 z-[1200] w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border-l pointer-events-auto overflow-y-auto">
+      <div className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5" />
-          <CardTitle className="text-lg">Filter Laporan</CardTitle>
+          <h2 className="text-lg font-semibold">Filter Laporan</h2>
         </div>
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         )}
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+      <div className="p-4 space-y-4">
         {user && (
           <div className="space-y-2">
             <Label>Preset Tersimpan</Label>
@@ -253,7 +250,7 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
             Terapkan
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Layers, X } from 'lucide-react';
@@ -9,7 +8,6 @@ export interface MapOverlays {
   adminBoundaries: boolean;
   clustering?: boolean;
   heatmap?: boolean;
-  // dynamic layer toggles keyed by geo_layers.key
   dynamic?: Record<string, boolean>;
 }
 
@@ -35,21 +33,21 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLay
   const dyn = localOverlays.dynamic || {};
 
   return (
-    <Card className="w-64 shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+    <div className="fixed inset-y-0 right-0 z-[1200] w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border-l pointer-events-auto overflow-y-auto">
+      <div className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5" />
-          <CardTitle className="text-sm">Layer Overlay</CardTitle>
+          <h2 className="text-lg font-semibold">Layer Overlay</h2>
         </div>
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="admin-boundaries" className="text-sm">
+      </div>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between py-2">
+          <Label htmlFor="admin-boundaries" className="text-sm font-medium">
             Batas Administratif
           </Label>
           <Switch
@@ -60,10 +58,11 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLay
         </div>
 
         {availableLayers && availableLayers.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2 border-t">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layer Geospasial</div>
             {availableLayers.map((l) => (
-              <div key={l.key} className="flex items-center justify-between">
-                <Label htmlFor={`dyn-${l.key}`} className="text-sm">
+              <div key={l.key} className="flex items-center justify-between py-2">
+                <Label htmlFor={`dyn-${l.key}`} className="text-sm font-medium">
                   {l.name}
                 </Label>
                 <Switch
@@ -82,28 +81,31 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLay
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="clustering" className="text-sm">
-            Cluster Marker
-          </Label>
-          <Switch
-            id="clustering"
-            checked={Boolean(localOverlays.clustering)}
-            onCheckedChange={(checked) => handleToggle('clustering', checked)}
-          />
-        </div>
+        <div className="space-y-3 pt-2 border-t">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Visualisasi</div>
+          <div className="flex items-center justify-between py-2">
+            <Label htmlFor="clustering" className="text-sm font-medium">
+              Cluster Marker
+            </Label>
+            <Switch
+              id="clustering"
+              checked={Boolean(localOverlays.clustering)}
+              onCheckedChange={(checked) => handleToggle('clustering', checked)}
+            />
+          </div>
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="heatmap" className="text-sm">
-            Heatmap Kepadatan
-          </Label>
-          <Switch
-            id="heatmap"
-            checked={Boolean(localOverlays.heatmap)}
-            onCheckedChange={(checked) => handleToggle('heatmap', checked)}
-          />
+          <div className="flex items-center justify-between py-2">
+            <Label htmlFor="heatmap" className="text-sm font-medium">
+              Heatmap Kepadatan
+            </Label>
+            <Switch
+              id="heatmap"
+              checked={Boolean(localOverlays.heatmap)}
+              onCheckedChange={(checked) => handleToggle('heatmap', checked)}
+            />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

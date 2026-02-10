@@ -15,19 +15,18 @@ import { BasemapSwitcher } from '@/components/map/BasemapSwitcher';
 import type { BasemapType } from '@/components/map/basemap-config';
 import { Legend, type LegendOverlayItem } from '@/components/map/Legend';
 import { reverseGeocode } from '@/lib/geocoding';
-import { MapToolbar } from '@/components/map/MapToolbar';
 import type { MapFilters } from '@/components/map/FilterPanel';
 import { MapSearch } from '@/components/map/MapSearch';
 import { FilterPanel } from '@/components/map/FilterPanel';
 import { OverlayToggle, type MapOverlays } from '@/components/map/OverlayToggle';
-import { TimeSlider } from '@/components/map/TimeSlider';
 import { ReportDetailDrawer } from '@/components/map/ReportDetailDrawer';
+import { ModernMapOverlay } from '@/components/map/ModernMapOverlay';
 import { LayerDetailDrawer } from '@/components/map/LayerDetailDrawer';
 import { useLayerHighlight } from '@/hooks/useLayerHighlight';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/lib/mapExport';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
-import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
+import { format, isAfter, isBefore, startOfDay, subDays, addDays, differenceInCalendarDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
 import { sanitizeText, sanitizeForLog } from '@/lib/security';
@@ -189,6 +188,9 @@ const MapView = () => {
   const hasUrlZoom = typeof urlParams.zoom === 'number';
   const hasUrlBasemap = Boolean(urlParams.basemap);
   const isMobile = useIsMobile();
+
+  // Define minDate at the very top before any hooks that use it
+  const minDate = startOfDay(new Date('2025-10-01'));
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -379,7 +381,14 @@ const MapView = () => {
     dashArray?: string;
     radius?: number;
   };
-  const [dynamicStyle, setDynamicStyle] = useState<Record<string, LayerStyleConfig>>({});
+  const [dynamicStyle, setDynamicStyle] = useState<Record<string, LayerStyleConfig>>(() => {
+    try {
+      const cached = sessionStorage.getItem('map:layerStyles');
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
   const [dynamicLoading, setDynamicLoading] = useState<Record<string, boolean>>({});
   const processedLayersRef = useRef<Set<string>>(new Set());
   const layerErrorsRef = useRef<Set<string>>(new Set());
@@ -387,6 +396,15 @@ const MapView = () => {
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sliderValue, setSliderValue] = useState(0);
+
+  // Calculate maxDate from reports (must be before useEffect hooks that use it)
+  const maxDate = useMemo(() => {
+    if (reports.length === 0) return new Date();
+    const dates = reports.map((r) => new Date(r.created_at));
+    return startOfDay(new Date(Math.max(...dates.map((d) => d.getTime()))));
+  }, [reports]);
 
   // Sinkronkan perubahan timeFilterDate ke filters.dateTo
   useEffect(() => {
@@ -395,6 +413,31 @@ const MapView = () => {
       dateTo: format(timeFilterDate, 'yyyy-MM-dd'),
     }));
   }, [timeFilterDate]);
+
+  // Sync slider value with current date
+  useEffect(() => {
+    const currentDays = Math.max(0, differenceInCalendarDays(startOfDay(timeFilterDate), minDate));
+    setSliderValue(currentDays);
+  }, [timeFilterDate, minDate]);
+
+  // Auto-play timeline
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setSliderValue((prev) => {
+        const totalDays = Math.max(0, differenceInCalendarDays(maxDate, minDate));
+        if (prev >= totalDays) {
+          setIsPlaying(false);
+          return prev;
+        }
+        const next = prev + 1;
+        const newDate = addDays(minDate, next);
+        setTimeFilterDate(newDate);
+        return next;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [isPlaying, minDate, maxDate]);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [clusterLayer, setClusterLayer] = useState<L.MarkerClusterGroup | null>(null);
   const [heatLayer, setHeatLayer] = useState<L.Layer | null>(null);
@@ -406,7 +449,6 @@ const MapView = () => {
   const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
   const [ctxAddress, setCtxAddress] = useState<string | null>(null);
   const [ctxLoading, setCtxLoading] = useState(false);
-  const minDate = startOfDay(new Date('2025-10-01'));
 
   const { registerLayer, unregisterLayer } = useLayerHighlight({
     selectedFeatureId: selectedLayer?.id || null,
@@ -420,6 +462,92 @@ const MapView = () => {
       mapInstance.fitBounds(bounds.pad(0.1));
     }
   }, [selectedLayer, mapInstance]);
+
+  // Memoize rendered layers to force re-render when style changes
+  const renderedLayers = useMemo(() => {
+    return Object.entries(overlays.dynamic || {}).map(([key, on]) => {
+      if (!on || !dynamicData[key]) return null;
+      const config = dynamicStyle[key] || {};
+      console.log(`[MapView] Rendering layer ${key} with style:`, config);
+      
+      return (
+        <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
+          <RLGeoJSON
+            key={`geojson-${key}-${JSON.stringify(config)}`}
+            data={dynamicData[key]!}
+            style={() => ({
+              color: config.color || '#3b82f6',
+              weight: config.weight || 2,
+              opacity: config.opacity || 0.8,
+              fillColor: config.fillColor || config.color || '#3b82f6',
+              fillOpacity: config.fillOpacity ?? 0.3,
+              dashArray: config.dashArray,
+            })}
+            pointToLayer={(feature, latlng) => {
+              if (key === 'assets') {
+                const p = feature.properties as Record<string, unknown> | undefined;
+                const status = (p?.status as string) || 'aktif';
+                const cat = (p?.category as string) || '';
+                return L.marker(latlng, { icon: createAssetIcon((['aktif', 'nonaktif', 'rusak'].includes(status) ? (status as 'aktif' | 'nonaktif' | 'rusak') : 'aktif'), cat) });
+              }
+              return L.circleMarker(latlng, {
+                radius: config.radius ?? 8,
+                color: config.color ?? '#3b82f6',
+                weight: config.weight ?? 2,
+                fillColor: config.fillColor || config.color || '#3b82f6',
+                fillOpacity: config.fillOpacity ?? 0.7,
+              });
+            }}
+            onEachFeature={(feature, layer) => {
+              const p = feature.properties as Record<string, unknown> | undefined;
+              const featureId = `${key}-${Math.random().toString(36).substr(2, 9)}`;
+              
+              registerLayer(featureId, layer, {
+                color: '#6b7280',
+                weight: 1,
+                opacity: 0.8,
+                fillOpacity: 0,
+              });
+
+              const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
+              if (title) {
+                layer.bindTooltip(String(title), { sticky: true });
+              }
+
+              if (key === 'assets') {
+                const code = p?.code as string | undefined;
+                const cat = p?.category as string | undefined;
+                const status = p?.status as string | undefined;
+                const ket = p?.keterangan as string | undefined;
+                const safeTitle = sanitizeText(title);
+                const safeCode = sanitizeText(code ?? '-');
+                const safeCat = sanitizeText(cat ?? '-');
+                const safeStatus = sanitizeText(status ?? '-');
+                const safeKet = sanitizeText(ket ?? '-');
+                layer.bindPopup(`
+                  <div style="min-width:200px">
+                    <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
+                    <div><strong>Kode:</strong> ${safeCode}</div>
+                    <div><strong>Kategori:</strong> ${safeCat}</div>
+                    <div><strong>Status:</strong> ${safeStatus}</div>
+                    <div><strong>Keterangan:</strong> ${safeKet}</div>
+                  </div>
+                `);
+              } else {
+                layer.on('click', () => {
+                  setSelectedLayer({ id: featureId, feature, layer });
+                });
+              }
+
+              layer.on('remove', () => {
+                unregisterLayer(featureId);
+              });
+            }}
+          />
+        </Pane>
+      );
+    });
+  }, [overlays.dynamic, dynamicData, dynamicStyle, registerLayer, unregisterLayer, setSelectedLayer]);
 
   // Build dynamic legend items based on active overlays and layer types
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
@@ -469,12 +597,6 @@ const MapView = () => {
     }
     return items;
   }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData, dynamicStyle]);
-
-  const maxDate = useMemo(() => {
-    if (reports.length === 0) return new Date();
-    const dates = reports.map((r) => new Date(r.created_at));
-    return startOfDay(new Date(Math.max(...dates.map((d) => d.getTime()))));
-  }, [reports]);
 
   // Listen for layer deletion/update events from GeoDataManager
   useEffect(() => {
@@ -793,12 +915,10 @@ const MapView = () => {
         setDynamicLoading((s) => ({ ...s, [key]: true }));
         
         try {
-          // Cache busting: append timestamp to prevent stale 404s
-          const timestamp = Date.now();
-          // Fetch full layer with style_config
+          // Fetch full layer data
           const { data: fullLayer, error: layerError } = await supabase
             .from('geo_layers')
-            .select('data, style_config')
+            .select('data')
             .eq('key', key)
             .limit(1)
             .maybeSingle();
@@ -808,10 +928,56 @@ const MapView = () => {
           let raw: Record<string, unknown> | null = null;
 
           if (!layerError && fullLayer) {
-            // Store style_config from database
-            if (fullLayer.style_config && typeof fullLayer.style_config === 'object') {
-              setDynamicStyle((s) => ({ ...s, [key]: fullLayer.style_config as LayerStyleConfig }));
+            raw = fullLayer.data as unknown as Record<string, unknown>;
+            
+            // CRITICAL: Extract and store style FIRST before anything else
+            const dataStyle = (raw?.style || {}) as Record<string, unknown>;
+            const geomType = availableLayers.find((l) => l.key === key)?.geometry_type || '';
+            
+            const styleConfig: LayerStyleConfig = {};
+            if (/Point/i.test(geomType)) {
+              const pt = dataStyle.point as Record<string, unknown> | undefined;
+              if (pt) {
+                styleConfig.color = pt.color as string;
+                styleConfig.fillColor = pt.fillColor as string;
+                styleConfig.fillOpacity = pt.fillOpacity as number;
+                styleConfig.radius = pt.radius as number;
+                styleConfig.weight = pt.weight as number;
+              }
+            } else if (/LineString/i.test(geomType)) {
+              const ln = dataStyle.line as Record<string, unknown> | undefined;
+              if (ln) {
+                styleConfig.color = ln.color as string;
+                styleConfig.weight = ln.weight as number;
+                styleConfig.opacity = ln.opacity as number;
+                styleConfig.dashArray = ln.dashArray as string;
+              }
+            } else if (/Polygon/i.test(geomType)) {
+              const pg = dataStyle.polygon as Record<string, unknown> | undefined;
+              if (pg) {
+                styleConfig.color = pg.color as string;
+                styleConfig.weight = pg.weight as number;
+                styleConfig.opacity = pg.opacity as number;
+                styleConfig.fillColor = pg.fillColor as string;
+                styleConfig.fillOpacity = pg.fillOpacity as number;
+              }
             }
+            
+            // Store style SYNCHRONOUSLY before setting data
+            if (Object.keys(styleConfig).length > 0) {
+              console.log(`[MapView] Loading style for ${key}:`, styleConfig);
+              setDynamicStyle((s) => {
+                const next = { ...s, [key]: styleConfig };
+                try {
+                  sessionStorage.setItem('map:layerStyles', JSON.stringify(next));
+                } catch {}
+                return next;
+              });
+              // Wait for state update before loading data
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            // Now extract FeatureCollection
 
             raw = fullLayer.data as unknown as Record<string, unknown>;
             if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
@@ -1005,7 +1171,7 @@ const MapView = () => {
       }
     };
     void loadToggled();
-  }, [overlays.dynamic, dynamicData, dynamicLoading]);
+  }, [overlays.dynamic, dynamicData, dynamicLoading, availableLayers]);
 
   // Attach map interactions once map instance is ready
   useEffect(() => {
@@ -1027,62 +1193,51 @@ const MapView = () => {
     };
   }, [mapInstance]);
 
-  // Position scale and coordinates stacked above legend at bottom-right
+  // Custom scale control with Indonesian format
   useEffect(() => {
-    const updateBottomStack = () => {
-      const legendEl = document.querySelector('.legend-container') as HTMLElement | null;
-      const scaleEl = document.querySelector('.leaflet-control-scale') as HTMLElement | null;
-      const brCorner = document.querySelector(
-        '.leaflet-control-container .leaflet-bottom.leaflet-right'
-      ) as HTMLElement | null;
-      const mapEl = document.querySelector('.leaflet-container') as HTMLElement | null;
-      const legendH = legendEl?.offsetHeight ?? 0;
-      const bottomPadding = 16; // tailwind bottom-4 on legend container
-      const gapScaleLegend = 8;
-      const gapCoordScale = 8;
+    if (!mapInstance) return;
 
-      // Reset any previously forced inline positioning on the scale (from older revisions)
-      if (scaleEl) {
-        scaleEl.style.position = '';
-        scaleEl.style.right = '';
-        scaleEl.style.bottom = '';
-      }
+    // Remove default scale control
+    const existingScale = document.querySelector('.leaflet-control-scale');
+    if (existingScale) existingScale.remove();
 
-      // Nudge the entire bottom-right Leaflet controls corner upward so the scale sits above the legend
-      if (brCorner) {
-        brCorner.style.bottom = `${bottomPadding + legendH + gapScaleLegend}px`;
-        // Ensure controls render above the legend stack
-        brCorner.style.zIndex = '1250';
-      }
+    // Create custom scale element
+    const scaleDiv = document.createElement('div');
+    scaleDiv.className = 'custom-scale-control';
+    scaleDiv.style.cssText = `
+      position: absolute;
+      bottom: 72px;
+      left: 16px;
+      z-index: 850;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 0.75rem;
+      padding: 8px 12px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.9);
+      font-family: system-ui, -apple-system, sans-serif;
+      pointer-events: none;
+    `;
 
-      // If we can measure, position the coordinate badge right above the scale's top edge
-      if (mapEl && scaleEl) {
-        const mapRect = mapEl.getBoundingClientRect();
-        const scaleRect = scaleEl.getBoundingClientRect();
-        const bottomOffset = Math.max(0, Math.round(mapRect.bottom - scaleRect.top)) + gapCoordScale;
-        setCoordBottomOffset(bottomOffset);
-      } else {
-        // Fallback to using heights if rects are not available yet
-        const scaleH = scaleEl?.offsetHeight ?? 24;
-        setCoordBottomOffset(bottomPadding + legendH + gapScaleLegend + scaleH + gapCoordScale);
-      }
+    const updateScale = () => {
+      const zoom = mapInstance.getZoom();
+      const scale = 40075017 * Math.cos(mapInstance.getCenter().lat * Math.PI / 180) / Math.pow(2, zoom + 8);
+      const roundedScale = Math.round(scale / 100) * 100;
+      scaleDiv.textContent = `Skala 1 : ${roundedScale.toLocaleString('id-ID')}`;
     };
 
-    updateBottomStack();
-    const t = setTimeout(updateBottomStack, 300);
-    window.addEventListener('resize', updateBottomStack);
+    mapInstance.on('zoomend moveend', updateScale);
+    updateScale();
 
-    let ro: ResizeObserver | null = null;
-    const legendEl = document.querySelector('.legend-container') as HTMLElement | null;
-    if (legendEl && 'ResizeObserver' in window) {
-      ro = new ResizeObserver(() => updateBottomStack());
-      ro.observe(legendEl);
-    }
+    const mapContainer = mapInstance.getContainer();
+    mapContainer.appendChild(scaleDiv);
 
     return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', updateBottomStack);
-      if (ro) ro.disconnect();
+      mapInstance.off('zoomend moveend', updateScale);
+      scaleDiv.remove();
     };
   }, [mapInstance]);
 
@@ -1332,9 +1487,7 @@ const MapView = () => {
               />
             )}
             
-            <div className="legend-container absolute bottom-4 right-4 z-[1200]">
-              <Legend overlays={legendOverlays} />
-            </div>
+            {/* Legend now integrated in ModernMapOverlay */}
             {/* DrawControls removed */}
 
             {/* Administrative boundaries overlay (under markers) */}
@@ -1414,93 +1567,7 @@ const MapView = () => {
             )}
 
             {/* Render any toggled dynamic layers */}
-            {Object.entries(overlays.dynamic || {}).map(([key, on]) => (
-              on && dynamicData[key] ? (
-                <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
-                  <RLGeoJSON
-                    key={`geojson-${key}`}
-                    data={dynamicData[key]!}
-                    style={(feat) => {
-                      const t = feat?.geometry?.type;
-                      const config = dynamicStyle[key] || {};
-                      
-                      // PRIORITY: Use database style_config first
-                      const baseStyle = {
-                        color: config.color || '#3b82f6',
-                        weight: config.weight || 2,
-                        opacity: config.opacity || 0.8,
-                        fillColor: config.fillColor || config.color || '#3b82f6',
-                        fillOpacity: config.fillOpacity ?? 0.3,
-                        dashArray: config.dashArray,
-                      };
-                      
-                      return baseStyle;
-                    }}
-                    pointToLayer={(feature, latlng) => {
-                      if (key === 'assets') {
-                        const p = feature.properties as Record<string, unknown> | undefined;
-                        const status = (p?.status as string) || 'aktif';
-                        const cat = (p?.category as string) || '';
-                        return L.marker(latlng, { icon: createAssetIcon((['aktif', 'nonaktif', 'rusak'].includes(status) ? (status as 'aktif' | 'nonaktif' | 'rusak') : 'aktif'), cat) });
-                      }
-                      const config = dynamicStyle[key] || {};
-                      return L.circleMarker(latlng, {
-                        radius: config.radius ?? 8,
-                        color: config.color ?? '#3b82f6',
-                        weight: config.weight ?? 2,
-                        fillColor: config.fillColor || config.color || '#3b82f6',
-                        fillOpacity: config.fillOpacity ?? 0.7,
-                      });
-                    }}
-                    onEachFeature={(feature, layer) => {
-                      const p = feature.properties as Record<string, unknown> | undefined;
-                      const featureId = `${key}-${Math.random().toString(36).substr(2, 9)}`;
-                      
-                      registerLayer(featureId, layer, {
-                        color: '#6b7280',
-                        weight: 1,
-                        opacity: 0.8,
-                        fillOpacity: 0,
-                      });
-
-                      const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
-                      if (title) {
-                        layer.bindTooltip(String(title), { sticky: true });
-                      }
-
-                      if (key === 'assets') {
-                        const code = p?.code as string | undefined;
-                        const cat = p?.category as string | undefined;
-                        const status = p?.status as string | undefined;
-                        const ket = p?.keterangan as string | undefined;
-                        const safeTitle = sanitizeText(title);
-                        const safeCode = sanitizeText(code ?? '-');
-                        const safeCat = sanitizeText(cat ?? '-');
-                        const safeStatus = sanitizeText(status ?? '-');
-                        const safeKet = sanitizeText(ket ?? '-');
-                        layer.bindPopup(`
-                          <div style="min-width:200px">
-                            <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
-                            <div><strong>Kode:</strong> ${safeCode}</div>
-                            <div><strong>Kategori:</strong> ${safeCat}</div>
-                            <div><strong>Status:</strong> ${safeStatus}</div>
-                            <div><strong>Keterangan:</strong> ${safeKet}</div>
-                          </div>
-                        `);
-                      } else {
-                        layer.on('click', () => {
-                          setSelectedLayer({ id: featureId, feature, layer });
-                        });
-                      }
-
-                      layer.on('remove', () => {
-                        unregisterLayer(featureId);
-                      });
-                    }}
-                  />
-                </Pane>
-              ) : null
-            ))}
+            {renderedLayers}
 
             {/* Render plain markers only when clustering is off */}
             {!overlays.clustering && filteredReports.map((report) => (
@@ -1532,8 +1599,7 @@ const MapView = () => {
             )}
           </MapContainer>
 
-          <MapToolbar
-            compact={isMobile}
+          <ModernMapOverlay
             showSearch={showSearchPanel}
             onToggleSearch={() => {
               setShowSearchPanel((v) => !v);
@@ -1553,12 +1619,50 @@ const MapView = () => {
               setShowFilterPanel(false);
             }}
             onShare={handleShare}
-            onExport={handleExport}
+            onExport={() => handleExport()}
+            minDate={minDate}
+            maxDate={maxDate}
+            currentDate={timeFilterDate}
+            onDateChange={setTimeFilterDate}
+            totalDays={Math.max(0, differenceInCalendarDays(maxDate, minDate))}
+            sliderValue={sliderValue}
+            onSliderChange={(value) => {
+              const days = value[0];
+              setSliderValue(days);
+              const newDate = addDays(minDate, days);
+              setTimeFilterDate(newDate);
+            }}
+            isPlaying={isPlaying}
+            onPlayPause={() => setIsPlaying(!isPlaying)}
+            onStepPrev={() => {
+              setIsPlaying(false);
+              setSliderValue((prev) => {
+                const next = Math.max(0, prev - 1);
+                setTimeFilterDate(addDays(minDate, next));
+                return next;
+              });
+            }}
+            onStepNext={() => {
+              setIsPlaying(false);
+              setSliderValue((prev) => {
+                const totalDays = Math.max(0, differenceInCalendarDays(maxDate, minDate));
+                const next = Math.min(totalDays, prev + 1);
+                setTimeFilterDate(addDays(minDate, next));
+                return next;
+              });
+            }}
+            onReset={() => {
+              setIsPlaying(false);
+              setSliderValue(0);
+              setTimeFilterDate(minDate);
+            }}
+            legendOverlays={legendOverlays}
+            statusCounts={statusCounts}
           />
 
-          {/* Floating mini panels under the toolbar (top-left) */}
+          {/* Search panel centered below toolbar */}
           {showSearchPanel && (
-            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
+            <div className={`absolute z-[1200] top-20 left-1/2 -translate-x-1/2 ${isMobile ? 'w-[calc(100%-1rem)]' : 'w-auto'}`}>
               <MapSearch
                 onSelect={(lat, lon, label) => {
                   setMapCenter([lat, lon]);
@@ -1571,38 +1675,33 @@ const MapView = () => {
             </div>
           )}
           {showFilterPanel && (
-            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
-              <FilterPanel
-                filters={filters}
-                onFilterChange={(newFilters) => {
-                  setFilters(newFilters);
-                  // Update URL parameters for share-ability
-                  const url = generateShareableURL({
-                    center: mapCenter,
-                    zoom: mapZoom,
-                    category: newFilters.category,
-                    status: newFilters.status,
-                    dateFrom: newFilters.dateFrom,
-                    dateTo: newFilters.dateTo,
-                    selectedReportId: selectedReport?.id,
-                    basemap,
-                  });
-                  window.history.replaceState({}, '', url);
-                  setShowFilterPanel(false);
-                }}
-                onClose={() => setShowFilterPanel(false)}
-              />
-            </div>
+            <FilterPanel
+              filters={filters}
+              onFilterChange={(newFilters) => {
+                setFilters(newFilters);
+                const url = generateShareableURL({
+                  center: mapCenter,
+                  zoom: mapZoom,
+                  category: newFilters.category,
+                  status: newFilters.status,
+                  dateFrom: newFilters.dateFrom,
+                  dateTo: newFilters.dateTo,
+                  selectedReportId: selectedReport?.id,
+                  basemap,
+                });
+                window.history.replaceState({}, '', url);
+                setShowFilterPanel(false);
+              }}
+              onClose={() => setShowFilterPanel(false)}
+            />
           )}
           {showOverlayPanel && (
-            <div className={`absolute z-[1200] ${isMobile ? 'top-20 left-2 right-2' : 'top-24 left-4'}`}>
-              <OverlayToggle
-                overlays={overlays}
-                onOverlayChange={setOverlays}
-                availableLayers={availableLayers.map(({ key, name }) => ({ key, name }))}
-                onClose={() => setShowOverlayPanel(false)}
-              />
-            </div>
+            <OverlayToggle
+              overlays={overlays}
+              onOverlayChange={setOverlays}
+              availableLayers={availableLayers.map(({ key, name }) => ({ key, name }))}
+              onClose={() => setShowOverlayPanel(false)}
+            />
           )}
 
           {/* Floating detail card (left-aligned on desktop) */}
@@ -1610,8 +1709,8 @@ const MapView = () => {
             <div
               className={`absolute z-[1300] ${
                 isMobile
-                  ? 'bottom-20 left-2 right-2'
-                  : 'top-28 left-4'
+                  ? 'bottom-32 left-2 right-2'
+                  : 'top-24 left-4'
               }`}
             >
               <div className="max-w-[42rem]">
@@ -1628,43 +1727,16 @@ const MapView = () => {
             onZoomToFeature={handleZoomToLayer}
           />
 
-          {/* SidePanel consolidates Search, Filter, and Overlay */}
-
-          {reports.length > 0 && (
-            <div className="absolute bottom-4 left-0 right-0 z-[1000] px-2 md:px-4 pointer-events-none">
-              {/* Add right padding on larger screens to avoid overlapping legend; center the slider */}
-              <div className="w-full" style={{ paddingRight: isMobile ? 0 : timelineRightOffset }}>
-                <div className="mx-auto max-w-xl pointer-events-auto">
-                  <TimeSlider
-                    minDate={minDate}
-                    maxDate={maxDate}
-                    currentDate={timeFilterDate}
-                    onDateChange={setTimeFilterDate}
-                    compact
-                    loop={false}
-                  />
-                  <div className="mt-1 text-center text-[11px] text-muted-foreground">
-                    Rentang: {format(startOfDay(subDays(timeFilterDate, 6)), 'dd MMM yy')} - {format(startOfDay(timeFilterDate), 'dd MMM yy')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Coordinates readout above scale and legend (bottom-right stack) */}
+          {/* Coordinates readout below scale at bottom-left */}
           {cursorLatLng && !selectedReport && (
-            <div
-              className="absolute right-4 z-[1300] bg-background/90 border rounded px-2 py-1 text-[11px] font-mono shadow pointer-events-none"
-              style={{ bottom: coordBottomOffset }}
-            >
-              {cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}
+            <div className="absolute bottom-4 left-4 z-[800] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/20 rounded-lg px-3 py-1.5 text-[10px] font-mono shadow-xl pointer-events-none">
+              <div className="text-[9px] uppercase tracking-wide text-muted-foreground mb-0.5">Koordinat</div>
+              <div className="font-semibold">{cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}</div>
             </div>
           )}
 
-          {/* Scale bar via native Leaflet control */}
-          {mapInstance && (
-            <ScaleBar map={mapInstance} />
-          )}
+          {/* Scale bar via custom control */}
+          {mapInstance && null}
 
           {/* Context menu */}
           {ctxOpen && ctxPoint && ctxLatLng && (
@@ -1710,26 +1782,33 @@ const MapView = () => {
             </div>
           )}
 
-          {loading && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-[1002]">
-              <Card className="p-6">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="font-medium">Memuat laporan...</span>
+          {/* Loading indicators - stacked vertically top-center */}
+          {(loading || adminLoading || Object.entries(dynamicLoading).some(([k, v]) => overlays.dynamic?.[k] && v)) && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1100] flex flex-col gap-2 pointer-events-none">
+              {loading && (
+                <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg px-4 py-2 shadow-xl">
+                  <div className="flex items-center gap-2 text-sm text-white">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-medium">Memuat laporan...</span>
+                  </div>
                 </div>
-              </Card>
-            </div>
-          )}
-          {/* Admin layer loader indicator */}
-          {adminLoading && overlays.adminBoundaries && (
-            <div className="absolute left-4 top-24 z-[1300]">
-              <Card className="px-3 py-2 text-sm">Memuat batas administratif.</Card>
-            </div>
-          )}
-          {/* Other layer loaders */}
-          {Object.entries(dynamicLoading).some(([k, v]) => (overlays.dynamic?.[k] && v)) && (
-            <div className="absolute left-4 top-36 z-[1300]">
-              <Card className="px-3 py-2 text-sm">Memuat layer geospasial.</Card>
+              )}
+              {adminLoading && overlays.adminBoundaries && (
+                <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg px-4 py-2 shadow-xl">
+                  <div className="flex items-center gap-2 text-sm text-white">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-medium">Memuat batas administratif...</span>
+                  </div>
+                </div>
+              )}
+              {Object.entries(dynamicLoading).some(([k, v]) => overlays.dynamic?.[k] && v) && (
+                <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg px-4 py-2 shadow-xl">
+                  <div className="flex items-center gap-2 text-sm text-white">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-medium">Memuat layer geospasial...</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1747,9 +1826,9 @@ const MapView = () => {
 export default MapView;
 
 // Small helper component to add Leaflet scale control
-const ScaleBar = ({ map }: { map: L.Map }) => {
+const ScaleBar = ({ map, position = 'bottomright' }: { map: L.Map; position?: 'bottomleft' | 'bottomright' }) => {
   useEffect(() => {
-    const control = L.control.scale({ metric: true, imperial: false, position: 'bottomright' });
+    const control = L.control.scale({ metric: true, imperial: false, position });
     control.addTo(map);
     return () => {
       // Leaflet Map has removeControl in runtime; TS types may not expose it on our import.
@@ -1759,7 +1838,7 @@ const ScaleBar = ({ map }: { map: L.Map }) => {
         m.removeControl(control);
       }
     };
-  }, [map]);
+  }, [map, position]);
   return null;
 };
 
