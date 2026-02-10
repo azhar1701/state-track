@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useLayerManager, type LayerData } from '@/hooks/useLayerManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,20 +58,9 @@ function InlineEditableSelect({ value, options, onSave }: { value: string; optio
   );
 }
 
-interface GeoLayerRow {
-  id: string;
-  key: string;
-  name: string;
-  geometry_type: string | null;
-  created_at: string;
-}
-
-// Old inline importers removed in favor of UnifiedImporter
-
 export default function GeoDataManager() {
   const { user, isAdmin } = useAuth();
-  const [rows, setRows] = useState<GeoLayerRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { layers, loading, fetchLayers, deleteLayer, updateLayer } = useLayerManager();
   const [keyVal, setKeyVal] = useState('admin_boundaries');
   const [name, setName] = useState('Admin Boundaries');
   const [layerSearch, setLayerSearch] = useState('');
@@ -211,55 +202,31 @@ export default function GeoDataManager() {
     }
   }, []);
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('geo_layers')
-      .select('id,key,name,geometry_type,created_at')
-      .order('created_at', { ascending: false });
-    setLoading(false);
-    if (!error) {
-      let list = (data ?? []) as GeoLayerRow[];
-      // If admin boundaries layer is not listed, try fetching it explicitly (key-based fetch)
-      const hasAdmin = list.some((r) => r.key === 'admin_boundaries');
-      if (!hasAdmin) {
-        try {
-          const res = await supabase
-            .from('geo_layers')
-            .select('id,key,name,geometry_type,created_at')
-            .eq('key', 'admin_boundaries')
-            .maybeSingle();
-          if (!res.error && res.data) {
-            list = [res.data as GeoLayerRow, ...list];
-          } else {
-            setMissingAdminLayer(true);
-          }
-        } catch {
-          setMissingAdminLayer(true);
-        }
-      } else {
-        setMissingAdminLayer(false);
-      }
-      setRows(list);
+  useEffect(() => {
+    if (user) {
+      void fetchLayers();
     }
-  }, [user]);
+  }, [user, fetchLayers]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const hasAdmin = layers.some((r) => r.key === 'admin_boundaries');
+    setMissingAdminLayer(!hasAdmin && layers.length > 0);
+  }, [layers]);
 
-  // Using UnifiedImporter callbacks; popup configurator removed
+  const handleDelete = async (row: LayerData) => {
+    await deleteLayer(row);
+  };
 
-  const delById = async (row: GeoLayerRow) => {
-    const { error } = await supabase.from('geo_layers').delete().eq('id', row.id);
-    if (error) {
-      const byKey = await supabase.from('geo_layers').delete().eq('key', row.key);
-      if (byKey.error) {
-        toast.error('Gagal menghapus layer');
-        return;
-      }
-    }
-    toast.success('Layer dihapus');
-    void load();
+  const handleUpdateName = async (row: LayerData, newName: string) => {
+    if (!newName || newName === row.name) return;
+    await updateLayer(row.id || '', { name: newName });
+  };
+
+  const handleUpdateGeometry = async (row: LayerData, newType: string) => {
+    if (newType === row.geometry_type) return;
+    await updateLayer(row.id || '', { 
+      geometry_type: (newType || null) as LayerData['geometry_type']
+    });
   };
 
   const loadUsers = useCallback(async () => {
@@ -514,7 +481,7 @@ export default function GeoDataManager() {
                 toast.success('Layer disimpan');
                 setKeyVal(key);
                 setName(name);
-                void load();
+                void fetchLayers();
               }
             }}
           />
@@ -557,7 +524,7 @@ export default function GeoDataManager() {
                     if (error) return toast.error('Gagal menyimpan layer batas administrasi');
                     toast.success('Layer batas administrasi dipulihkan');
                     setMissingAdminLayer(false);
-                    void load();
+                    void fetchLayers();
                   } catch (e) {
                     console.warn(e);
                     toast.error('Gagal memulihkan layer batas administrasi');
@@ -575,7 +542,7 @@ export default function GeoDataManager() {
                 <SelectTrigger className="w-[200px]"><SelectValue placeholder="Urutkan" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                  <SelectItem value="name_asc">Nama (AÔåÆZ)</SelectItem>
+                  <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -592,7 +559,7 @@ export default function GeoDataManager() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows
+                {layers
                   .filter((r) => r.key.toLowerCase().includes(layerSearch.toLowerCase()) || r.name.toLowerCase().includes(layerSearch.toLowerCase()))
                   .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .map((r) => (
@@ -601,24 +568,14 @@ export default function GeoDataManager() {
                     <TableCell>
                       <InlineEditableText
                         value={r.name}
-                        onSave={async (val) => {
-                          if (!val || val === r.name) return;
-                          const { error } = await supabase.from('geo_layers').update({ name: val }).eq('id', r.id);
-                          if (!error) { toast.success('Nama layer diperbarui'); void load(); }
-                          else toast.error('Gagal memperbarui nama layer');
-                        }}
+                        onSave={(val) => handleUpdateName(r, val)}
                       />
                     </TableCell>
                     <TableCell>
                       <InlineEditableSelect
                         value={r.geometry_type ?? ''}
                         options={['Point','LineString','Polygon','MultiPoint','MultiLineString','MultiPolygon','GeometryCollection']}
-                        onSave={async (val) => {
-                          if (val === r.geometry_type) return;
-                          const { error } = await supabase.from('geo_layers').update({ geometry_type: val || null }).eq('id', r.id);
-                          if (!error) { toast.success('Tipe geometri diperbarui'); void load(); }
-                          else toast.error('Gagal memperbarui tipe geometri');
-                        }}
+                        onSave={(val) => handleUpdateGeometry(r, val)}
                       />
                     </TableCell>
                     <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
@@ -651,11 +608,14 @@ export default function GeoDataManager() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus layer ÔÇ£{r.name}ÔÇØ?</AlertDialogTitle>
+                                <AlertDialogTitle>Hapus layer "{r.name}"?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tindakan ini tidak dapat dibatalkan. Layer akan dihapus dari database dan storage.
+                                </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => void delById(r)}>Hapus</AlertDialogAction>
+                                <AlertDialogAction onClick={() => void handleDelete(r)}>Hapus</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -663,9 +623,9 @@ export default function GeoDataManager() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {rows.length === 0 && (
+                {layers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{loading ? 'MemuatÔÇª' : 'Belum ada layer'}</TableCell>
+                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{loading ? 'Memuat...' : 'Belum ada layer'}</TableCell>
                   </TableRow>
                 )}
               </TableBody>

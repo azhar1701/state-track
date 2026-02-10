@@ -35,10 +35,20 @@ export const sanitizeHTML = (dirty: string, options?: {
 };
 
 /**
- * Sanitize text content (strip all HTML)
+ * Sanitize text content (strip all HTML and fix encoding issues)
  */
 export const sanitizeText = (dirty: string): string => {
-  return DOMPurify.sanitize(dirty, {
+  if (!dirty) return '';
+  
+  // Fix smart quotes and encoding issues first
+  const fixed = dirty
+    .replace(/[""]/g, '"')  // Curly double quotes → straight
+    .replace(/['']/g, "'")  // Curly single quotes → straight
+    .replace(/…/g, '...')   // Ellipsis
+    .replace(/—/g, '-')     // Em dash
+    .replace(/–/g, '-');    // En dash
+  
+  return DOMPurify.sanitize(fixed, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],
   });

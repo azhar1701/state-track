@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/integrations/supabase/client';
@@ -370,13 +370,20 @@ const MapView = () => {
   // Dynamic overlays from geo_layers
   const [availableLayers, setAvailableLayers] = useState<Array<{ key: string; name: string; geometry_type: string | null }>>([]);
   const [dynamicData, setDynamicData] = useState<Record<string, FeatureCollection<Geometry> | null>>({});
-  type LayerStyle = {
-    point?: { color?: string; fillColor?: string; fillOpacity?: number; radius?: number; weight?: number };
-    line?: { color?: string; weight?: number; opacity?: number; dashArray?: string };
-    polygon?: { color?: string; weight?: number; opacity?: number; fillColor?: string; fillOpacity?: number };
+  type LayerStyleConfig = {
+    color?: string;
+    weight?: number;
+    opacity?: number;
+    fillColor?: string;
+    fillOpacity?: number;
+    dashArray?: string;
+    radius?: number;
   };
-  const [dynamicStyle, setDynamicStyle] = useState<Record<string, LayerStyle>>({});
+  const [dynamicStyle, setDynamicStyle] = useState<Record<string, LayerStyleConfig>>({});
   const [dynamicLoading, setDynamicLoading] = useState<Record<string, boolean>>({});
+  const processedLayersRef = useRef<Set<string>>(new Set());
+  const layerErrorsRef = useRef<Set<string>>(new Set());
+  const toastIdsRef = useRef<Map<string, string | number>>(new Map());
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
@@ -417,79 +424,50 @@ const MapView = () => {
   // Build dynamic legend items based on active overlays and layer types
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
     const items: LegendOverlayItem[] = [];
+    const seenLabels = new Set<string>();
+    
     if (overlays.adminBoundaries) {
-      items.push({ type: 'line', label: 'Batas Administratif', color: '#6b7280', dashArray: '4 3' });
+      const label = 'Batas Administratif';
+      if (!seenLabels.has(label)) {
+        items.push({ type: 'line', label, color: '#6b7280', dashArray: '4 3' });
+        seenLabels.add(label);
+      }
     }
     const dyn = overlays.dynamic || {};
     const activeDyn = Object.entries(dyn).filter(([, on]) => on).map(([k]) => k);
     const getName = (key: string) => availableLayers.find((l) => l.key === key)?.name || key;
+    
     for (const key of activeDyn) {
       const lower = key.toLowerCase();
       if (lower === 'assets') continue;
-      const style = dynamicStyle[key];
-      const pointColor = style?.point?.fillColor ?? style?.point?.color;
-      const lineColor = style?.line?.color;
-      const lineDash = style?.line?.dashArray;
-      const polygonStroke = style?.polygon?.color ?? lineColor;
-      const polygonFill = style?.polygon?.fillColor;
-      // Heuristic based on key
-      if (lower.includes('sungai') || lower.includes('river')) {
-        const defaultColor = '#38bdf8';
-        items.push({ type: 'line', label: 'Sungai', color: lineColor ?? defaultColor, dashArray: lineDash });
-        continue;
-      }
-      if (lower.includes('irigasi') || lower.includes('irrigation')) {
-        const defaultColor = '#0ea5e9';
-        items.push({ type: 'line', label: 'Jaringan Irigasi', color: lineColor ?? defaultColor, dashArray: lineDash });
-        continue;
-      }
-      if (lower.includes('banjir') || lower.includes('flood')) {
-        const defaultStroke = '#ef4444';
-        const defaultFill = '#f87171';
-        items.push({
-          type: 'fill',
-          label: 'Zona Rawan Banjir',
-          color: polygonStroke ?? defaultStroke,
-          fillColor: polygonFill ?? defaultFill,
-        });
-        continue;
-      }
-      if (lower.includes('sawah') || lower.includes('paddy')) {
-        const defaultStroke = '#16a34a';
-        const defaultFill = '#86efac';
-        items.push({
-          type: 'fill',
-          label: 'Sawah',
-          color: polygonStroke ?? defaultStroke,
-          fillColor: polygonFill ?? defaultFill,
-        });
-        continue;
-      }
-      // ...existing code...
-      // Fall back to geometry type from DB or data sample
+      
+      // Use style_config from database
+      const config = dynamicStyle[key] || {};
+      const strokeColor = config.color || '#3b82f6';
+      const fillColor = config.fillColor || config.color || '#3b82f6';
+      const dashArray = config.dashArray;
+      
+      // Determine geometry type
       const gt = availableLayers.find((l) => l.key === key)?.geometry_type
         || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
         || '';
+      
       if (/LineString/i.test(String(gt))) {
-        const defaultColor = '#334155';
-        items.push({ type: 'line', label: getName(key), color: lineColor ?? defaultColor, dashArray: lineDash });
+        items.push({ type: 'line', label: getName(key), color: strokeColor, dashArray });
       } else if (/Point/i.test(String(gt))) {
-        // Jangan tampilkan label 'Aset' untuk geometry point dari key assets
         if (getName(key).toLowerCase() === 'aset' || lower === 'assets') continue;
-        const defaultColor = '#16a34a';
-        items.push({ type: 'point', label: getName(key), color: pointColor ?? defaultColor });
+        items.push({ type: 'point', label: getName(key), color: fillColor });
       } else {
-        const defaultStroke = '#475569';
-        const defaultFill = '#cbd5e1';
+        // Polygon/MultiPolygon
         items.push({
           type: 'fill',
           label: getName(key),
-          color: polygonStroke ?? defaultStroke,
-          fillColor: polygonFill ?? defaultFill,
+          color: strokeColor,
+          fillColor: fillColor,
         });
       }
     }
-  return items;
+    return items;
   }, [overlays.adminBoundaries, overlays.dynamic, availableLayers, dynamicData, dynamicStyle]);
 
   const maxDate = useMemo(() => {
@@ -497,6 +475,41 @@ const MapView = () => {
     const dates = reports.map((r) => new Date(r.created_at));
     return startOfDay(new Date(Math.max(...dates.map((d) => d.getTime()))));
   }, [reports]);
+
+  // Listen for layer deletion/update events from GeoDataManager
+  useEffect(() => {
+    const handleLayerDeleted = (e: Event) => {
+      const { layerId, layerKey } = (e as CustomEvent).detail;
+      console.log('[MapView] Layer deleted:', layerKey);
+      
+      setDynamicData(prev => {
+        const next = { ...prev };
+        delete next[layerKey];
+        return next;
+      });
+      
+      setOverlays(prev => {
+        const nextDynamic = { ...prev.dynamic };
+        delete nextDynamic[layerKey];
+        return { ...prev, dynamic: nextDynamic };
+      });
+      
+      processedLayersRef.current.delete(layerKey);
+      layerErrorsRef.current.delete(layerKey);
+    };
+
+    const handleLayerUpdated = () => {
+      sessionStorage.removeItem('map:availableLayers');
+    };
+
+    window.addEventListener('layer-deleted', handleLayerDeleted);
+    window.addEventListener('layer-updated', handleLayerUpdated);
+
+    return () => {
+      window.removeEventListener('layer-deleted', handleLayerDeleted);
+      window.removeEventListener('layer-updated', handleLayerUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     fetchReports();
@@ -768,13 +781,24 @@ const MapView = () => {
       const keysToLoad = Object.entries(dyn)
         .filter(([, on]) => on)
         .map(([k]) => k);
+      
       for (const key of keysToLoad) {
-        if (dynamicData[key] || dynamicLoading[key]) continue;
+        // Skip if already loaded, loading, or previously errored
+        if (dynamicData[key] || dynamicLoading[key] || layerErrorsRef.current.has(key)) continue;
+        
+        // Skip if already processed in this session
+        if (processedLayersRef.current.has(key)) continue;
+        
+        processedLayersRef.current.add(key);
         setDynamicLoading((s) => ({ ...s, [key]: true }));
+        
         try {
-          const { data: gl, error } = await supabase
+          // Cache busting: append timestamp to prevent stale 404s
+          const timestamp = Date.now();
+          // Fetch full layer with style_config
+          const { data: fullLayer, error: layerError } = await supabase
             .from('geo_layers')
-            .select('data')
+            .select('data, style_config')
             .eq('key', key)
             .limit(1)
             .maybeSingle();
@@ -783,8 +807,13 @@ const MapView = () => {
           let srcCrs: string | undefined = undefined;
           let raw: Record<string, unknown> | null = null;
 
-          if (!error && gl?.data) {
-            raw = gl.data as unknown as Record<string, unknown>;
+          if (!layerError && fullLayer) {
+            // Store style_config from database
+            if (fullLayer.style_config && typeof fullLayer.style_config === 'object') {
+              setDynamicStyle((s) => ({ ...s, [key]: fullLayer.style_config as LayerStyleConfig }));
+            }
+
+            raw = fullLayer.data as unknown as Record<string, unknown>;
             if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
               const wrapper = raw as { featureCollection?: unknown; crs?: string };
               if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
@@ -800,15 +829,6 @@ const MapView = () => {
                 const found = vals.find((v) => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection');
                 if (found) fc = found as FeatureCollection<Geometry>;
               }
-            }
-
-            if (raw) {
-              try {
-                const maybeStyle = (raw as { style?: unknown })?.style;
-                if (maybeStyle && typeof maybeStyle === 'object') {
-                  setDynamicStyle((s) => ({ ...s, [key]: maybeStyle as Record<string, unknown> as LayerStyle }));
-                }
-              } catch { /* ignore */ }
             }
           }
 
@@ -936,20 +956,48 @@ const MapView = () => {
               }
               setDynamicData((s) => ({ ...s, [key]: resultFC }));
             } else {
+              // Mark as errored to prevent retry loops
+              layerErrorsRef.current.add(key);
+              processedLayersRef.current.delete(key);
+              
+              // Show ONE toast with unique ID
+              const toastId = `layer-error-${key}`;
               toast.error(`Gagal memuat layer: ${key}`, {
+                id: toastId,
                 description: key === 'assets'
-                  ? (!error && !gl?.data
+                  ? (!layerError && !fullLayer?.data
                     ? 'Tidak ditemukan data aset. Tambahkan aset dari GeoData Manager terlebih dahulu.'
                     : 'Data aset belum tersedia atau koordinat aset belum lengkap.')
                   : 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.',
             });
+              
+              // Auto-remove from overlays to prevent re-render attempts
+              setOverlays(prev => {
+                const nextDynamic = { ...prev.dynamic };
+                delete nextDynamic[key];
+                return { ...prev, dynamic: nextDynamic };
+              });
           }
         } catch (e) {
           console.warn('Failed to load layer', key, sanitizeForLog(e));
+          
+          // Mark as errored
+          layerErrorsRef.current.add(key);
+          processedLayersRef.current.delete(key);
+          
+          const toastId = `layer-error-${key}`;
           toast.error(`Gagal memuat layer: ${key}`, {
+            id: toastId,
             description: key === 'assets'
               ? 'Terjadi kesalahan saat mengambil data aset.'
               : undefined,
+          });
+          
+          // Auto-remove from overlays
+          setOverlays(prev => {
+            const nextDynamic = { ...prev.dynamic };
+            delete nextDynamic[key];
+            return { ...prev, dynamic: nextDynamic };
           });
         } finally {
           setDynamicLoading((s) => ({ ...s, [key]: false }));
@@ -1374,47 +1422,19 @@ const MapView = () => {
                     data={dynamicData[key]!}
                     style={(feat) => {
                       const t = feat?.geometry?.type;
-                      const keyLower = key.toLowerCase();
-                      const styLine = dynamicStyle[key]?.line;
-                      const styPoly = dynamicStyle[key]?.polygon;
+                      const config = dynamicStyle[key] || {};
                       
-                      // Sungai - PRIORITAS PERTAMA (biru langit)
-                      if (keyLower.includes('sungai') || keyLower.includes('river')) {
-                        if (t === 'LineString' || t === 'MultiLineString') {
-                          return { color: styLine?.color ?? '#38bdf8', weight: styLine?.weight ?? 2.5, opacity: styLine?.opacity ?? 0.95, dashArray: styLine?.dashArray };
-                        }
-                        return { color: styPoly?.color ?? '#38bdf8', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.85, fillColor: styPoly?.fillColor ?? '#7dd3fc', fillOpacity: styPoly?.fillOpacity ?? 0.2 };
-                      }
+                      // PRIORITY: Use database style_config first
+                      const baseStyle = {
+                        color: config.color || '#3b82f6',
+                        weight: config.weight || 2,
+                        opacity: config.opacity || 0.8,
+                        fillColor: config.fillColor || config.color || '#3b82f6',
+                        fillOpacity: config.fillOpacity ?? 0.3,
+                        dashArray: config.dashArray,
+                      };
                       
-                      // Irigasi - biru cerah
-                      if (keyLower.includes('irigasi') || keyLower.includes('irrigation')) {
-                        if (t === 'LineString' || t === 'MultiLineString') {
-                          return { color: styLine?.color ?? '#0ea5e9', weight: styLine?.weight ?? 3, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
-                        }
-                        return { color: styPoly?.color ?? '#0ea5e9', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#38bdf8', fillOpacity: styPoly?.fillOpacity ?? 0.15 };
-                      }
-                      
-                      // Banjir - merah
-                      if (keyLower.includes('banjir') || keyLower.includes('flood')) {
-                        return { color: styPoly?.color ?? '#ef4444', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#f87171', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
-                      }
-                      
-                      // Sawah - hijau
-                      if (keyLower.includes('sawah') || keyLower.includes('paddy')) {
-                        if (t === 'LineString' || t === 'MultiLineString') {
-                          return { color: styLine?.color ?? '#16a34a', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
-                        }
-                        return { color: styPoly?.color ?? '#16a34a', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.9, fillColor: styPoly?.fillColor ?? '#86efac', fillOpacity: styPoly?.fillOpacity ?? 0.3 };
-                      }
-                      
-                      // Default berdasarkan geometri
-                      if (t === 'LineString' || t === 'MultiLineString') {
-                        return { color: styLine?.color ?? '#334155', weight: styLine?.weight ?? 2, opacity: styLine?.opacity ?? 0.9, dashArray: styLine?.dashArray };
-                      }
-                      if (t === 'Point' || t === 'MultiPoint') {
-                        return { color: dynamicStyle[key]?.point?.color ?? '#16a34a', weight: dynamicStyle[key]?.point?.weight ?? 2, opacity: 0.9 };
-                      }
-                      return { color: styPoly?.color ?? '#475569', weight: styPoly?.weight ?? 1.5, opacity: styPoly?.opacity ?? 0.8, fillColor: styPoly?.fillColor ?? '#cbd5e1', fillOpacity: styPoly?.fillOpacity ?? 0.25 };
+                      return baseStyle;
                     }}
                     pointToLayer={(feature, latlng) => {
                       if (key === 'assets') {
@@ -1423,13 +1443,13 @@ const MapView = () => {
                         const cat = (p?.category as string) || '';
                         return L.marker(latlng, { icon: createAssetIcon((['aktif', 'nonaktif', 'rusak'].includes(status) ? (status as 'aktif' | 'nonaktif' | 'rusak') : 'aktif'), cat) });
                       }
-                      const sty = dynamicStyle[key]?.point;
+                      const config = dynamicStyle[key] || {};
                       return L.circleMarker(latlng, {
-                        radius: sty?.radius ?? 5,
-                        color: sty?.color ?? '#16a34a',
-                        weight: sty?.weight ?? 1,
-                        fillColor: sty?.fillColor ?? '#16a34a',
-                        fillOpacity: sty?.fillOpacity ?? 0.7,
+                        radius: config.radius ?? 8,
+                        color: config.color ?? '#3b82f6',
+                        weight: config.weight ?? 2,
+                        fillColor: config.fillColor || config.color || '#3b82f6',
+                        fillOpacity: config.fillOpacity ?? 0.7,
                       });
                     }}
                     onEachFeature={(feature, layer) => {

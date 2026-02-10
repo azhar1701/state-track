@@ -1,0 +1,90 @@
+// ============================================
+// COPY-PASTE FIX: Add to MapView.tsx
+// ============================================
+
+// 1. ADD THESE HELPERS AT TOP (after imports)
+const sanitizeUrl = (url: string) => url.replace(/['"""]/g, '').trim();
+
+const getDefaultStyle = (key: string) => ({
+  sawah: { color: '#16a34a', weight: 1.5, fillColor: '#86efac', fillOpacity: 0.4 },
+  admin_boundaries: { color: '#6b7280', weight: 1, fillOpacity: 0, dashArray: '4 3' },
+}[key] || { color: '#3b82f6', weight: 2, fillColor: '#3b82f6', fillOpacity: 0.3 });
+
+// 2. WRAP LAYER FETCH IN TRY-CATCH (Find the fetch block and wrap it)
+// FIND THIS:
+const { data: gl, error } = await supabase
+  .from('geo_layers')
+  .select('data')
+  .eq('key', key)
+  .maybeSingle();
+
+// REPLACE WITH:
+try {
+  const { data: gl, error } = await supabase
+    .from('geo_layers')
+    .select('data')
+    .eq('key', key)
+    .maybeSingle();
+
+  if (error) {
+    console.debug(`Layer ${key} error:`, error);
+    layerErrorsRef.current.add(key);
+    continue; // or return null if in function
+  }
+
+  // ... rest of your logic
+} catch (err) {
+  console.debug(`Layer ${key} failed:`, err);
+  layerErrorsRef.current.add(key);
+  continue; // or return null
+}
+
+// 3. FIX ADMIN BOUNDARIES RENDERING (Find admin boundaries GeoJSON)
+// FIND THIS:
+{overlays.adminBoundaries && adminGeoJson && (
+  <RLGeoJSON
+    key="admin-boundaries"
+    data={adminGeoJson}
+    style={() => ({
+      color: '#6b7280',
+      weight: 1,
+      opacity: 0.8,
+      dashArray: '4 3',
+      fillOpacity: 0,
+    })}
+
+// REPLACE WITH:
+{overlays.adminBoundaries && adminGeoJson && (
+  <Pane name="admin-boundaries" style={{ zIndex: 350 }}>
+    <RLGeoJSON
+      key="admin-boundaries"
+      data={adminGeoJson}
+      style={() => getDefaultStyle('admin_boundaries')}
+
+// 4. FIX DYNAMIC LAYERS RENDERING (Find dynamic layer map)
+// FIND THIS:
+{Object.entries(overlays.dynamic || {}).map(([key, on]) => (
+  on && dynamicData[key] ? (
+    <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
+
+// REPLACE WITH:
+{Object.entries(overlays.dynamic || {}).map(([key, on]) => (
+  on && dynamicData[key] ? (
+    <Pane 
+      key={`pane-${key}`} 
+      name={`dyn-${key}`} 
+      style={{ zIndex: key === 'sawah' ? 400 : 365 }}
+    >
+      <RLGeoJSON
+        key={`geojson-${key}`}
+        data={dynamicData[key]!}
+        style={(feat) => {
+          const customStyle = dynamicStyle[key];
+          return {
+            ...getDefaultStyle(key),
+            ...customStyle?.polygon,
+            ...customStyle?.line,
+          };
+        }}
+
+// 5. DONE! Test by toggling Sawah layer
