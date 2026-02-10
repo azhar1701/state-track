@@ -22,7 +22,7 @@ export default function BottomCTA() {
               </Button>
             </Link>
             <Link to="/map">
-              <Button size="lg" variant="outline" className="gap-2 border-2 border-white text-white hover:bg-white/10 rounded-xl py-6 px-8 text-base font-semibold hover:scale-105 transition-all">
+              <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-white text-blue-600 hover:bg-white/90 rounded-xl py-6 px-8 text-base font-semibold hover:scale-105 transition-all">
                 <MapIcon className="w-5 h-5" /> Lihat Peta
               </Button>
             </Link>
