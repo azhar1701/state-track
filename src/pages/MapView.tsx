@@ -260,7 +260,7 @@ const MapView = () => {
     const counts: Record<string, number> = {};
     for (const report of reports) {
       // Coba berbagai field lokasi yang mungkin ada
-      const loc = report.location_name || report.kecamatan || report.desa || 'Lokasi Lain';
+      const loc = report.location_name || (report as unknown as { kecamatan?: string; desa?: string }).kecamatan || (report as unknown as { kecamatan?: string; desa?: string }).desa || 'Lokasi Lain';
       if (loc && loc !== 'Lokasi Lain') {
         counts[loc] = (counts[loc] || 0) + 1;
       }
@@ -616,7 +616,7 @@ const MapView = () => {
         </Pane>
       );
     });
-  }, [overlays.dynamic, dynamicData, dynamicStyle, registerLayer, unregisterLayer, setSelectedLayer]);
+  }, [overlays.dynamic, dynamicData, dynamicStyle, unregisterLayer, setSelectedLayer, availableLayers]);
 
   // Build dynamic legend items based on active overlays and layer types
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
@@ -725,7 +725,6 @@ const MapView = () => {
     return () => {
       void supabase.removeChannel(channel);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const loadAdminBoundaries = async () => {
@@ -1041,7 +1040,10 @@ const MapView = () => {
                 const next = { ...s, [key]: styleConfig };
                 try {
                   sessionStorage.setItem('map:layerStyles', JSON.stringify(next));
-                } catch {}
+                } catch (error) {
+                  // Ignore session storage errors
+                  console.debug('Session storage error:', error);
+                }
                 return next;
               });
               // Wait for state update before loading data

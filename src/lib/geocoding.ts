@@ -31,6 +31,20 @@ export interface GeocodingResult {
   importance?: number;
 }
 
+interface PhotonFeature {
+  geometry: { coordinates: [number, number] };
+  properties: {
+    name?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    village?: string;
+    town?: string;
+    type?: string;
+  };
+}
+
 const fetchPhoton = async (query: string): Promise<GeocodingResult[]> => {
   try {
     const response = await fetch(
@@ -42,8 +56,8 @@ const fetchPhoton = async (query: string): Promise<GeocodingResult[]> => {
       { headers: { 'Accept': 'application/json' } }
     );
     if (!response.ok) return [];
-    const data = await response.json();
-    return (data.features || []).map((f: any) => ({
+    const data = await response.json() as { features: PhotonFeature[] };
+    return (data.features || []).map((f: PhotonFeature) => ({
       lat: f.geometry.coordinates[1],
       lon: f.geometry.coordinates[0],
       display_name: f.properties.name || f.properties.street || '',
@@ -57,7 +71,8 @@ const fetchPhoton = async (query: string): Promise<GeocodingResult[]> => {
       },
       type: f.properties.type,
     })).filter((r: GeocodingResult) => Number.isFinite(r.lat) && Number.isFinite(r.lon));
-  } catch {
+  } catch (error) {
+    console.debug('Photon geocoding error:', error);
     return [];
   }
 };
@@ -93,7 +108,8 @@ const fetchNominatim = async (query: string): Promise<GeocodingResult[]> => {
         importance: r.importance,
       }))
       .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lon));
-  } catch {
+  } catch (error) {
+    console.debug('Nominatim geocoding error:', error);
     return [];
   }
 };
@@ -107,7 +123,10 @@ export const geocodeAddress = async (query: string): Promise<GeocodingResult[]> 
       const { t, v } = JSON.parse(cached) as { t: number; v: GeocodingResult[] };
       if (now - t < 7 * 24 * 60 * 60 * 1000) return v;
     }
-  } catch {}
+  } catch (error) {
+    // Ignore cache read errors
+    console.debug('Cache read error:', error);
+  }
 
   // Fetch from both providers in parallel
   const [photonResults, nominatimResults] = await Promise.all([
@@ -134,7 +153,10 @@ export const geocodeAddress = async (query: string): Promise<GeocodingResult[]> 
     .sort((a, b) => (b.importance || 0) - (a.importance || 0))
     .slice(0, 10);
 
-  try { localStorage.setItem(key, JSON.stringify({ t: now, v: results })); } catch {}
+  try { localStorage.setItem(key, JSON.stringify({ t: now, v: results })); } catch (error) {
+    // Ignore cache write errors
+    console.debug('Cache write error:', error);
+  }
   return results;
 };
 
@@ -147,7 +169,10 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<Geocodin
       const { t, v } = JSON.parse(cached) as { t: number; v: GeocodingResult };
       if (now - t < 14 * 24 * 60 * 60 * 1000) return v;
     }
-  } catch {}
+  } catch (error) {
+    // Ignore cache read errors
+    console.debug('Cache read error:', error);
+  }
   try {
     const response = await fetch(
       `${NOMINATIM_BASE_URL}/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&accept-language=id`,
@@ -169,7 +194,10 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<Geocodin
       display_name: raw.display_name,
       address: raw.address,
     };
-    try { localStorage.setItem(key, JSON.stringify({ t: now, v: result })); } catch {}
+    try { localStorage.setItem(key, JSON.stringify({ t: now, v: result })); } catch (error) {
+      // Ignore cache write errors
+      console.debug('Cache write error:', error);
+    }
     return result;
   } catch (error) {
     console.error('Reverse geocoding error:', error);

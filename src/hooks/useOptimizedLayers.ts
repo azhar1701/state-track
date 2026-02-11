@@ -52,7 +52,7 @@ export const useOptimizedLayers = (options: UseOptimizedLayersOptions = {}) => {
             srcCrs = wrapper.crs;
           }
         } else if ((raw as { type?: string }).type === 'FeatureCollection') {
-          fc = raw as FeatureCollection<Geometry>;
+          fc = raw as unknown as FeatureCollection<Geometry>;
         }
 
         if (!fc) return null;
@@ -70,14 +70,18 @@ export const useOptimizedLayers = (options: UseOptimizedLayersOptions = {}) => {
             return [lon, lat];
           };
 
-          const reprojectGeometry = (geom: any): any => {
+          const reprojectGeometry = (geom: Geometry | null): Geometry | null => {
             if (!geom) return geom;
             const mapCoords = (arr: unknown): unknown => {
               if (!Array.isArray(arr)) return arr;
               if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
               return (arr as unknown[]).map((a) => mapCoords(a));
             };
-            return { ...geom, coordinates: mapCoords(geom.coordinates) };
+            const geomWithCoords = geom as { coordinates?: unknown; type?: string };
+            return {
+              ...geom,
+              coordinates: mapCoords(geomWithCoords.coordinates),
+            } as Geometry;
           };
 
           fc = {
