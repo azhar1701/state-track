@@ -47,6 +47,8 @@ interface Report {
   photo_urls?: string[] | null;
   created_at: string;
   user_id: string;
+  kecamatan?: string | null;
+  desa?: string | null;
 }
 
 type AssetRow = {

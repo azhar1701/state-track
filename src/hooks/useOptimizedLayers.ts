@@ -52,7 +52,7 @@ export const useOptimizedLayers = (options: UseOptimizedLayersOptions = {}) => {
             srcCrs = wrapper.crs;
           }
         } else if ((raw as { type?: string }).type === 'FeatureCollection') {
-          fc = raw as FeatureCollection<Geometry>;
+          fc = raw as unknown as FeatureCollection<Geometry>;
         }
 
         if (!fc) return null;

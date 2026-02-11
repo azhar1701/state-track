@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Pane, GeoJSON } from 'react-leaflet';
+import { supabase } from '@/integrations/supabase/client';
 import type { FeatureCollection, Geometry } from 'geojson';
 
 // 1. URL Sanitizer

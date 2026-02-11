@@ -42,8 +42,9 @@ export const useLayerManager = () => {
 
       if (error) throw error;
       
+      const rows = (data || []) as any[];
       const uniqueLayers = Array.from(
-        new Map((data || []).map(l => [l.id, { ...l, data: null } as LayerData])).values()
+        new Map(rows.map((l) => [l.id, { ...l, data: null } as LayerData])).values()
       );
       
       setLayers(uniqueLayers);

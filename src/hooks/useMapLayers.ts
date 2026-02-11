@@ -53,7 +53,7 @@ export const useMapLayers = () => {
   const queryClient = useQueryClient();
 
   // Fetch all layers
-  const { data: layers = [], isLoading, error } = useQuery({
+  const { data: layers = [], isLoading, error } = useQuery<GeoLayer[]>({
     queryKey: ['map-layers'],
     queryFn: async () => {
       const { data, error } = await supabase
