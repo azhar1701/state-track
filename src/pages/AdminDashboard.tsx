@@ -1494,10 +1494,10 @@ const AdminDashboard = () => {
 
         {/* Detail Drawer */}
         <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-          <DrawerContent className="flex flex-col max-h-[85vh] md:max-h-[80vh] overflow-hidden">
+          <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden">
             <DrawerErrorBoundary>
             <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
-              <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex-1 overflow-hidden">
+              <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex flex-col flex-1 overflow-hidden">
                 <AdminDetail
                   selectedReport={selectedReport}
                   fullReport={fullReport}
@@ -1708,8 +1708,8 @@ const AdminDetail = lazy(async () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
       return (
-          <>
-            <DrawerHeader className="text-left pb-3 border-b">
+          <div className="flex flex-col h-full overflow-hidden">
+            <DrawerHeader className="text-left pb-3 border-b flex-shrink-0">
               <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
               <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
             </DrawerHeader>
@@ -1717,8 +1717,6 @@ const AdminDetail = lazy(async () => {
             <div
               className="flex-1 overflow-y-auto px-6 py-4"
               style={{
-                maxHeight: '60vh',
-                minHeight: '320px',
                 overscrollBehavior: 'contain',
                 scrollbarColor: '#cbd5e1 #f1f5f9',
                 scrollbarWidth: 'thin',
@@ -1931,8 +1929,8 @@ const AdminDetail = lazy(async () => {
             ) : null;
           })()}
 
-          <DrawerFooter className="py-3 px-6 border-t">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
+          <DrawerFooter className="py-3 px-6 border-t flex-shrink-0 gap-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap w-full">
               <Button
                 size="sm"
                 variant="outline"
@@ -1959,8 +1957,8 @@ const AdminDetail = lazy(async () => {
               </div>
             </div>
           </DrawerFooter>
-        </>
-      );
-    },
+          </div>
+        );
+    }
   };
 });

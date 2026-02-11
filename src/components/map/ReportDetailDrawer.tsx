@@ -15,6 +15,12 @@ export interface Report {
   photo_urls?: string[] | null;
   created_at: string;
   user_id: string;
+  // Reporter information
+  reporter_name?: string | null;
+  phone?: string | null;
+  // Administrative location
+  kecamatan?: string | null;
+  desa?: string | null;
 }
 
 interface ReportDetailDrawerProps {
