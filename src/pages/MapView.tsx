@@ -64,6 +64,17 @@ type AssetRow = {
 const MAP_PREFS_STORAGE_KEY = 'admin:mapPreferences';
 const MAP_OVERLAY_STORAGE_KEY = 'map:overlays';
 
+// Deterministic color generator per layer key to provide visual distinction
+const getColorForKey = (key: string) => {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue} 70% 48%)`;
+};
+
 const createClusterCustomIcon = (cluster: L.MarkerCluster) => {
   const count = cluster.getChildCount();
   const size = count < 10 ? 40 : count < 100 ? 50 : 60;
@@ -498,19 +509,52 @@ const MapView = () => {
       const config = dynamicStyle[key] || {};
       console.log(`[MapView] Rendering layer ${key} with style:`, config);
       
+      // Force dynamic layers (non-admin) to use the same visual style as
+      // administrative boundaries. Only the admin boundary layer may have
+      // a custom/different appearance.
+      const geomType = availableLayers.find((l) => l.key === key)?.geometry_type
+        || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
+        || '';
+
       return (
         <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
           <RLGeoJSON
             key={`geojson-${key}-${JSON.stringify(config)}`}
             data={dynamicData[key]!}
-            style={() => ({
-              color: config.color || '#3b82f6',
-              weight: config.weight || 2,
-              opacity: config.opacity || 0.8,
-              fillColor: config.fillColor || config.color || '#3b82f6',
-              fillOpacity: config.fillOpacity ?? 0.3,
-              dashArray: config.dashArray,
-            })}
+            style={() => {
+              const layerColor = getColorForKey(key);
+              // Points: keep marker-only styling (no polygon stroke)
+              if (/Point/i.test(String(geomType))) {
+                return {
+                  color: 'transparent',
+                  weight: 0,
+                  opacity: 0,
+                  fillColor: config.fillColor || layerColor,
+                  fillOpacity: config.fillOpacity ?? 0.75,
+                } as L.PathOptions;
+              }
+
+              // Lines: show stroke, no fill
+              if (/LineString/i.test(String(geomType))) {
+                return {
+                  color: config.color || layerColor,
+                  weight: config.weight ?? 2,
+                  opacity: config.opacity ?? 0.9,
+                  fillOpacity: 0,
+                  dashArray: config.dashArray,
+                } as L.PathOptions;
+              }
+
+              // Polygons/MultiPolygons: show stroke + fill
+              return {
+                color: config.color || '#6b7280',
+                weight: config.weight ?? 1,
+                opacity: config.opacity ?? 0.85,
+                fillColor: config.fillColor || layerColor,
+                fillOpacity: config.fillOpacity ?? 0.45,
+                dashArray: config.dashArray,
+              } as L.PathOptions;
+            }}
             pointToLayer={(feature, latlng) => {
               if (key === 'assets') {
                 const p = feature.properties as Record<string, unknown> | undefined;
@@ -518,24 +562,21 @@ const MapView = () => {
                 const cat = (p?.category as string) || '';
                 return L.marker(latlng, { icon: createAssetIcon((['aktif', 'nonaktif', 'rusak'].includes(status) ? (status as 'aktif' | 'nonaktif' | 'rusak') : 'aktif'), cat) });
               }
+              // Point marker: no stroke, dynamic fill color
+              const layerColor = getColorForKey(key);
               return L.circleMarker(latlng, {
                 radius: config.radius ?? 8,
-                color: config.color ?? '#3b82f6',
-                weight: config.weight ?? 2,
-                fillColor: config.fillColor || config.color || '#3b82f6',
-                fillOpacity: config.fillOpacity ?? 0.7,
+                color: 'transparent',
+                weight: 0,
+                fillColor: config.fillColor || layerColor,
+                fillOpacity: config.fillOpacity ?? 0.75,
               });
             }}
             onEachFeature={(feature, layer) => {
               const p = feature.properties as Record<string, unknown> | undefined;
               const featureId = `${key}-${Math.random().toString(36).substr(2, 9)}`;
               
-              registerLayer(featureId, layer, {
-                color: '#6b7280',
-                weight: 1,
-                opacity: 0.8,
-                fillOpacity: 0,
-              });
+              // not registering dynamic layer for highlight
 
               const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
               if (title) {
@@ -597,10 +638,11 @@ const MapView = () => {
       const lower = key.toLowerCase();
       if (lower === 'assets') continue;
       
-      // Use style_config from database
+      // Compute dynamic color per-layer; keep ability to override via style
       const config = dynamicStyle[key] || {};
-      const strokeColor = config.color || '#3b82f6';
-      const fillColor = config.fillColor || config.color || '#3b82f6';
+      const layerColor = getColorForKey(key);
+      const strokeColor = config.color || layerColor;
+      const fillColor = config.fillColor || layerColor;
       const dashArray = config.dashArray;
       
       // Determine geometry type
