@@ -13,11 +13,7 @@ type LayerAttributeTableProps = {
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export const LayerAttributeTable = ({ featureCollection, maxFeatures = 1000 }: LayerAttributeTableProps) => {
-  const features = useMemo(() => {
-    const data = featureCollection?.features;
-    if (!data) return [];
-    return data;
-  }, [featureCollection]);
+  const features = useMemo(() => featureCollection?.features ?? [], [featureCollection]);
   const limitedFeatures = useMemo(() => features.slice(0, maxFeatures), [features, maxFeatures]);
   const truncated = features.length > limitedFeatures.length;
 
@@ -42,9 +38,7 @@ export const LayerAttributeTable = ({ featureCollection, maxFeatures = 1000 }: L
   const [pageSize, setPageSize] = useState<number>(25);
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, pageSize, limitedFeatures]);
+  useEffect(() => { setPage(1); }, [search, pageSize, limitedFeatures]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -63,98 +57,78 @@ export const LayerAttributeTable = ({ featureCollection, maxFeatures = 1000 }: L
   const start = (currentPage - 1) * pageSize;
   const pageRows = filteredRows.slice(start, start + pageSize);
 
-  const handlePrev = () => setPage((p) => Math.max(1, p - 1));
-  const handleNext = () => setPage((p) => Math.min(pageCount, p + 1));
+  if (rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-muted-foreground border rounded-lg">
+        Tidak ada data atribut yang tersedia
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col md:flex-row md:items-end gap-2">
-        <div className="w-full md:w-64">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari nilai atribut..."
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground">
-            Baris per halaman
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <Input className="w-full sm:w-64" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nilai atribut..." />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Baris/halaman</span>
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger className="h-9 w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((opt) => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => setPageSize(Number(value))}
-          >
-            <SelectTrigger className="h-8 w-[88px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-xs text-muted-foreground md:ml-auto">
-          {filteredRows.length} dari {rows.length} fitur{truncated ? ` (dibatasi ${limitedFeatures.length} baris)` : ''}
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {filteredRows.length} dari {rows.length}{truncated ? ` (max ${maxFeatures})` : ''}
+          </span>
         </div>
       </div>
 
-      <div className="overflow-auto rounded border max-h-[60vh]">
-        <Table className="min-w-full table-auto text-xs">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 whitespace-nowrap px-2 py-2 text-xs font-medium text-muted-foreground">#</TableHead>
-              <TableHead className="w-32 whitespace-nowrap px-2 py-2 text-xs font-medium text-muted-foreground">Geometri</TableHead>
-              {columns.map((col) => (
-                <TableHead key={col} className="px-2 py-2 text-xs font-medium text-muted-foreground">
-                  <span className="block max-w-[220px] break-words">{col}</span>
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pageRows.map((row) => (
-              <TableRow key={row.index} className="align-top">
-                <TableCell className="px-2 py-1 text-xs text-muted-foreground align-top">{row.index + 1}</TableCell>
-                <TableCell className="px-2 py-1 text-xs align-top">
-                  <span className="block max-w-[200px] break-words">{row.geometryType ?? '-'}</span>
-                </TableCell>
-                {columns.map((col) => {
-                  const value = row.properties[col];
-                  return (
-                    <TableCell key={col} className="px-2 py-1 text-xs align-top">
-                      <span className="block max-w-[260px] whitespace-pre-wrap break-words">
-                        {value === undefined || value === null ? '-' : String(value)}
-                      </span>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-            {pageRows.length === 0 && (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-auto max-h-[50vh]">
+          <Table>
+            <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur">
               <TableRow>
-                <TableCell colSpan={2 + columns.length} className="px-3 py-3 text-sm text-muted-foreground">
-                  {rows.length === 0 ? 'Tidak ada data atribut yang tersedia' : 'Tidak ada baris yang cocok dengan pencarian'}
-                </TableCell>
+                <TableHead className="w-12 text-center">#</TableHead>
+                <TableHead className="w-32">Geometri</TableHead>
+                {columns.map((col) => <TableHead key={col} className="min-w-[120px]">{col}</TableHead>)}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {pageRows.map((row) => (
+                <TableRow key={row.index}>
+                  <TableCell className="text-center text-xs text-muted-foreground">{row.index + 1}</TableCell>
+                  <TableCell className="text-xs font-mono">{row.geometryType ?? '-'}</TableCell>
+                  {columns.map((col) => {
+                    const value = row.properties[col];
+                    return (
+                      <TableCell key={col} className="text-xs">
+                        <div className="max-w-[200px] truncate" title={value === undefined || value === null ? '-' : String(value)}>
+                          {value === undefined || value === null ? '-' : String(value)}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+              {pageRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={2 + columns.length} className="text-center py-8 text-sm text-muted-foreground">
+                    Tidak ada hasil yang cocok dengan pencarian
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          Halaman {currentPage} dari {pageCount}
-        </div>
+        <span className="text-xs text-muted-foreground">Halaman {currentPage} dari {pageCount}</span>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handlePrev} disabled={currentPage <= 1}>
-            Sebelumnya
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleNext} disabled={currentPage >= pageCount}>
-            Berikutnya
-          </Button>
+          <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>Sebelumnya</Button>
+          <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={currentPage >= pageCount}>Berikutnya</Button>
         </div>
       </div>
     </div>

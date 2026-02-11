@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 interface Ticket {
@@ -242,6 +243,8 @@ export default function HelpCenter() {
   const [message, setMessage] = useState('');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const filteredFaqs = useMemo(() => {
     const s = search.toLowerCase();
@@ -274,21 +277,35 @@ export default function HelpCenter() {
     void loadTickets();
   };
 
+  const updateTicketStatus = async (ticketId: string, status: 'resolved' | 'closed') => {
+    const { error } = await supabase.from('support_tickets').update({ status }).eq('id', ticketId);
+    if (error) return toast.error('Gagal memperbarui status');
+    toast.success(`Tiket ditandai ${status === 'resolved' ? 'selesai' : 'ditutup'}`);
+    void loadTickets();
+    if (selectedTicket?.id === ticketId) {
+      setSelectedTicket({ ...selectedTicket, status });
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Help Center</h1>
-          <p className="text-sm text-muted-foreground">Panduan terstruktur untuk pengguna dan admin dalam mengoperasikan StateTrack secara efektif.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Help Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">Panduan lengkap penggunaan aplikasi StateTrack</p>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>SOP / Modul Penggunaan Pengguna (User)</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <span>📖</span> SOP Pengguna (User)
+            </CardTitle>
             <CardDescription>Ikuti modul berikut secara berurutan untuk memastikan pelaporan berjalan lengkap dan terdokumentasi.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Accordion type="multiple" className="space-y-3">
+            <Accordion type="single" collapsible className="space-y-2">
               {userSopModules.map((module, index) => (
                 <AccordionItem
                   key={module.title}
@@ -344,13 +361,15 @@ export default function HelpCenter() {
         </Card>
 
         {isAdmin ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>SOP / Modul Penggunaan Admin</CardTitle>
+          <Card className="border-2">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span>🔧</span> SOP Admin
+              </CardTitle>
               <CardDescription>Gunakan modul berikut sebagai panduan operasional harian, mingguan, dan evaluasi berkala di lingkungan admin.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Accordion type="multiple" className="space-y-3">
+              <Accordion type="single" collapsible className="space-y-2">
                 {adminSopModules.map((module, index) => (
                   <AccordionItem
                     key={module.title}
@@ -405,9 +424,11 @@ export default function HelpCenter() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>SOP / Modul Penggunaan Admin</CardTitle>
+          <Card className="border-2 border-muted">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span>🔒</span> SOP Admin
+              </CardTitle>
               <CardDescription>Hanya admin yang dapat mengakses modul operasional internal.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -421,41 +442,47 @@ export default function HelpCenter() {
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pertanyaan Umum</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <span>❓</span> Pertanyaan Umum (FAQ)
+            </CardTitle>
             <CardDescription>Gunakan pencarian di bawah untuk menemukan jawaban cepat sebelum menghubungi tim dukungan.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Input 
               id="faq-search"
-              placeholder="Cari FAQ..." 
+              placeholder="🔍 Cari pertanyaan..." 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
-              className="mb-3"
               aria-label="Cari FAQ"
             />
-            <div className="space-y-3">
+            <div className="space-y-2">
               {filteredFaqs.map((f, i) => (
-                <div key={i} className="rounded-lg border border-border/60 bg-background/80 p-3">
-                  <div className="font-medium">{f.q}</div>
-                  <div className="text-sm text-muted-foreground">{f.a}</div>
+                <div key={i} className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
+                  <div className="font-semibold text-sm mb-2">{f.q}</div>
+                  <div className="text-sm text-muted-foreground leading-relaxed">{f.a}</div>
                 </div>
               ))}
               {filteredFaqs.length === 0 && (
-                <div className="text-sm text-muted-foreground">Tidak ada FAQ yang cocok</div>
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  <span className="text-2xl block mb-2">🔍</span>
+                  Tidak ada FAQ yang cocok dengan pencarian
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Buat Tiket Dukungan</CardTitle>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card className="border-2">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span>🎫</span> Buat Tiket Dukungan
+              </CardTitle>
               <CardDescription>Kirimkan kendala teknis atau kebutuhan tambahan fitur kepada tim pengembang.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="support-subject">Subjek</Label>
                 <Input 
@@ -476,36 +503,45 @@ export default function HelpCenter() {
                   rows={5}
                 />
               </div>
-              <Button onClick={submitTicket} disabled={loading}>{loading ? 'Mengirim...' : 'Kirim Tiket'}</Button>
+              <Button onClick={submitTicket} disabled={loading} className="w-full">
+                {loading ? 'Mengirim...' : 'Kirim Tiket'}
+              </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Tiket Saya</CardTitle>
+          <Card className="border-2">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span>📝</span> Tiket Saya
+              </CardTitle>
               <CardDescription>Pantau progres tindak lanjut tiket dukungan yang telah Anda kirimkan.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Subjek</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Dibuat</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Subjek</TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Dibuat</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tickets.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{t.subject}</TableCell>
-                        <TableCell><Badge variant={t.status === 'open' ? 'default' : 'secondary'} className="capitalize">{t.status.replace(/_/g, ' ')}</Badge></TableCell>
-                        <TableCell>{new Date(t.created_at).toLocaleString()}</TableCell>
+                      <TableRow key={t.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => { setSelectedTicket(t); setDetailOpen(true); }}>
+                        <TableCell className="font-medium">{t.subject}</TableCell>
+                        <TableCell><Badge variant={t.status === 'open' ? 'default' : t.status === 'resolved' ? 'secondary' : 'outline'} className="capitalize">{t.status.replace(/_/g, ' ')}</Badge></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
                       </TableRow>
                     ))}
                     {tickets.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-sm text-muted-foreground">Belum ada tiket</TableCell>
+                        <TableCell colSpan={3} className="text-center py-8">
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <span className="text-2xl">📦</span>
+                            <span className="text-sm">Belum ada tiket</span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -514,6 +550,57 @@ export default function HelpCenter() {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg">Detail Tiket</DialogTitle>
+              <DialogDescription>Informasi lengkap tiket dukungan Anda</DialogDescription>
+            </DialogHeader>
+            {selectedTicket && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                  <span className="text-muted-foreground">Subjek</span>
+                  <span className="font-semibold">{selectedTicket.subject}</span>
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge variant={selectedTicket.status === 'open' ? 'default' : selectedTicket.status === 'resolved' ? 'secondary' : 'outline'} className="capitalize w-fit">
+                    {selectedTicket.status.replace(/_/g, ' ')}
+                  </Badge>
+                  <span className="text-muted-foreground">Dibuat</span>
+                  <span>{new Date(selectedTicket.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</span>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Pesan</Label>
+                  <div className="mt-2 p-4 rounded-lg border bg-muted/30 text-sm whitespace-pre-wrap">
+                    {selectedTicket.message}
+                  </div>
+                </div>
+                {selectedTicket.status === 'open' && (
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button size="sm" variant="outline" onClick={() => updateTicketStatus(selectedTicket.id, 'resolved')} className="flex-1">
+                      ✓ Tandai Selesai
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => updateTicketStatus(selectedTicket.id, 'closed')} className="flex-1">
+                      ✕ Tutup Tiket
+                    </Button>
+                  </div>
+                )}
+                {selectedTicket.status === 'resolved' && (
+                  <Alert>
+                    <AlertTitle>Tiket Selesai</AlertTitle>
+                    <AlertDescription>Tiket ini telah ditandai selesai. Terima kasih atas laporannya.</AlertDescription>
+                  </Alert>
+                )}
+                {selectedTicket.status === 'closed' && (
+                  <Alert>
+                    <AlertTitle>Tiket Ditutup</AlertTitle>
+                    <AlertDescription>Tiket ini telah ditutup.</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

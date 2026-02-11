@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { WifiOff } from 'lucide-react';
 
-export const OfflineIndicator = () => {
+export const OfflineIndicator = memo(() => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -25,4 +25,6 @@ export const OfflineIndicator = () => {
       <span className="text-sm font-medium">Mode Offline</span>
     </div>
   );
-};
+});
+
+OfflineIndicator.displayName = 'OfflineIndicator';

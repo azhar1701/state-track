@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { addReportToOutbox, deleteOutboxReport, listOutboxReports, registerBackgroundSync, type OutboxReport, type ReportOutboxPayload } from '@/lib/outbox';
@@ -50,7 +50,6 @@ async function submitSingle(out: OutboxReport, userId: string) {
       error.message.toLowerCase().includes('could not find')
     )
   ) {
-    // Retry without optional columns missing in some deployments
     const minimal = { ...basePayload };
     const retry = await supabase.from('reports').insert(minimal);
     error = retry.error as typeof error;
@@ -60,54 +59,56 @@ async function submitSingle(out: OutboxReport, userId: string) {
 
 export function useOutboxSync(userId?: string | null) {
   const syncingRef = useRef(false);
+  const userIdRef = useRef(userId);
+  
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+
+  const process = useMemo(() => async () => {
+    const currentUserId = userIdRef.current;
+    if (!currentUserId || !isSupabaseConfigured || syncingRef.current) return;
+    
+    syncingRef.current = true;
+    try {
+      const all = await listOutboxReports();
+      if (all.length === 0) return;
+      toast.message('Mengirim laporan tertunda...', { description: `${all.length} item` });
+      for (const item of all) {
+        try {
+          await submitSingle(item, currentUserId);
+          await deleteOutboxReport(item.id);
+        } catch {
+          break;
+        }
+      }
+      toast.success('Semua laporan tertunda berhasil dikirim');
+    } catch {
+      // keep items in outbox
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     if (!userId || !isSupabaseConfigured) return;
 
-    const process = async () => {
-      if (syncingRef.current) return;
-      syncingRef.current = true;
-      try {
-        const all = await listOutboxReports();
-        if (all.length === 0) return;
-        toast.message('Mengirim laporan tertunda...', { description: `${all.length} item` });
-        for (const item of all) {
-          try {
-            await submitSingle(item, userId);
-            await deleteOutboxReport(item.id);
-          } catch {
-            // stop processing; will retry later
-            break;
-          }
-        }
-        toast.success('Semua laporan tertunda berhasil dikirim');
-      } catch (e) {
-        // keep items in outbox; will retry later
-      } finally {
-        syncingRef.current = false;
-      }
-    };
-
     const onlineHandler = () => { void process(); };
-    window.addEventListener('online', onlineHandler);
-
-    // Kick once on mount
-    void process();
-
-    // Messages from SW to trigger processing
     const msgHandler = (evt: Event) => {
-      const data = (evt as MessageEvent).data;
-      if (data === 'sync:submit-reports') {
+      if ((evt as MessageEvent).data === 'sync:submit-reports') {
         void process();
       }
     };
+    
+    window.addEventListener('online', onlineHandler);
     navigator.serviceWorker?.addEventListener?.('message', msgHandler);
+    void process();
 
     return () => {
       window.removeEventListener('online', onlineHandler);
-  navigator.serviceWorker?.removeEventListener?.('message', msgHandler);
+      navigator.serviceWorker?.removeEventListener?.('message', msgHandler);
     };
-  }, [userId]);
+  }, [userId, process]);
 }
 
 // Helper to enqueue from UI

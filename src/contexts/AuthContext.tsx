@@ -63,11 +63,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [ADMIN_EMAILS]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setLoading(true);
     setUser(null);
     setSession(null);
     setIsAdmin(false);
-    navigate("/auth");
+    await supabase.auth.signOut();
+    setLoading(false);
+    navigate("/", { replace: true });
   };
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully');
+        return;
       }
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         setSession(null);

@@ -37,14 +37,13 @@ export const useLayerManager = () => {
     try {
       const { data, error } = await supabase
         .from('geo_layers')
-        .select('*')
+        .select('id,key,name,geometry_type,created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Deduplicate by id
       const uniqueLayers = Array.from(
-        new Map((data || []).map(l => [l.id, l as LayerData])).values()
+        new Map((data || []).map(l => [l.id, { ...l, data: null } as LayerData])).values()
       );
       
       setLayers(uniqueLayers);

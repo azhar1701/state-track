@@ -1,325 +1,166 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { MapPin, Menu, X, Map, FileText, LayoutDashboard, LogOut, Bell } from "lucide-react";
-import { useState } from "react";
-import ThemeToggle from "@/components/ThemeToggle";
+import { Map, Bell, User, PlusCircle, LayoutDashboard, BarChart3, LogOut, Home } from "lucide-react";
+import { useState, memo, useEffect } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
-const Navbar = () => {
-  const { user, isAdmin, signOut, loading } = useAuth();
+const Navbar = memo(() => {
+  const { user, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { items: notifs, unreadCount, markAsRead, markAllAsRead } = useNotifications(10);
+  const [fullName, setFullName] = useState<string | null>(null);
 
-  const isActive = (path: string) => {
-    // Treat nested routes as active (e.g., /admin?tab=geo or /map/...) for clearer UX
-    return location.pathname === path || location.pathname.startsWith(path + "/");
-  };
-  // Prefetch heavy routes on hover/focus for faster navigation
-  const prefetchMap = () => import("@/pages/MapView");
-  const prefetchReport = () => import("@/pages/ReportForm");
-  const prefetchAdmin = () => import("@/pages/AdminDashboard");
-  const prefetchMyReports = () => import("@/pages/MyReports");
-  const prefetchHelp = () => import("@/pages/HelpCenter");
-  // const prefetchAssets = () => import("@/pages/Assets");
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setFullName(data?.full_name || null);
+      });
+  }, [user?.id]);
+
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <nav className="sticky top-0 z-50 w-full glass-strong border-none shadow-lifted transition-all duration-300">
-      <div className="container px-2 md:px-4">
-        <div className="flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <div className="p-2 bg-primary/10 rounded-xl shadow-sm">
-              <MapPin className="icon-sm text-primary" />
-            </div>
-            <span className="hidden sm:inline">SIPASDA</span>
-          </Link>
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 mr-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <Map className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="hidden font-bold sm:inline-block">SIPASDA</span>
+        </Link>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-3">
-            {user && (
-              <>
-                {/* Primary nav: Map, My Reports, Report */}
-                <Link to="/map">
-                  <Button
-                    variant={isActive("/map") ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-2 btn-haptic"
-                    onMouseEnter={prefetchMap}
-                    onFocus={prefetchMap}
-                  >
-                    <Map className="icon-sm" />
-                    Peta
-                  </Button>
-                </Link>
-                <Link to="/me/reports">
-                  <Button
-                    variant={isActive("/me/reports") ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-2 btn-haptic"
-                    onMouseEnter={prefetchMyReports}
-                    onFocus={prefetchMyReports}
-                  >
-                    <FileText className="icon-sm" />
-                    Laporan Saya
-                  </Button>
-                </Link>
-                <Link to="/report">
-                  <Button
-                    variant={isActive("/report") ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-2 btn-haptic"
-                    onMouseEnter={prefetchReport}
-                    onFocus={prefetchReport}
-                  >
-                    <FileText className="icon-sm" />
-                    Buat Laporan
-                  </Button>
-                </Link>
+        {/* Desktop Nav */}
+        {user && (
+          <div className="hidden md:flex items-center gap-1 flex-1">
+            <Link to="/">
+              <Button variant={isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "secondary" : "ghost"} size="sm" className="gap-2">
+                <Home className="h-4 w-4" />
+                Beranda
+              </Button>
+            </Link>
+            <Link to="/map">
+              <Button variant={isActive("/map") ? "secondary" : "ghost"} size="sm" className="gap-2">
+                <Map className="h-4 w-4" />
+                Peta
+              </Button>
+            </Link>
+            <Link to="/me/reports">
+              <Button variant={isActive("/me/reports") ? "secondary" : "ghost"} size="sm" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Laporan Saya
+              </Button>
+            </Link>
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" className="gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
 
-                {/* Context nav: Admin Dashboard or Help Center (non-admin) */}
-                {loading ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 btn-haptic"
-                    disabled
-                  >
-                    <LayoutDashboard className="icon-sm animate-pulse" />
-                    Memuat...
-                  </Button>
-                ) : isAdmin ? (
-                  <Link to="/admin">
-                    <Button
-                      variant={isActive("/admin") ? "secondary" : "ghost"}
-                      size="sm"
-                      className="gap-2 btn-haptic"
-                      onMouseEnter={prefetchAdmin}
-                      onFocus={prefetchAdmin}
-                    >
-                      <LayoutDashboard className="icon-sm" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                ) : (
-                  <Link to="/help">
-                    <Button
-                      variant={isActive("/help") ? "secondary" : "ghost"}
-                      size="sm"
-                      className="gap-2 btn-haptic"
-                      onMouseEnter={prefetchHelp}
-                      onFocus={prefetchHelp}
-                    >
-                      <FileText className="icon-sm" />
-                      Help Center
-                    </Button>
-                  </Link>
-                )}
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 ml-auto">
+          {user ? (
+            <>
+              <Link to="/report">
+                <Button size="sm" className="gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Lapor</span>
+                </Button>
+              </Link>
 
-                {/* Notifications */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="relative p-2 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring">
-                      <Bell className="icon-sm" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] leading-none px-1 py-0.5 rounded">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80">
-                    <DropdownMenuLabel className="flex items-center justify-between">
-                      <span>Notifikasi</span>
-                      {unreadCount > 0 && (
-                        <button className="text-xs text-primary hover:underline" onClick={(e) => { e.preventDefault(); void markAllAsRead(); }}>
-                          Tandai semua dibaca
-                        </button>
-                      )}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+              {/* Notifications */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel className="flex items-center justify-between">
+                    <span>Notifikasi</span>
+                    {unreadCount > 0 && (
+                      <button className="text-xs text-primary hover:underline" onClick={() => void markAllAsRead()}>
+                        Tandai dibaca
+                      </button>
+                    )}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="max-h-[300px] overflow-y-auto">
                     {notifs.length === 0 ? (
-                      <div className="px-3 py-6 text-sm text-muted-foreground">Belum ada notifikasi</div>
+                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">Belum ada notifikasi</div>
                     ) : (
                       notifs.map((n) => (
                         <DropdownMenuItem
                           key={n.id}
-                          className="flex items-start gap-2"
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            if (n.report_id) {
-                              navigate(`/map?report=${n.report_id}`);
-                            }
+                          className="flex flex-col items-start gap-1 cursor-pointer"
+                          onSelect={() => {
+                            if (n.report_id) navigate(`/map?report=${n.report_id}`);
                             void markAsRead(n.id);
                           }}
                         >
-                          <div className="flex-1">
-                            <div className="text-sm font-medium">{n.title}</div>
-                            {n.body && <div className="text-xs text-muted-foreground leading-snug">{n.body}</div>}
-                            <div className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
-                          </div>
-                          {!n.read_at && (
-                            <button className="text-xs text-primary hover:underline" onClick={(e) => { e.preventDefault(); void markAsRead(n.id); }}>
-                              Tandai dibaca
-                            </button>
-                          )}
+                          <div className="font-medium text-sm">{n.title}</div>
+                          {n.body && <div className="text-xs text-muted-foreground">{n.body}</div>}
+                          <div className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString('id-ID')}</div>
                         </DropdownMenuItem>
                       ))
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* Session & theme */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="gap-2 btn-haptic"
-                >
-                  <LogOut className="icon-sm" />
-                  Keluar
-                </Button>
-                <ThemeToggle />
-              </>
-            )}
-            {!user && (
-              <div className="flex items-center gap-2">
-                <Link to="/auth">
-                  <Button size="sm" className="btn-haptic">Masuk / Daftar</Button>
-                </Link>
-                <ThemeToggle />
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 rounded-lg border border-border bg-background shadow-sm transition-all duration-300"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Buka menu"
-          >
-            {mobileMenuOpen ? <X className="icon-md" /> : <Menu className="icon-md" />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-3 border-t bg-background rounded-b-xl shadow-lg transition-all duration-300">
-            <div className="flex flex-col gap-3 px-2">
-              {user && (
-                <>
-                  {/* Primary nav */}
-                  <Link to="/map" onClick={() => setMobileMenuOpen(false)}>
-                    <Button
-                      variant={isActive("/map") ? "secondary" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                      onMouseEnter={prefetchMap}
-                      onFocus={prefetchMap}
-                    >
-                      <Map className="icon-sm" />
-                      Peta
-                    </Button>
-                  </Link>
-                  <Link to="/me/reports" onClick={() => setMobileMenuOpen(false)}>
-                    <Button
-                      variant={isActive("/me/reports") ? "secondary" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                      onMouseEnter={prefetchMyReports}
-                      onFocus={prefetchMyReports}
-                    >
-                      <FileText className="icon-sm" />
-                      Laporan Saya
-                    </Button>
-                  </Link>
-                  <Link to="/report" onClick={() => setMobileMenuOpen(false)}>
-                    <Button
-                      variant={isActive("/report") ? "secondary" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                      onMouseEnter={prefetchReport}
-                      onFocus={prefetchReport}
-                    >
-                      <FileText className="icon-sm" />
-                      Buat Laporan
-                    </Button>
-                  </Link>
-
-                  {/* Context nav */}
-                  {loading ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                      disabled
-                    >
-                      <LayoutDashboard className="icon-sm animate-pulse" />
-                      Memuat...
-                    </Button>
-                  ) : isAdmin ? (
-                    <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                      <Button
-                        variant={isActive("/admin") ? "secondary" : "ghost"}
-                        size="sm"
-                        className="w-full justify-start gap-2"
-                        onMouseEnter={prefetchAdmin}
-                        onFocus={prefetchAdmin}
-                      >
-                        <LayoutDashboard className="icon-sm" />
-                        Dashboard
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link to="/help" onClick={() => setMobileMenuOpen(false)}>
-                      <Button
-                        variant={isActive("/help") ? "secondary" : "ghost"}
-                        size="sm"
-                        className="w-full justify-start gap-2"
-                        onMouseEnter={prefetchHelp}
-                        onFocus={prefetchHelp}
-                      >
-                        <FileText className="icon-sm" />
-                        Help Center
-                      </Button>
-                    </Link>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      signOut();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-start gap-2"
-                  >
-                    <LogOut className="icon-sm" />
-                    Keluar
-                  </Button>
-                  <div className="flex w-full justify-start px-2 pt-2">
-                    <ThemeToggle />
                   </div>
-                </>
-              )}
-              {!user && (
-                <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" className="w-full">
-                    Masuk / Daftar
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-4 w-4" />
                   </Button>
-                </Link>
-              )}
-              {!user && (
-                <div className="flex w-full justify-start px-2 pt-2">
-                  <ThemeToggle />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{fullName || user.email}</p>
+                      {isAdmin && <Badge variant="secondary" className="w-fit text-[10px]">Admin</Badge>}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Keluar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm">Masuk</Button>
+            </Link>
+          )}
+        </div>
       </div>
     </nav>
   );
-};
+});
+
+Navbar.displayName = 'Navbar';
 
 export default Navbar;

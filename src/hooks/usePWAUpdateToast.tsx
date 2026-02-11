@@ -17,18 +17,13 @@ export function usePWAUpdateToast() {
       action: {
         label: 'Muat Ulang',
         onClick: async () => {
-          try {
-            await updateServiceWorker(true);
-          } finally {
-            window.location.reload();
-          }
+          await updateServiceWorker(true);
         },
       },
-      duration: 10000,
+      duration: Infinity,
       onDismiss: () => setNeedRefresh(false),
     });
     return () => {
-      // Ensure cleanup returns void; dismiss returns an id in some typings
       toast.dismiss(id as unknown as string);
     };
   }, [needRefresh, setNeedRefresh, updateServiceWorker]);

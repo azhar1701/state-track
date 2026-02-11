@@ -438,44 +438,48 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* User management hidden */}
-      {/* ...existing code... */}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Preferensi Peta</CardTitle>
+    <div className="space-y-5">
+      <Card className="border-l-4 border-l-primary">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="text-2xl">🗺️</span>
+            Preferensi Peta
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Atur tampilan default peta dan layer</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Latitude pusat</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Latitude pusat</label>
               <Input
+                className="h-9"
                 value={mapPreferences.centerLat}
                 onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLat: event.target.value }))}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Longitude pusat</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Longitude pusat</label>
               <Input
+                className="h-9"
                 value={mapPreferences.centerLng}
                 onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLng: event.target.value }))}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Level Zoom awal</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level Zoom awal</label>
               <Input
+                className="h-9"
                 value={mapPreferences.zoom}
                 onChange={(event) => setMapPreferences((prev) => ({ ...prev, zoom: event.target.value }))}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Basemap</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Basemap</label>
               <Select
                 value={mapPreferences.basemap}
                 onValueChange={(value) => setMapPreferences((prev) => ({ ...prev, basemap: value as MapPreferences["basemap"] }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Pilih basemap" />
                 </SelectTrigger>
                 <SelectContent>
@@ -489,11 +493,11 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <label className="flex items-center justify-between rounded border p-3">
+          <div className="bg-muted/30 rounded-lg p-3 border">
+            <label className="flex items-center justify-between">
               <div>
-                <div className="font-medium">Tampilkan batas administrasi</div>
-                <p className="text-sm text-muted-foreground">Aktifkan layer batas wilayah saat peta dibuka.</p>
+                <div className="text-sm font-medium">Tampilkan batas administrasi</div>
+                <p className="text-xs text-muted-foreground mt-0.5">Aktifkan layer batas wilayah saat peta dibuka.</p>
               </div>
               <Switch
                 checked={mapPreferences.showAdminBoundaries}
@@ -502,52 +506,62 @@ const AdminSettings = () => {
             </label>
           </div>
 
-          <Button onClick={saveMapPreferences} disabled={mapPrefSaving}>
+          <Button onClick={saveMapPreferences} disabled={mapPrefSaving} size="sm" className="w-full md:w-auto">
             {mapPrefSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan Preferensi
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pengaturan GeoLayer</CardTitle>
+      <Card className="border-l-4 border-l-blue-500">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="text-2xl">🌍</span>
+            Pengaturan GeoLayer
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Kelola validasi dan publikasi layer geografis</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Wajibkan CRS EPSG:4326</div>
-                <p className="text-sm text-muted-foreground">Pastikan data yang diunggah sesuai koordinat standar.</p>
-              </div>
-              <Switch
-                checked={geoLayerSettings.enforceCRS}
-                onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, enforceCRS: checked }))}
-              />
-            </label>
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Publikasikan otomatis ke peta</div>
-                <p className="text-sm text-muted-foreground">Setiap layer baru langsung tersedia di MapView.</p>
-              </div>
-              <Switch
-                checked={geoLayerSettings.autoPublishToMap}
-                onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, autoPublishToMap: checked }))}
-              />
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Wajibkan CRS EPSG:4326</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pastikan data yang diunggah sesuai koordinat standar.</p>
+                </div>
+                <Switch
+                  checked={geoLayerSettings.enforceCRS}
+                  onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, enforceCRS: checked }))}
+                />
+              </label>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Publikasikan otomatis ke peta</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Setiap layer baru langsung tersedia di MapView.</p>
+                </div>
+                <Switch
+                  checked={geoLayerSettings.autoPublishToMap}
+                  onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, autoPublishToMap: checked }))}
+                />
+              </label>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">CRS default</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CRS default</label>
               <Input
+                className="h-9"
                 value={geoLayerSettings.defaultCRS}
                 onChange={(event) => setGeoLayerSettings((prev) => ({ ...prev, defaultCRS: event.target.value }))}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Batas ukuran unggah (MB)</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Batas ukuran unggah (MB)</label>
               <Input
+                className="h-9"
                 type="number"
                 inputMode="numeric"
                 value={geoLayerSettings.maxUploadSizeMb}
@@ -562,84 +576,99 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          <label className="flex items-center justify-between rounded border p-3">
-            <div>
-              <div className="font-medium">Wajibkan metadata layer</div>
-              <p className="text-sm text-muted-foreground">Pastikan informasi deskriptif terisi saat impor.</p>
-            </div>
-            <Switch
-              checked={geoLayerSettings.requireMetadata}
-              onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, requireMetadata: checked }))}
-            />
-          </label>
+          <div className="bg-muted/30 rounded-lg p-3 border">
+            <label className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Wajibkan metadata layer</div>
+                <p className="text-xs text-muted-foreground mt-0.5">Pastikan informasi deskriptif terisi saat impor.</p>
+              </div>
+              <Switch
+                checked={geoLayerSettings.requireMetadata}
+                onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, requireMetadata: checked }))}
+              />
+            </label>
+          </div>
 
-          <Button onClick={saveGeoLayerSettings} disabled={geoLayerSaving}>
+          <Button onClick={saveGeoLayerSettings} disabled={geoLayerSaving} size="sm" className="w-full md:w-auto">
             {geoLayerSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan Pengaturan GeoLayer
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifikasi &amp; Audit</CardTitle>
+      <Card className="border-l-4 border-l-amber-500">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="text-2xl">🔔</span>
+            Notifikasi &amp; Audit
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Atur preferensi notifikasi dan lihat aktivitas sistem</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Email</div>
-                <p className="text-sm text-muted-foreground">Kirim pemberitahuan via email untuk laporan penting.</p>
-              </div>
-              <Switch
-                checked={notificationSettings.email}
-                onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, email: checked }))}
-              />
-            </label>
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Push</div>
-                <p className="text-sm text-muted-foreground">Tampilkan notifikasi push pada dashboard.</p>
-              </div>
-              <Switch
-                checked={notificationSettings.push}
-                onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: checked }))}
-              />
-            </label>
-            <label className="flex items-center justify-between rounded border p-3">
-              <div>
-                <div className="font-medium">Ringkasan harian</div>
-                <p className="text-sm text-muted-foreground">Terima rekap aktivitas setiap pagi.</p>
-              </div>
-              <Switch
-                checked={notificationSettings.dailyDigest}
-                onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, dailyDigest: checked }))}
-              />
-            </label>
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Email</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Kirim pemberitahuan via email untuk laporan penting.</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.email}
+                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, email: checked }))}
+                />
+              </label>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Push</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Tampilkan notifikasi push pada dashboard.</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.push}
+                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: checked }))}
+                />
+              </label>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Ringkasan harian</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Terima rekap aktivitas setiap pagi.</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.dailyDigest}
+                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, dailyDigest: checked }))}
+                />
+              </label>
+            </div>
           </div>
 
-          <Button onClick={saveNotificationSettings} disabled={notificationSaving}>
+          <Button onClick={saveNotificationSettings} disabled={notificationSaving} size="sm" className="w-full md:w-auto">
             {notificationSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan Pengaturan Notifikasi
           </Button>
 
-          <div className="rounded border p-4">
-            <div className="mb-2 font-medium">Audit Terbaru</div>
+          <div className="bg-muted/50 rounded-lg p-4 border-2 border-dashed">
+            <div className="flex items-center gap-2 mb-3">
+              <RefreshCcw className="h-4 w-4 text-muted-foreground" />
+              <div className="text-sm font-semibold">Audit Terbaru</div>
+            </div>
             {auditLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Memuat catatan audit...
               </div>
             ) : sortedAuditLogs.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Tidak ada catatan audit.</div>
+              <div className="text-xs text-muted-foreground py-4 text-center">Tidak ada catatan audit.</div>
             ) : (
-              <ul className="space-y-2 max-h-60 overflow-auto pr-2 text-sm">
+              <ul className="space-y-2 max-h-48 overflow-auto pr-2 text-xs">
                 {sortedAuditLogs.map((log) => (
-                  <li key={log.id} className="border-b pb-2 last:border-b-0 last:pb-0">
-                    <div className="text-muted-foreground">
+                  <li key={log.id} className="bg-background rounded p-2 border">
+                    <div className="text-muted-foreground mb-1">
                       {formatDateTime(log.created_at)} · {log.actor_email || "-"}
                     </div>
-                    <div>{log.action} · {log.report_id}</div>
+                    <div className="font-medium">{log.action} · {log.report_id}</div>
                   </li>
                 ))}
               </ul>
@@ -648,22 +677,34 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Backup &amp; Restore</CardTitle>
+      <Card className="border-l-4 border-l-green-500">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="text-2xl">💾</span>
+            Backup &amp; Restore
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Kelola cadangan dan pemulihan data geo layer</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Buat salinan data geo layer untuk cadangan, atau pulihkan dari file JSON yang telah diekspor sebelumnya.
-          </p>
-          <div className="flex flex-col gap-3 md:flex-row">
-            <Button onClick={handleBackupGeoLayers} disabled={backupInProgress} className="md:w-auto">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-xs text-blue-900 dark:text-blue-100">
+              Buat salinan data geo layer untuk cadangan, atau pulihkan dari file JSON yang telah diekspor sebelumnya.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button onClick={handleBackupGeoLayers} disabled={backupInProgress} variant="outline" size="sm" className="h-auto py-3">
               {backupInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-              Backup GeoLayer
+              <div className="text-left">
+                <div className="font-semibold">Backup GeoLayer</div>
+                <div className="text-xs text-muted-foreground font-normal">Unduh semua layer ke file JSON</div>
+              </div>
             </Button>
-            <Button onClick={handleTriggerRestore} disabled={restoreInProgress} variant="outline" className="md:w-auto">
+            <Button onClick={handleTriggerRestore} disabled={restoreInProgress} variant="outline" size="sm" className="h-auto py-3">
               {restoreInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              Restore dari File
+              <div className="text-left">
+                <div className="font-semibold">Restore dari File</div>
+                <div className="text-xs text-muted-foreground font-normal">Pulihkan layer dari backup</div>
+              </div>
             </Button>
             <input
               ref={restoreInputRef}
@@ -673,31 +714,40 @@ const AdminSettings = () => {
               onChange={handleRestoreFileChange}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Saat restore, data layer dengan key yang sama akan digantikan.
-          </p>
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <p className="text-xs text-amber-900 dark:text-amber-100">
+              ⚠️ Saat restore, data layer dengan key yang sama akan digantikan.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Keamanan</CardTitle>
+      <Card className="border-l-4 border-l-red-500">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="text-2xl">🔒</span>
+            Keamanan
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Konfigurasi pengaturan keamanan dan akses sistem</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex items-center justify-between rounded border p-3">
-            <div>
-              <div className="font-medium">Wajibkan MFA</div>
-              <p className="text-sm text-muted-foreground">Minta administrator menyalakan multi-factor authentication.</p>
-            </div>
-            <Switch
-              checked={securitySettings.requireMFA}
-              onCheckedChange={(checked) => setSecuritySettings((prev) => ({ ...prev, requireMFA: checked }))}
-            />
-          </label>
+          <div className="bg-muted/30 rounded-lg p-3 border">
+            <label className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Wajibkan MFA</div>
+                <p className="text-xs text-muted-foreground mt-0.5">Minta administrator menyalakan multi-factor authentication.</p>
+              </div>
+              <Switch
+                checked={securitySettings.requireMFA}
+                onCheckedChange={(checked) => setSecuritySettings((prev) => ({ ...prev, requireMFA: checked }))}
+              />
+            </label>
+          </div>
 
-          <div>
-            <label className="text-sm font-medium">Durasi sesi (menit)</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Durasi sesi (menit)</label>
             <Input
+              className="h-9"
               type="number"
               inputMode="numeric"
               value={securitySettings.sessionTimeoutMinutes}
@@ -711,21 +761,24 @@ const AdminSettings = () => {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Daftar IP yang diizinkan</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Daftar IP yang diizinkan</label>
             <Textarea
+              className="text-sm"
               placeholder="Pisahkan dengan koma, contoh: 192.168.0.1, 10.0.0.2"
               value={securitySettings.ipAllowlist}
               onChange={(event) => setSecuritySettings((prev) => ({ ...prev, ipAllowlist: event.target.value }))}
             />
           </div>
 
-          <div className="flex items-start gap-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-            <ShieldAlert className="mt-1 h-4 w-4 shrink-0" />
-            Pastikan perubahan keamanan dikomunikasikan ke seluruh administrator agar tidak mengganggu operasional.
+          <div className="flex items-start gap-3 rounded-lg border-2 border-destructive/40 bg-destructive/10 p-3 text-xs">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <span className="text-destructive">
+              Pastikan perubahan keamanan dikomunikasikan ke seluruh administrator agar tidak mengganggu operasional.
+            </span>
           </div>
 
-          <Button onClick={saveSecuritySettings} disabled={securitySaving}>
+          <Button onClick={saveSecuritySettings} disabled={securitySaving} size="sm" className="w-full md:w-auto">
             {securitySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan Pengaturan Keamanan
           </Button>

@@ -675,14 +675,15 @@ const MapView = () => {
           table: 'reports',
         },
         () => {
-          fetchReports();
+          void fetchReports();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const loadAdminBoundaries = async () => {

@@ -8,11 +8,13 @@ import Navbar from "@/components/Navbar";
 import CommandMenu from "@/components/CommandMenu";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import PageLoader from "@/components/PageLoader";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, memo, useMemo } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useOutboxSync } from "@/hooks/useOutboxSync";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePreventRefresh } from "@/hooks/usePreventRefresh";
+import { usePWAUpdateToast } from "@/hooks/usePWAUpdateToast";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
@@ -30,16 +32,23 @@ const GeoDataManager = lazy(() => import("./pages/GeoDataManager"));
 
 // TanStack Query removed
 
-const AppInner = () => {
+const AppInner = memo(() => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   useOutboxSync(user?.id);
+  usePreventRefresh();
+  usePWAUpdateToast();
+  
+  const mainStyle = useMemo(() => ({
+    paddingBottom: isMobile && user ? '72px' : '0'
+  }), [isMobile, user]);
+  
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
       <Navbar />
       <OfflineIndicator />
-      <main id="main-content" className="min-h-[calc(100vh-3.5rem)]" style={{ paddingBottom: isMobile && user ? '72px' : '0' }}>
+      <main id="main-content" className="min-h-[calc(100vh-3.5rem)]" style={mainStyle}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -68,7 +77,9 @@ const AppInner = () => {
       <CommandMenu />
     </>
   );
-};
+});
+
+AppInner.displayName = 'AppInner';
 
 const rawBase = import.meta.env.BASE_URL || "/";
 // Normalize trailing slashes so /state-track and /state-track/ both work

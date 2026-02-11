@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         srcDir: "src",
         filename: "sw.ts",
         injectRegister: "auto",
-        registerType: "autoUpdate",
+        registerType: "prompt",
         includeAssets: ["favicon.ico", "robots.txt", "placeholder.svg"],
         manifest: {
           name: "State Track",

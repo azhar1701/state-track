@@ -12,7 +12,8 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: str
 // Minimal SyncEvent typing for TS
 interface SyncEvent extends ExtendableEvent { tag: string }
 
-self.skipWaiting();
+// Don't skip waiting - let user decide when to update
+// self.skipWaiting();
 clientsClaim();
 
 // Precaching manifest will be injected at build time

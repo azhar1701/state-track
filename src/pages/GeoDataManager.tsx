@@ -113,6 +113,63 @@ export default function GeoDataManager() {
   const [inspectKey, setInspectKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'geodata' | 'settings'>('geodata');
   const [settingsInitialized, setSettingsInitialized] = useState(false);
+  const [layerValidation, setLayerValidation] = useState<Map<string, { valid: boolean; errorCount: number }>>(new Map());
+
+  const validateLayerData = useCallback((layer: LayerData) => {
+    return { valid: true, errorCount: 0 };
+  }, []);
+
+  const validateLayerById = useCallback(async (layerId: string, layerKey: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('geo_layers')
+        .select('data')
+        .eq('id', layerId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (error || !data) return { valid: true, errorCount: 0 };
+      
+      const layerData = data as { data: { featureCollection?: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown } }> } } };
+      const fc = layerData.data?.featureCollection;
+      if (!fc || !Array.isArray(fc.features)) return { valid: true, errorCount: 0 };
+      
+      let errors = 0;
+      fc.features.forEach((f) => {
+        if (!f.geometry || !f.geometry.type) errors++;
+        else if (f.geometry.type === 'Polygon' && Array.isArray(f.geometry.coordinates)) {
+          (f.geometry.coordinates as number[][][]).forEach((ring) => {
+            if (ring.length < 4) errors++;
+            else {
+              const [fx, fy] = ring[0], [lx, ly] = ring[ring.length - 1];
+              if (fx !== lx || fy !== ly) errors++;
+            }
+          });
+        }
+      });
+      return { valid: errors === 0, errorCount: errors };
+    } catch {
+      return { valid: true, errorCount: 0 };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (layers.length === 0) return;
+    
+    const validateLayers = async () => {
+      const validation = new Map<string, { valid: boolean; errorCount: number }>();
+      
+      for (const layer of layers.slice(0, 10)) {
+        const result = await validateLayerById(layer.id || '', layer.key);
+        validation.set(layer.key, result);
+      }
+      
+      setLayerValidation(validation);
+    };
+    
+    const timer = setTimeout(validateLayers, 300);
+    return () => clearTimeout(timer);
+  }, [layers, validateLayerById]);
 
   const MAP_PREFS_STORAGE_KEY = 'admin:mapPreferences';
   const GEO_LAYER_STORAGE_KEY = 'admin:geoLayerSettings';
@@ -216,6 +273,8 @@ export default function GeoDataManager() {
   const handleDelete = async (row: LayerData) => {
     await deleteLayer(row);
   };
+
+  const load = fetchLayers;
 
   const handleUpdateName = async (row: LayerData, newName: string) => {
     if (!newName || newName === row.name) return;
@@ -446,17 +505,20 @@ export default function GeoDataManager() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Geo Data Manager</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Geo Data Manager</h1>
+          <p className="text-sm text-muted-foreground mt-1">Kelola layer geospasial dan validasi data</p>
+        </div>
       </div>
 
       {/* Unified Importer with mode toggle */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Impor Data</CardTitle>
+      <Card className="mb-6 border-2">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Impor Data</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <UnifiedImporter
             mode="layer"
             initialKey={keyVal}
@@ -489,12 +551,31 @@ export default function GeoDataManager() {
       </Card>
 
       {/* Layers section */}
-      <Card className="mb-6">
-        <CardHeader><CardTitle>Daftar Layer</CardTitle></CardHeader>
+      <Card className="border-2">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Daftar Layer</CardTitle>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-semibold">{layers.length}</span>
+              </div>
+              {Array.from(layerValidation.values()).filter(v => !v.valid).length > 0 && (
+                <div className="flex items-center gap-2 text-destructive">
+                  <span>⚠️</span>
+                  <span className="font-semibold">{Array.from(layerValidation.values()).filter(v => !v.valid).length} error</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
         <CardContent>
           {missingAdminLayer && (
-            <div className="mb-3 p-3 border rounded bg-muted/40 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <div>Layer batas administrasi belum terdaftar di database. Anda bisa memulihkannya dari data publik.</div>
+            <div className="mb-4 p-4 border-2 border-amber-500/50 rounded-lg bg-amber-500/10 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-500 mt-0.5">⚠️</span>
+                <span>Layer batas administrasi belum terdaftar di database. Anda bisa memulihkannya dari data publik.</span>
+              </div>
               <div>
                 <Button size="sm" variant="outline" onClick={async () => {
                   try {
@@ -533,56 +614,62 @@ export default function GeoDataManager() {
               </div>
             </div>
           )}
-          <div className="flex flex-col md:flex-row gap-3 items-center mb-3">
-            <div className="w-full md:w-64">
-              <Input placeholder="Cari layer" value={layerSearch} onChange={(e) => setLayerSearch(e.target.value)} />
-            </div>
-            <div>
-              <Select value={layerSort} onValueChange={(v) => setLayerSort(v as typeof layerSort)}>
-                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Urutkan" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                  <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-4">
+            <Input className="w-full sm:w-80" placeholder="🔍 Cari layer..." value={layerSearch} onChange={(e) => setLayerSearch(e.target.value)} />
+            <Select value={layerSort} onValueChange={(v) => setLayerSort(v as typeof layerSort)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Urutkan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at_desc">🕒 Terbaru</SelectItem>
+                <SelectItem value="name_asc">🔤 Nama (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Tipe Geometri</TableHead>
-                  <TableHead>Dibuat</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {layers
-                  .filter((r) => r.key.toLowerCase().includes(layerSearch.toLowerCase()) || r.name.toLowerCase().includes(layerSearch.toLowerCase()))
-                  .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                  .map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{r.key}</TableCell>
-                    <TableCell>
-                      <InlineEditableText
-                        value={r.name}
-                        onSave={(val) => handleUpdateName(r, val)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineEditableSelect
-                        value={r.geometry_type ?? ''}
-                        options={['Point','LineString','Polygon','MultiPoint','MultiLineString','MultiPolygon','GeometryCollection']}
-                        onSave={(val) => handleUpdateGeometry(r, val)}
-                      />
-                    </TableCell>
-                    <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => { setInspectKey(r.key); setInspectorOpen(true); }}>Detail</Button>
-                            <Button size="sm" variant="outline" onClick={async () => {
+          <div className="border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-semibold">Key</TableHead>
+                    <TableHead className="font-semibold">Nama</TableHead>
+                    <TableHead className="font-semibold">Tipe Geometri</TableHead>
+                    <TableHead className="font-semibold">Dibuat</TableHead>
+                    <TableHead className="text-right font-semibold">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {React.useMemo(() => layers
+                    .filter((r) => r.key.toLowerCase().includes(layerSearch.toLowerCase()) || r.name.toLowerCase().includes(layerSearch.toLowerCase()))
+                    .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()), [layers, layerSearch, layerSort])
+                    .map((r) => (
+                    <TableRow key={r.id} className="hover:bg-muted/30">
+                      <TableCell className="font-mono text-xs">{r.key}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <InlineEditableText
+                            value={r.name}
+                            onSave={(val) => handleUpdateName(r, val)}
+                          />
+                          {layerValidation.get(r.key) && !layerValidation.get(r.key)!.valid && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20" title={`${layerValidation.get(r.key)!.errorCount} error geometri`}>
+                              ⚠️ {layerValidation.get(r.key)!.errorCount}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditableSelect
+                          value={r.geometry_type ?? ''}
+                          options={['Point','LineString','Polygon','MultiPoint','MultiLineString','MultiPolygon','GeometryCollection']}
+                          onSave={(val) => handleUpdateGeometry(r, val)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(r.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell>
+                      <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => { setInspectKey(r.key); setInspectorOpen(true); }}>📊 Detail</Button>
+                              <Button size="sm" variant="outline" onClick={async () => {
                               try {
                                 const { data, error } = await supabase
                                   .from('geo_layers')
@@ -601,10 +688,10 @@ export default function GeoDataManager() {
                               } catch {
                                 toast.error('Gagal mengunduh data');
                               }
-                            }}>Unduh</Button>
+                            }}>💾 Unduh</Button>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="destructive">Hapus</Button>
+                              <Button size="sm" variant="destructive">🗑️ Hapus</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
@@ -622,14 +709,23 @@ export default function GeoDataManager() {
                           </div>
                     </TableCell>
                   </TableRow>
-                ))}
-                {layers.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">{loading ? 'Memuat...' : 'Belum ada layer'}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                  {layers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          {loading ? (
+                            <><Loader2 className="h-8 w-8 animate-spin" /><span>Memuat layer...</span></>
+                          ) : (
+                            <><span className="text-4xl">📂</span><span>Belum ada layer</span></>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

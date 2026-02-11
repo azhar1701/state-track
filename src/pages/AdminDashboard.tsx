@@ -846,24 +846,42 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !isAdmin && user) {
       toast.error("Akses ditolak");
       navigate("/");
     }
-  }, [authLoading, isAdmin, navigate]);
+  }, [authLoading, isAdmin, user, navigate]);
 
-  // Realtime updates for reports
+  // Realtime updates for reports - only when tab is visible
   useEffect(() => {
     if (!user || !isAdmin || activeTab !== 'reports') return;
+    
+    let isVisible = !document.hidden;
+    const handleVisibilityChange = () => {
+      const wasHidden = !isVisible;
+      isVisible = !document.hidden;
+      // Refresh only when returning to visible tab
+      if (wasHidden && isVisible) {
+        void fetchReports();
+        void fetchStats();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     const channel = supabase
       .channel('reports-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-        void fetchReports();
-        void fetchStats();
-        // fetchChartData dihilangkan agar chart tidak selalu auto refresh
+        // Only refresh if tab is visible
+        if (!document.hidden) {
+          void fetchReports();
+          void fetchStats();
+        }
       })
       .subscribe();
+    
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       channel.unsubscribe();
     };
   }, [activeTab, fetchReports, fetchStats, isAdmin, user]);
@@ -887,11 +905,10 @@ const AdminDashboard = () => {
   }, [activeTab, fetchReports, isAdmin, page, pageSize, user]);
 
   useEffect(() => {
-    // Fetch chart data when filters or tab change, for both 'reports' and 'insights' tab
     if (user && isAdmin && activeTab === 'insights') {
       void fetchChartData();
     }
-  }, [activeTab, fetchChartData, isAdmin, user, chartDays, categoryFilter, debouncedSearch, severityFilter, statusFilter]);
+  }, [activeTab, fetchChartData, isAdmin, user, chartDays]);
 
   useEffect(() => {
     if (user && isAdmin && (activeTab === 'reports' || activeTab === 'insights')) {
@@ -1007,66 +1024,73 @@ const AdminDashboard = () => {
 
           <TabsContent value="reports" className="mt-0">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Total Laporan</CardTitle>
-              <div className="text-3xl font-bold flex items-center gap-2">
-                <FileText className="icon-md text-primary" />
-                {stats.total}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Laporan</CardTitle>
+                <FileText className="w-4 h-4 text-primary/60" />
               </div>
+              <div className="text-2xl font-bold mt-1">{stats.total}</div>
             </CardHeader>
           </Card>
-          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Baru</CardTitle>
-              <div className="text-3xl font-bold flex items-center gap-2">
-                <Clock className="icon-md text-accent" />
-                {stats.baru}
+          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Baru</CardTitle>
+                <Clock className="w-4 h-4 text-amber-500/60" />
               </div>
+              <div className="text-2xl font-bold mt-1">{stats.baru}</div>
             </CardHeader>
           </Card>
-          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Diproses</CardTitle>
-              <div className="text-3xl font-bold flex items-center gap-2">
-                <Loader2 className="icon-md text-secondary" />
-                {stats.diproses}
+          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Diproses</CardTitle>
+                <Loader2 className="w-4 h-4 text-blue-500/60" />
               </div>
+              <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
             </CardHeader>
           </Card>
-          <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-xl border border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Selesai</CardTitle>
-              <div className="text-3xl font-bold flex items-center gap-2">
-                <CheckCircle className="icon-md text-green-600" />
-                {stats.selesai}
+          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selesai</CardTitle>
+                <CheckCircle className="w-4 h-4 text-green-500/60" />
               </div>
+              <div className="text-2xl font-bold mt-1">{stats.selesai}</div>
             </CardHeader>
           </Card>
         </div>
        
         {/* Filters */}
-        <Card className="mb-5">
-          <CardContent className="pt-5 space-y-3">
-            <div className="flex flex-col gap-3">
-              <Tabs
-                value={statusFilter}
-                onValueChange={(value) => {
-                  if (isStatusFilter(value)) {
-                    setStatusFilter(value);
-                  }
-                }}
-              >
-                <TabsList className="grid grid-cols-4 w-full md:w-auto">
-                  <TabsTrigger value="semua">Semua</TabsTrigger>
-                  <TabsTrigger value="baru">Baru</TabsTrigger>
-                  <TabsTrigger value="diproses">Diproses</TabsTrigger>
-                  <TabsTrigger value="selesai">Selesai</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Card className="mb-4">
+          <CardContent className="pt-4 pb-4">
+            <div className="space-y-4">
+              {/* Status Filter Tabs */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">Status</label>
+                <Tabs
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    if (isStatusFilter(value)) {
+                      setStatusFilter(value);
+                    }
+                  }}
+                >
+                  <TabsList className="grid grid-cols-4 w-full">
+                    <TabsTrigger value="semua" className="text-xs">Semua</TabsTrigger>
+                    <TabsTrigger value="baru" className="text-xs">Baru</TabsTrigger>
+                    <TabsTrigger value="diproses" className="text-xs">Diproses</TabsTrigger>
+                    <TabsTrigger value="selesai" className="text-xs">Selesai</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              
+              {/* Other Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Severity</label>
                   <Select
                     value={severityFilter}
                     onValueChange={(value) => {
@@ -1075,8 +1099,8 @@ const AdminDashboard = () => {
                       }
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Severity" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Semua Severity" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="semua">Semua Severity</SelectItem>
@@ -1087,6 +1111,7 @@ const AdminDashboard = () => {
                   </Select>
                 </div>
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Kategori</label>
                   <Select
                     value={categoryFilter}
                     onValueChange={(value) => {
@@ -1097,8 +1122,8 @@ const AdminDashboard = () => {
                       }
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kategori" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Semua Kategori" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="semua">Semua Kategori</SelectItem>
@@ -1109,6 +1134,7 @@ const AdminDashboard = () => {
                   </Select>
                 </div>
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Urutkan</label>
                   <Select
                     value={sortBy}
                     onValueChange={(value) => {
@@ -1117,21 +1143,23 @@ const AdminDashboard = () => {
                       }
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       <SelectValue placeholder="Urutkan" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                      <SelectItem value="severity_desc">Severity (tinggi ke rendah)</SelectItem>
-                      <SelectItem value="category_asc">Kategori (A ke Z)</SelectItem>
+                      <SelectItem value="severity_desc">Severity Tinggi</SelectItem>
+                      <SelectItem value="category_asc">Kategori A-Z</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pencarian</label>
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Cari judul laporan..."
+                    placeholder="Cari judul..."
+                    className="h-9"
                   />
                 </div>
               </div>
@@ -1141,89 +1169,105 @@ const AdminDashboard = () => {
 
         {/* Active Filters Display */}
         {(statusFilter !== 'semua' || severityFilter !== 'semua' || categoryFilter !== 'semua' || search.length > 0) && (
-          <div className="flex gap-2 flex-wrap mb-4 p-4 bg-muted/50 rounded-lg border border-border">
-            {statusFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-2 pl-3">
-                Status: {statusFilter}
-                <button
-                  onClick={() => setStatusFilter('semua')}
-                  className="ml-1 hover:opacity-70"
-                  aria-label="Hapus filter status"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            {severityFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-2 pl-3">
-                Severity: {severityFilter}
-                <button
-                  onClick={() => setSeverityFilter('semua')}
-                  className="ml-1 hover:opacity-70"
-                  aria-label="Hapus filter severity"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            {categoryFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-2 pl-3">
-                Kategori: {categoryFilter}
-                <button
-                  onClick={() => setCategoryFilter('semua')}
-                  className="ml-1 hover:opacity-70"
-                  aria-label="Hapus filter kategori"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            {search.length > 0 && (
-              <Badge variant="secondary" className="gap-2 pl-3">
-                Cari: "{search}"
-                <button
-                  onClick={() => setSearch('')}
-                  className="ml-1 hover:opacity-70"
-                  aria-label="Hapus filter pencarian"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setStatusFilter('semua');
-                setSeverityFilter('semua');
-                setCategoryFilter('semua');
-                setSearch('');
-              }}
-              className="ml-auto"
-            >
-              Hapus Semua Filter
-            </Button>
+          <div className="mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">Filter aktif:</span>
+              {statusFilter !== 'semua' && (
+                <Badge variant="secondary" className="gap-1.5 text-xs">
+                  {statusFilter}
+                  <button
+                    onClick={() => setStatusFilter('semua')}
+                    className="hover:opacity-70 transition-opacity"
+                    aria-label="Hapus filter status"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )}
+              {severityFilter !== 'semua' && (
+                <Badge variant="secondary" className="gap-1.5 text-xs">
+                  {severityFilter}
+                  <button
+                    onClick={() => setSeverityFilter('semua')}
+                    className="hover:opacity-70 transition-opacity"
+                    aria-label="Hapus filter severity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )}
+              {categoryFilter !== 'semua' && (
+                <Badge variant="secondary" className="gap-1.5 text-xs">
+                  {categoryFilter}
+                  <button
+                    onClick={() => setCategoryFilter('semua')}
+                    className="hover:opacity-70 transition-opacity"
+                    aria-label="Hapus filter kategori"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )}
+              {search.length > 0 && (
+                <Badge variant="secondary" className="gap-1.5 text-xs">
+                  "{search}"
+                  <button
+                    onClick={() => setSearch('')}
+                    className="hover:opacity-70 transition-opacity"
+                    aria-label="Hapus filter pencarian"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setStatusFilter('semua');
+                  setSeverityFilter('semua');
+                  setCategoryFilter('semua');
+                  setSearch('');
+                }}
+                className="h-7 text-xs ml-auto"
+              >
+                Reset Filter
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Reports Table */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>Semua Laporan</CardTitle>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-lg">Daftar Laporan</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {totalFiltered} laporan ditemukan
+                </p>
+              </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={exportCSV}>Export CSV</Button>
-                <Button variant="outline" onClick={exportPDF}>Export PDF</Button>
+                <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
+                  Export CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 text-xs">
+                  Export PDF
+                </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {/* Bulk actions toolbar */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-4">
-              <div className="text-sm text-muted-foreground">
-                {selectedIds.size > 0 ? `${selectedIds.size} dipilih` : 'Tidak ada item dipilih'}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 pb-3 border-b">
+              <div className="text-xs text-muted-foreground">
+                {selectedIds.size > 0 ? (
+                  <span className="font-medium text-foreground">{selectedIds.size} item dipilih</span>
+                ) : (
+                  'Pilih item untuk aksi bulk'
+                )}
               </div>
-              <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Select
                   value={bulkStatus}
                   onValueChange={(value) => {
@@ -1232,8 +1276,8 @@ const AdminDashboard = () => {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Ubah status menjadi..." />
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="Ubah status..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="baru">Baru</SelectItem>
@@ -1243,7 +1287,12 @@ const AdminDashboard = () => {
                 </Select>
                 <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
                   <AlertDialogTrigger asChild>
-                    <Button onClick={applyBulk} disabled={!bulkStatus || selectedIds.size === 0 || bulkLoading}>
+                    <Button 
+                      size="sm" 
+                      onClick={applyBulk} 
+                      disabled={!bulkStatus || selectedIds.size === 0 || bulkLoading}
+                      className="h-8 text-xs"
+                    >
                       Terapkan
                     </Button>
                   </AlertDialogTrigger>
@@ -1265,28 +1314,36 @@ const AdminDashboard = () => {
               </div>
             </div>
             {reports.length === 0 ? (
-              <div className="text-center text-muted-foreground py-10">Tidak ada laporan untuk filter saat ini.</div>
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
+                <p className="text-sm text-muted-foreground">Tidak ada laporan ditemukan</p>
+                <p className="text-xs text-muted-foreground mt-1">Coba ubah filter atau pencarian Anda</p>
+              </div>
             ) : (
               <div className="w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="hover:bg-transparent">
                       <TableHead className="w-10">
-                        <Checkbox checked={allVisibleSelected} onCheckedChange={() => toggleSelectAll()} aria-label="Pilih semua" />
+                        <Checkbox 
+                          checked={allVisibleSelected} 
+                          onCheckedChange={() => toggleSelectAll()} 
+                          aria-label="Pilih semua" 
+                        />
                       </TableHead>
-                      <TableHead>Judul</TableHead>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>Lokasi</TableHead>
-                      <TableHead>Respon</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
+                      <TableHead className="font-semibold">Judul</TableHead>
+                      <TableHead className="font-semibold">Kategori</TableHead>
+                      <TableHead className="font-semibold">Severity</TableHead>
+                      <TableHead className="font-semibold">Lokasi</TableHead>
+                      <TableHead className="font-semibold">Respon</TableHead>
+                      <TableHead className="font-semibold">Tanggal</TableHead>
+                      <TableHead className="text-right font-semibold">Status</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {reports.map((report) => (
-                      <TableRow key={report.id}>
+                      <TableRow key={report.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell>
                           <Checkbox
                             checked={selectedIds.has(report.id)}
@@ -1294,26 +1351,31 @@ const AdminDashboard = () => {
                             aria-label={`Pilih laporan ${report.title || ''}`}
                           />
                         </TableCell>
-                        <TableCell className="font-medium">
-                          <button type="button" className="text-left hover:underline" onClick={() => openDetail(report)}>
+                        <TableCell className="font-medium max-w-[200px]">
+                          <button 
+                            type="button" 
+                            className="text-left hover:text-primary hover:underline transition-colors truncate block w-full" 
+                            onClick={() => openDetail(report)}
+                            title={report.title || '(tanpa judul)'}
+                          >
                             {report.title || '(tanpa judul)'}
                           </button>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{report.category}</Badge>
+                          <Badge variant="outline" className="text-xs">{report.category}</Badge>
                         </TableCell>
                         <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
-                        <TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={shortLocation(report)}>
                           {shortLocation(report)
                             ? shortLocation(report)
-                            : <span className="text-muted-foreground">-</span>}
+                            : <span className="text-muted-foreground text-xs">-</span>}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="max-w-[180px]">
                           {report.resolution && report.resolution.trim().length > 0
-                            ? <span title={report.resolution}>{previewText(report.resolution, 100)}</span>
-                            : <span className="text-muted-foreground">-</span>}
+                            ? <span className="text-xs truncate block" title={report.resolution}>{previewText(report.resolution, 80)}</span>
+                            : <span className="text-muted-foreground text-xs">-</span>}
                         </TableCell>
-                        <TableCell>{formatDate(report.created_at)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(report.created_at)}</TableCell>
                         <TableCell className="text-right">
                           <Select
                             value={report.status}
@@ -1324,7 +1386,7 @@ const AdminDashboard = () => {
                             }}
                             disabled={updatingId === report.id}
                           >
-                            <SelectTrigger className="w-[140px] ml-auto">
+                            <SelectTrigger className="w-[120px] h-8 ml-auto text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1338,26 +1400,28 @@ const AdminDashboard = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
                             onClick={() => {
                               setReportToDelete(report.id);
                               setDeleteDialogOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-4">
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    Menampilkan {Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)} dari {totalFiltered}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>
+                      Menampilkan <span className="font-medium text-foreground">{Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)}</span> dari <span className="font-medium text-foreground">{totalFiltered}</span>
+                    </span>
                     <div className="flex items-center gap-2">
-                      <span className="hidden md:inline">Per halaman:</span>
+                      <span className="hidden sm:inline">Per halaman:</span>
                       <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-                        <SelectTrigger className="w-[90px]">
+                        <SelectTrigger className="w-[70px] h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1371,20 +1435,32 @@ const AdminDashboard = () => {
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} aria-disabled={page === 1} />
+                        <PaginationPrevious 
+                          onClick={() => setPage((p) => Math.max(1, p - 1))} 
+                          aria-disabled={page === 1}
+                          className="h-8 text-xs"
+                        />
                       </PaginationItem>
                       {Array.from({ length: Math.max(1, Math.ceil(totalFiltered / pageSize)) }).slice(0, 5).map((_, i) => {
-                        const pageNum = i + 1; // simple first 5 pages display
+                        const pageNum = i + 1;
                         return (
                           <PaginationItem key={pageNum}>
-                            <PaginationLink isActive={page === pageNum} onClick={() => setPage(pageNum)}>
+                            <PaginationLink 
+                              isActive={page === pageNum} 
+                              onClick={() => setPage(pageNum)}
+                              className="h-8 w-8 text-xs"
+                            >
                               {pageNum}
                             </PaginationLink>
                           </PaginationItem>
                         );
                       })}
                       <PaginationItem>
-                        <PaginationNext onClick={() => setPage((p) => (p * pageSize < totalFiltered ? p + 1 : p))} aria-disabled={page * pageSize >= totalFiltered} />
+                        <PaginationNext 
+                          onClick={() => setPage((p) => (p * pageSize < totalFiltered ? p + 1 : p))} 
+                          aria-disabled={page * pageSize >= totalFiltered}
+                          className="h-8 text-xs"
+                        />
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
@@ -1633,13 +1709,13 @@ const AdminDetail = lazy(async () => {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
       return (
           <>
-            <DrawerHeader className="text-left pb-2">
-              <DrawerTitle className="text-base">Detail Laporan</DrawerTitle>
-              <DrawerDescription className="text-xs">Informasi ringkas laporan.</DrawerDescription>
+            <DrawerHeader className="text-left pb-3 border-b">
+              <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
+              <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
             </DrawerHeader>
             {/* Scrollable detail area for Windows compatibility */}
             <div
-              className="flex-1 overflow-y-auto px-5 py-3 space-y-3"
+              className="flex-1 overflow-y-auto px-6 py-4"
               style={{
                 maxHeight: '60vh',
                 minHeight: '320px',
@@ -1649,17 +1725,20 @@ const AdminDetail = lazy(async () => {
               }}
             >
               {!selectedReport ? (
-                <div className="text-sm text-muted-foreground">Data laporan tidak tersedia.</div>
+                <div className="text-sm text-muted-foreground py-8 text-center">Data laporan tidak tersedia.</div>
               ) : (
-                <div className="space-y-3">
-                <div>
-                  <div className="text-xs text-muted-foreground">Judul</div>
-                  <Input className="h-9" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                <div className="space-y-5">
+                {/* Judul Section */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Judul Laporan</label>
+                  <Input className="h-9 text-sm" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Masukkan judul laporan" />
                 </div>
-                <div className="flex flex-wrap gap-2 items-center text-sm">
-                  <Badge variant="outline">{selectedReport.category || '-'}</Badge>
+
+                {/* Metadata Badges */}
+                <div className="flex flex-wrap gap-2 items-center pb-4 border-b">
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">{selectedReport.category || '-'}</Badge>
                   <select
-                    className="h-8 w-[160px] rounded-md border bg-background px-2 text-sm"
+                    className="h-8 px-3 rounded-md border bg-background text-xs font-medium transition-colors hover:bg-muted"
                     value={editSeverity}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -1668,17 +1747,18 @@ const AdminDetail = lazy(async () => {
                       }
                     }}
                   >
-                    <option value="">-</option>
-                    <option value="berat">Berat</option>
-                    <option value="sedang">Sedang</option>
-                    <option value="ringan">Ringan</option>
+                    <option value="">Pilih Severity</option>
+                    <option value="berat">🔴 Berat</option>
+                    <option value="sedang">🟡 Sedang</option>
+                    <option value="ringan">🟢 Ringan</option>
                   </select>
                   {renderStatusBadge(selectedReport.status)}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Lokasi</div>
-                    <div>{(() => {
+                {/* Info Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Lokasi</label>
+                    <div className="text-sm font-medium">{(() => {
                       if (!selectedReport) return '-';
                       const byName = (selectedReport.location_name || '').trim();
                       if (byName) return byName;
@@ -1686,136 +1766,140 @@ const AdminDetail = lazy(async () => {
                       return parts.length > 0 ? parts.join(', ') : '-';
                     })()}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Wilayah</div>
-                    <div>{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Wilayah</label>
+                    <div className="text-sm font-medium">{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Tanggal</div>
-                    <div>{formatDateTime(selectedReport.created_at)}</div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Tanggal Dibuat</label>
+                    <div className="text-sm font-medium">{formatDateTime(selectedReport.created_at)}</div>
                   </div>
-                  {/* Disisipkan: Deskripsi */}
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted-foreground">Deskripsi</div>
-                    <div className="text-foreground">{fullReport?.description || '-'}</div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Nama Pelapor</label>
+                    <div className="text-sm font-medium">{fullReport?.reporter_name || '-'}</div>
                   </div>
-                  {/* Disisipkan: Nama & Kontak */}
-                  <div>
-                    <div className="text-xs text-muted-foreground">Nama</div>
-                    <div>{fullReport?.reporter_name || '-'}</div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Kontak</label>
+                    <div className="text-sm font-medium">{fullReport?.phone || '-'}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Kontak</div>
-                    <div>{fullReport?.phone || '-'}</div>
-                  </div>
-                  {/* Disisipkan: Koordinat */}
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted-foreground">Koordinat</div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-mono text-[11px]">
-                        {(() => {
-                          const lat = typeof fullReport?.latitude === 'number' ? fullReport?.latitude : undefined;
-                          const lon = typeof fullReport?.longitude === 'number' ? fullReport?.longitude : undefined;
-                          return lat != null && lon != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : '-';
-                        })()}
-                      </div>
-                  {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={async () => {
-                          const lat = fullReport?.latitude;
-                          const lon = fullReport?.longitude;
-                          if (typeof lat !== 'number' || typeof lon !== 'number') {
-                            return;
-                          }
-                          await navigator.clipboard.writeText(`${lat}, ${lon}`);
-                          toast.success('Koordinat disalin');
-                        }}
-                      >
-                        Salin
-                          </Button>
+                </div>
+                {/* Deskripsi */}
+                <div className="space-y-2 pb-4 border-b">
+                  <label className="text-xs font-medium text-muted-foreground">Deskripsi Laporan</label>
+                  <div className="text-sm leading-relaxed bg-muted/30 p-3 rounded-md">{fullReport?.description || '-'}</div>
+                </div>
+
+                {/* Koordinat */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Koordinat Lokasi</label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                      {(() => {
+                        const lat = typeof fullReport?.latitude === 'number' ? fullReport?.latitude : undefined;
+                        const lon = typeof fullReport?.longitude === 'number' ? fullReport?.longitude : undefined;
+                        return lat != null && lon != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : '-';
+                      })()}
+                    </code>
+                    {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
+                      <>
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-7 text-xs"
+                          onClick={async () => {
+                            const lat = fullReport?.latitude;
+                            const lon = fullReport?.longitude;
+                            if (typeof lat !== 'number' || typeof lon !== 'number') return;
+                            await navigator.clipboard.writeText(`${lat}, ${lon}`);
+                            toast.success('Koordinat disalin');
+                          }}
+                        >
+                          Salin
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
                           onClick={() => {
-                          const lat = fullReport?.latitude;
-                          const lon = fullReport?.longitude;
-                          if (typeof lat !== 'number' || typeof lon !== 'number') {
-                            return;
-                          }
-                          const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-                          window.open(url, '_blank', 'noopener,noreferrer');
+                            const lat = fullReport?.latitude;
+                            const lon = fullReport?.longitude;
+                            if (typeof lat !== 'number' || typeof lon !== 'number') return;
+                            window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`, '_blank', 'noopener,noreferrer');
                           }}
                         >
                           Buka Maps
                         </Button>
-                      </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
-                  {/* Disisipkan: Dokumentasi */}
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted-foreground">Dokumentasi</div>
-                    <div>
-                      {(() => {
-                        const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
-                          ? fullReport.photo_urls
-                          : (fullReport?.photo_url ? [fullReport.photo_url] : []);
-                        return photos.length > 0 ? (
-                          <div className="grid grid-cols-3 gap-2">
-                            {photos.slice(0, 6).map((src, i) => (
+                </div>
+                {/* Dokumentasi */}
+                <div className="space-y-2 pb-4 border-b">
+                  <label className="text-xs font-medium text-muted-foreground">Dokumentasi Foto</label>
+                  <div>
+                    {(() => {
+                      const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
+                        ? fullReport.photo_urls
+                        : (fullReport?.photo_url ? [fullReport.photo_url] : []);
+                      return photos.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {photos.slice(0, 6).map((src, i) => (
+                            <div key={src + i} className="relative group">
                               <img
-                                key={src + i}
                                 src={src}
                                 alt={`Dokumentasi ${i + 1}`}
                                 loading="lazy"
                                 decoding="async"
-                                className="h-24 w-full object-cover rounded border cursor-zoom-in transition-transform hover:scale-105"
+                                className="h-24 w-full object-cover rounded-lg border cursor-zoom-in transition-all hover:scale-105 hover:shadow-md"
                                 onClick={() => { setActivePhotoIndex(i); setLightboxOpen(true); }}
                                 onError={(e) => {
                                   e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="14" text-anchor="middle" dy=".3em" fill="%23999"%3EError%3C/text%3E%3C/svg%3E';
                                 }}
                               />
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-foreground">-</span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted-foreground">Hasil/Respon</div>
-                    <textarea
-                      className="w-full min-h-[96px] rounded-md border bg-background p-2 text-sm"
-                      value={editResolution}
-                      onChange={(e) => setEditResolution(e.target.value)}
-                      placeholder="Tulis hasil penanganan/respon admin di sini..."
-                    />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg pointer-events-none" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md text-center">Tidak ada dokumentasi</div>
+                      );
+                    })()}
                   </div>
                 </div>
-                <div className="pt-3 mt-3 border-t">
-                  <div className="font-medium mb-2 text-sm">Riwayat Perubahan</div>
+
+                {/* Respon Admin */}
+                <div className="space-y-2 pb-4 border-b">
+                  <label className="text-xs font-medium text-muted-foreground">Hasil/Respon Admin</label>
+                  <textarea
+                    className="w-full min-h-[100px] rounded-md border bg-background p-3 text-sm focus:ring-2 focus:ring-primary/20 transition-shadow"
+                    value={editResolution}
+                    onChange={(e) => setEditResolution(e.target.value)}
+                    placeholder="Tulis hasil penanganan atau respon admin di sini..."
+                  />
+                </div>
+
+                {/* Riwayat */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Riwayat Perubahan</label>
                   {logsLoading ? (
-                    <div className="text-sm text-muted-foreground">Memuat riwayat...</div>
+                    <div className="text-sm text-muted-foreground py-4 text-center">Memuat riwayat...</div>
                   ) : logs.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Belum ada perubahan.</div>
+                    <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md text-center">Belum ada perubahan</div>
                   ) : (
-                    <ul className="space-y-2 max-h-48 overflow-auto pr-2">
+                    <div className="space-y-2 max-h-48 overflow-auto pr-2">
                       {logs.map((log) => (
-                        <li key={log.id} className="text-sm">
-                          <div className="text-muted-foreground">{formatDateTime(log.created_at)} - {log.actor_email || '-'}</div>
-                          <div>{summarizeLog(log)}</div>
-                        </li>
+                        <div key={log.id} className="text-xs bg-muted/30 p-3 rounded-md">
+                          <div className="text-muted-foreground mb-1">{formatDateTime(log.created_at)} • {log.actor_email || '-'}</div>
+                          <div className="text-foreground">{summarizeLog(log)}</div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
+
           {/* Lightbox for Dokumentasi */}
           {(() => {
             const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
@@ -1847,27 +1931,32 @@ const AdminDetail = lazy(async () => {
             ) : null;
           })()}
 
-          <DrawerFooter className="py-3">
-            <div className="flex items-center justify-end gap-2">
-              <DrawerClose asChild>
-                <Button size="sm" variant="outline">Batal</Button>
-              </DrawerClose>
-              <Button size="sm" onClick={saveEdits} disabled={saving || !selectedReport}>Simpan</Button>
-              {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    const lat = fullReport?.latitude as number;
-                    const lon = fullReport?.longitude as number;
-                    // open MapView with URL params to center
+          <DrawerFooter className="py-3 px-6 border-t">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number') {
+                    const lat = fullReport.latitude;
+                    const lon = fullReport.longitude;
                     const params = new URLSearchParams({ center: `${lat},${lon}`, zoom: '16' });
                     window.open(`/map?${params.toString()}`, '_blank', 'noopener,noreferrer');
-                  }}
-                >
-                  Lihat di Peta
+                  }
+                }}
+                disabled={typeof fullReport?.latitude !== 'number' || typeof fullReport?.longitude !== 'number'}
+                className="text-xs"
+              >
+                Lihat di Peta
+              </Button>
+              <div className="flex items-center gap-2">
+                <DrawerClose asChild>
+                  <Button size="sm" variant="outline" className="text-xs">Batal</Button>
+                </DrawerClose>
+                <Button size="sm" onClick={saveEdits} disabled={saving || !selectedReport} className="text-xs">
+                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </Button>
-              )}
+              </div>
             </div>
           </DrawerFooter>
         </>
