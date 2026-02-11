@@ -1880,12 +1880,6 @@ const MapView = () => {
             </div>
           )}
         </div>
-
-        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">
-            <strong>Total laporan:</strong> {filteredReports.length} dari {reports.length} laporan
-          </p>
-        </div>
       </div>
     </div>
   );

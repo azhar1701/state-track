@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -228,6 +228,9 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
               <span className="ml-2 text-xs text-muted-foreground font-normal">[{row.key}]</span>
             )}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Detail dan pengaturan layer geospasial
+          </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="ringkasan" className="w-full">
               <TabsList className="w-full justify-start h-9 overflow-x-auto">
