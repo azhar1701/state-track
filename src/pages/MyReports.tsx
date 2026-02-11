@@ -199,25 +199,25 @@ export default function MyReports() {
   const refetch = () => { void loadData(); };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Laporan Saya</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refetch}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Muat Ulang
+    <div className="container mx-auto px-2 md:px-4 py-4 md:py-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-semibold">Laporan Saya</h1>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={refetch} className="text-xs md:text-sm px-2 md:px-4 h-8 md:h-9">
+            <RefreshCw className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> Muat Ulang
           </Button>
         </div>
       </div>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Filter</CardTitle>
+      <Card className="mb-3 md:mb-4">
+        <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">Filter</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 px-3 md:px-6 pb-3 md:pb-4">
           <div className="space-y-1">
-            <Label>Status</Label>
+            <Label className="text-xs md:text-sm">Status</Label>
             <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
                 <SelectValue placeholder="Semua status" />
               </SelectTrigger>
               <SelectContent>
@@ -229,9 +229,9 @@ export default function MyReports() {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Kategori</Label>
+            <Label className="text-xs md:text-sm">Kategori</Label>
             <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
                 <SelectValue placeholder="Semua kategori" />
               </SelectTrigger>
               <SelectContent>
@@ -244,21 +244,21 @@ export default function MyReports() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1 md:col-span-2">
-            <Label>Cari Judul</Label>
-            <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Ketik judul laporan..." />
+          <div className="space-y-1 col-span-2 md:col-span-2">
+            <Label className="text-xs md:text-sm">Cari Judul</Label>
+            <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Ketik judul..." className="h-8 md:h-9 text-xs md:text-sm" />
           </div>
-          <div className="md:col-span-4 flex gap-2 justify-end">
-            <Button variant="outline" onClick={resetFilters}>Reset</Button>
+          <div className="col-span-2 md:col-span-4 flex gap-2 justify-end">
+            <Button variant="outline" onClick={resetFilters} size="sm" className="h-8 md:h-9 text-xs md:text-sm">Reset</Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Laporan</CardTitle>
+        <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">Daftar Laporan</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 md:px-6 pb-3 md:pb-4">
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -266,7 +266,7 @@ export default function MyReports() {
               ))}
             </div>
           ) : error ? (
-            <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+            <div className="text-xs md:text-sm text-red-600 dark:text-red-400">{error}</div>
           ) : rows.length === 0 ? (
             <EmptyState
               title="Belum ada laporan"
@@ -277,26 +277,26 @@ export default function MyReports() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="text-xs md:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Judul</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Tanggal Kejadian</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
+                    <TableHead className="text-[10px] md:text-xs">Judul</TableHead>
+                    <TableHead className="text-[10px] md:text-xs hidden sm:table-cell">Kategori</TableHead>
+                    <TableHead className="text-[10px] md:text-xs">Status</TableHead>
+                    <TableHead className="text-[10px] md:text-xs hidden md:table-cell">Tanggal Kejadian</TableHead>
+                    <TableHead className="text-[10px] md:text-xs hidden lg:table-cell">Dibuat</TableHead>
+                    <TableHead className="text-right text-[10px] md:text-xs">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="max-w-[20rem]">
-                        <div className="font-medium line-clamp-2">{r.title ?? 'Tanpa judul'}</div>
-                        {r.description && <div className="text-xs text-muted-foreground line-clamp-1">{r.description}</div>}
+                      <TableCell className="max-w-[12rem] md:max-w-[20rem] px-2 md:px-4">
+                        <div className="font-medium line-clamp-2 text-xs md:text-sm">{r.title ?? 'Tanpa judul'}</div>
+                        {r.description && <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 hidden sm:block">{r.description}</div>}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{categoryLabels[r.category ?? ''] ?? r.category ?? '-'}</Badge>
+                      <TableCell className="hidden sm:table-cell px-2 md:px-4 text-xs md:text-sm">
+                        <Badge variant="secondary" className="text-[10px]">{categoryLabels[r.category ?? ''] ?? r.category ?? '-'}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge>{statusLabels[r.status ?? ''] ?? r.status ?? '-'}</Badge>

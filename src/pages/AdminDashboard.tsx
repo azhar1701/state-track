@@ -999,11 +999,11 @@ const AdminDashboard = () => {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-6">
-      <div className="container">
-        <div className="mb-4">
-          <h1 className="text-3xl font-bold mb-1">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
+    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-4 md:py-6">
+      <div className="container px-3 md:px-4">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold mb-1">Dashboard Admin</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
         </div>
 
         {/* Admin Tabs */}
@@ -1015,29 +1015,29 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full md:w-auto grid grid-cols-4 mb-6">
-            <TabsTrigger value="reports">Laporan</TabsTrigger>
-            <TabsTrigger value="geo">Geo Data</TabsTrigger>
-            <TabsTrigger value="help">Help Center</TabsTrigger>
-            <TabsTrigger value="settings">Pengaturan</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-2 mb-4 md:mb-6 bg-muted/50 p-1">
+            <TabsTrigger value="reports" className="text-xs md:text-sm">Laporan</TabsTrigger>
+            <TabsTrigger value="geo" className="text-xs md:text-sm">Geo Data</TabsTrigger>
+            <TabsTrigger value="help" className="text-xs md:text-sm">Help Center</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs md:text-sm">Pengaturan</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reports" className="mt-0">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
           <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary">
-            <CardHeader className="pb-2 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Laporan</CardTitle>
-                <FileText className="w-4 h-4 text-primary/60" />
+            <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Laporan</CardTitle>
+                <FileText className="w-3 h-3 md:w-4 md:h-4 text-primary/60 flex-shrink-0" />
               </div>
-              <div className="text-2xl font-bold mt-1">{stats.total}</div>
+              <div className="text-xl md:text-2xl font-bold mt-1">{stats.total}</div>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
-            <CardHeader className="pb-2 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Baru</CardTitle>
+            <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">Baru</CardTitle>
                 <Clock className="w-4 h-4 text-amber-500/60" />
               </div>
               <div className="text-2xl font-bold mt-1">{stats.baru}</div>
@@ -1065,8 +1065,8 @@ const AdminDashboard = () => {
        
         {/* Filters */}
         <Card className="mb-4">
-          <CardContent className="pt-4 pb-4">
-            <div className="space-y-4">
+          <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
+            <div className="space-y-3 md:space-y-4">
               {/* Status Filter Tabs */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-2 block">Status</label>
@@ -1078,17 +1078,17 @@ const AdminDashboard = () => {
                     }
                   }}
                 >
-                  <TabsList className="grid grid-cols-4 w-full">
-                    <TabsTrigger value="semua" className="text-xs">Semua</TabsTrigger>
-                    <TabsTrigger value="baru" className="text-xs">Baru</TabsTrigger>
-                    <TabsTrigger value="diproses" className="text-xs">Diproses</TabsTrigger>
-                    <TabsTrigger value="selesai" className="text-xs">Selesai</TabsTrigger>
+                  <TabsList className="grid grid-cols-4 w-full bg-muted/50 p-1">
+                    <TabsTrigger value="semua" className="text-[10px] md:text-xs">Semua</TabsTrigger>
+                    <TabsTrigger value="baru" className="text-[10px] md:text-xs">Baru</TabsTrigger>
+                    <TabsTrigger value="diproses" className="text-[10px] md:text-xs">Diproses</TabsTrigger>
+                    <TabsTrigger value="selesai" className="text-[10px] md:text-xs">Selesai</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
               
               {/* Other Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Severity</label>
                   <Select
@@ -1099,7 +1099,7 @@ const AdminDashboard = () => {
                       }
                     }}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
                       <SelectValue placeholder="Semua Severity" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1122,7 +1122,7 @@ const AdminDashboard = () => {
                       }
                     }}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
                       <SelectValue placeholder="Semua Kategori" />
                     </SelectTrigger>
                     <SelectContent>

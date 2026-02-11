@@ -579,16 +579,16 @@ const ReportForm = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 fade-in">
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 md:py-8 fade-in">
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
-          <Card className="glass-card shadow-2xl rounded-2xl border-none transition-all duration-300 scale-in">
-          <CardHeader className="pb-4 fade-in">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-2xl font-bold">Buat Laporan Baru</CardTitle>
-                <CardDescription className="text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+          <Card className="glass-card shadow-2xl rounded-xl md:rounded-2xl border-none transition-all duration-300 scale-in">
+          <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 fade-in pt-4 md:pt-6">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 md:gap-4">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-xl md:text-2xl font-bold">Buat Laporan Baru</CardTitle>
+                <CardDescription className="text-sm md:text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
               </div>
-              <div className="flex items-center gap-2 text-xs whitespace-nowrap">
+              <div className="flex flex-col items-end gap-1 text-[10px] md:text-xs whitespace-nowrap">
                 {saveStatus === 'saving' && (
                   <>
                     <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
@@ -610,31 +610,31 @@ const ReportForm = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6 fade-in">
+          <CardContent className="px-3 md:px-6">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 fade-in">
               <div className="space-y-2">
-                <Label htmlFor="title">Judul Laporan *</Label>
+                <Label htmlFor="title" className="text-xs md:text-sm">Judul Laporan *</Label>
                 <Input
                   id="title"
                   placeholder="Contoh: Sungai Cileueur meluap"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40 text-sm"
                   autoComplete="off"
                 />
                 {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Kategori *</Label>
+                  <Label htmlFor="category" className="text-xs md:text-sm">Kategori *</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
                     required
                   >
-                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40 text-sm h-9 md:h-10">
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -647,7 +647,7 @@ const ReportForm = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="severity">Tingkat Keparahan *</Label>
+                  <Label htmlFor="severity" className="text-xs md:text-sm">Tingkat Keparahan *</Label>
                   <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
                     <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
                       <SelectValue placeholder="Pilih tingkat" />

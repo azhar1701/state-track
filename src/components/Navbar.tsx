@@ -99,7 +99,7 @@ const Navbar = memo(() => {
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuContent align="end" className="w-80 sm:w-72 md:w-80 max-w-[90vw]">
                   <DropdownMenuLabel className="flex items-center justify-between">
                     <span>Notifikasi</span>
                     {unreadCount > 0 && (

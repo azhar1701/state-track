@@ -139,18 +139,18 @@ const Home = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="container py-20 md:py-28">
-        <div className="max-w-4xl mx-auto text-center space-y-8 px-4">
-          <div className="inline-flex p-4 bg-gradient-to-br from-blue-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl mb-2 shadow-lg border border-white/10 animate-[page-enter_0.6s_ease-out]">
-            <MapPin className="w-12 h-12 text-blue-500" />
+      <section className="container py-12 md:py-20 lg:py-28 px-4">
+        <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-8">
+          <div className="inline-flex p-3 md:p-4 bg-gradient-to-br from-blue-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl mb-2 shadow-lg border border-white/10 animate-[page-enter_0.6s_ease-out]">
+            <MapPin className="w-10 h-10 md:w-12 md:h-12 text-blue-500" />
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out]">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out] leading-tight">
             Sistem Informasi Pelaporan SDA
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
+          <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
             Aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6 animate-[page-enter_1.2s_ease-out]">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-4 md:pt-6 animate-[page-enter_1.2s_ease-out]">
             {authLoading ? null : !user ? (
               <Link to="/auth">
                 <Button size="lg" className="gap-2 shadow-xl rounded-xl py-6 px-8 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:shadow-blue-500/50 hover:scale-105">
@@ -185,85 +185,85 @@ const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="container py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto px-4">
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-blue-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <FileText className="w-8 h-8 text-blue-500" />
+      <section className="container py-12 md:py-16 lg:py-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6 max-w-6xl mx-auto px-2 md:px-4">
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-blue-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-2 md:mb-4">
+              <div className="p-2 md:p-3 bg-blue-500/20 rounded-lg md:rounded-xl">
+                <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-blue-500">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">Total Laporan</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-500">{stats.total}</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Total Laporan</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-amber-500/20 rounded-xl">
-                <Clock className="w-8 h-8 text-amber-500" />
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-2 md:mb-4">
+              <div className="p-2 md:p-3 bg-amber-500/20 rounded-lg md:rounded-xl">
+                <Clock className="w-6 h-6 md:w-8 md:h-8 text-amber-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-amber-500">{stats.baru}</div>
-              <div className="text-sm text-muted-foreground">Laporan Baru</div>
+              <div className="text-3xl md:text-4xl font-bold text-amber-500">{stats.baru}</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Laporan Baru</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-cyan-500/20 rounded-xl">
-                <Users className="w-8 h-8 text-cyan-500" />
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-2 md:mb-4">
+              <div className="p-2 md:p-3 bg-cyan-500/20 rounded-lg md:rounded-xl">
+                <Users className="w-6 h-6 md:w-8 md:h-8 text-cyan-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-cyan-500">{stats.diproses}</div>
-              <div className="text-sm text-muted-foreground">Diproses</div>
+              <div className="text-3xl md:text-4xl font-bold text-cyan-500">{stats.diproses}</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Diproses</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-green-500/20 rounded-xl">
-                <CheckCircle className="w-8 h-8 text-green-500" />
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-center mb-2 md:mb-4">
+              <div className="p-2 md:p-3 bg-green-500/20 rounded-lg md:rounded-xl">
+                <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-green-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-green-500">{stats.selesai}</div>
-              <div className="text-sm text-muted-foreground">Selesai</div>
+              <div className="text-3xl md:text-4xl font-bold text-green-500">{stats.selesai}</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Selesai</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Charts Section */}
-      <section className="container py-16">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">Insight Laporan</h2>
+      <section className="container py-12 md:py-16 lg:py-20">
+        <div className="max-w-6xl mx-auto px-2 md:px-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-              <SelectTrigger className="w-[140px] bg-white/5 backdrop-blur-md border-white/10 rounded-xl"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[140px] bg-white/5 backdrop-blur-md border-white/10 rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="7">7 hari</SelectItem>
                 <SelectItem value="30">30 hari</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-muted-foreground">Tren Laporan ({chartDays} hari)</h3>
+                <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Tren Laporan ({chartDays} hari)</h3>
               </div>
               <div>
                 {chartDaily.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
+                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
+                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
-                  <div className="relative">
+                  <div className="relative w-full overflow-x-auto">
                     <ChartContainer
                       config={{ reports: { label: 'Laporan', color: 'hsl(215 70% 55%)' } }}
-                      className="h-64 md:h-72"
+                      className="h-48 md:h-64 lg:h-72 w-full"
                       withAspect={false}
                     >
                       <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
@@ -285,19 +285,19 @@ const Home = () => {
                 )}
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
+                <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
               </div>
               <div>
                 {chartByCategory.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
+                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
+                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
-                  <div className="relative">
+                  <div className="relative w-full overflow-x-auto">
                     <ChartContainer
                       config={{ count: { label: 'Jumlah', color: 'hsl(142 65% 50%)' } }}
                       className="h-64 md:h-72"
