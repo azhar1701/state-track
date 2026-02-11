@@ -7,6 +7,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Navbar = memo(() => {
   const { user, isAdmin, signOut } = useAuth();
@@ -74,6 +75,9 @@ const Navbar = memo(() => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 ml-auto">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {user ? (
             <>
               <Link to="/report">
