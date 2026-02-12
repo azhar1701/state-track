@@ -58,7 +58,7 @@ export const geoOptimizer = {
               return f;
             }
             const intersection = turf.intersect(
-              turf.featureCollection([f, bbox]) as any
+              turf.featureCollection([f, bbox]) as Parameters<typeof turf.intersect>[0]
             );
             return intersection ? { ...f, geometry: intersection.geometry } : null;
           } catch {

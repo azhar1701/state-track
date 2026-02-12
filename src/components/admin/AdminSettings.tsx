@@ -21,14 +21,11 @@ import { ReportSettings } from "@/components/admin/settings/ReportSettings";
 import { SystemSettings } from "@/components/admin/settings/SystemSettings";
 import { APISettings } from "@/components/admin/settings/APISettings";
 import { CategorySettings } from "@/components/admin/settings/CategorySettings";
-
-type UserManagementRow = {
-  id: string;
-  full_name: string | null;
-  phone: string | null;
-  created_at: string;
-  role: "admin" | "user";
-};
+import { GeoLayerSettings } from "@/components/admin/settings/GeoLayerSettings";
+import { NotificationSettings } from "@/components/admin/settings/NotificationSettings";
+import { SecuritySettings } from "@/components/admin/settings/SecuritySettings";
+import { BackupSettings } from "@/components/admin/settings/BackupSettings";
+import { UserManagementSettings } from "@/components/admin/settings/UserManagementSettings";
 
 type MapPreferences = {
   centerLat: string;
@@ -47,32 +44,9 @@ type MapPreferences = {
   defaultOpacity: number;
 };
 
-type GeoLayerSettings = {
-  enforceCRS: boolean;
-  defaultCRS: string;
-  autoPublishToMap: boolean;
-  maxUploadSizeMb: number;
-  requireMetadata: boolean;
-};
-
-type NotificationSettings = {
-  email: boolean;
-  push: boolean;
-  dailyDigest: boolean;
-};
-
-type SecuritySettings = {
-  requireMFA: boolean;
-  sessionTimeoutMinutes: number;
-  ipAllowlist: string;
-};
-
 type ReportLogEntry = Database["public"]["Tables"]["report_logs"]["Row"];
 
 const MAP_PREFS_STORAGE_KEY = "admin:mapPreferences";
-const GEO_LAYER_STORAGE_KEY = "admin:geoLayerSettings";
-const NOTIFICATION_STORAGE_KEY = "admin:notificationSettings";
-const SECURITY_STORAGE_KEY = "admin:securitySettings";
 
 const basemapOptions: Array<{ value: MapPreferences["basemap"]; label: string }> = [
   { value: "osm", label: "OpenStreetMap" },
@@ -95,9 +69,6 @@ const formatDateTime = (iso?: string | null) => {
 const AdminSettings = () => {
   const { user, isAdmin } = useAuth();
   const { fetchSetting, saveSetting } = useSystemSettings();
-  const [users, setUsers] = useState<UserManagementRow[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [userRoleUpdating, setUserRoleUpdating] = useState<string | null>(null);
 
   const [mapPreferences, setMapPreferences] = useState<MapPreferences>({
     centerLat: "-7.325",
@@ -117,86 +88,10 @@ const AdminSettings = () => {
   });
   const [mapPrefSaving, setMapPrefSaving] = useState(false);
 
-  const [geoLayerSettings, setGeoLayerSettings] = useState<GeoLayerSettings>({
-    enforceCRS: true,
-    defaultCRS: "EPSG:4326",
-    autoPublishToMap: true,
-    maxUploadSizeMb: 50,
-    requireMetadata: true,
-  });
-  const [geoLayerSaving, setGeoLayerSaving] = useState(false);
-
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    email: true,
-    push: false,
-    dailyDigest: true,
-  });
-  const [notificationSaving, setNotificationSaving] = useState(false);
-
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
-    requireMFA: false,
-    sessionTimeoutMinutes: 30,
-    ipAllowlist: "",
-  });
-  const [securitySaving, setSecuritySaving] = useState(false);
-
   const [auditLogs, setAuditLogs] = useState<ReportLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
-  const [backupInProgress, setBackupInProgress] = useState(false);
-  const [restoreInProgress, setRestoreInProgress] = useState(false);
-  const restoreInputRef = useRef<HTMLInputElement | null>(null);
-
   const canUseBrowserStorage = typeof window !== "undefined" && !!window.localStorage;
-
-  const loadUsers = useCallback(async () => {
-    if (!isAdmin) return;
-    setUsersLoading(true);
-    try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id,full_name,phone,created_at")
-        .order("created_at", { ascending: false });
-      
-      console.log('[AdminSettings] Profiles loaded:', profiles?.length, profiles);
-      if (profilesError) {
-        console.error('[AdminSettings] Profiles error:', profilesError);
-        throw profilesError;
-      }
-
-      const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id,role");
-      console.log('[AdminSettings] Roles loaded:', roles?.length, roles);
-      if (rolesError) {
-        console.error('[AdminSettings] Roles error:', rolesError);
-        throw rolesError;
-      }
-
-      const adminIds = new Set((roles ?? []).filter((role) => role.role === "admin").map((role) => role.user_id));
-      const list: UserManagementRow[] = (profiles ?? []).map((profile) => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        phone: profile.phone,
-        created_at: profile.created_at,
-        role: adminIds.has(profile.id) ? "admin" : "user",
-      }));
-      console.log('[AdminSettings] Final user list:', list);
-      setUsers(list);
-    } catch (error) {
-      console.error("Failed to load users", error);
-      const message =
-        error && typeof error === "object" && "message" in error && typeof (error as { message?: string }).message === "string"
-          ? (error as { message: string }).message
-          : null;
-      if (message && /access denied|permission denied/i.test(message)) {
-        toast.error("Akses ditolak. Pastikan akun Anda memiliki role admin di tabel user_roles.");
-      } else {
-        toast.error("Gagal memuat pengguna");
-      }
-      setUsers([]);
-    } finally {
-      setUsersLoading(false);
-    }
-  }, [isAdmin]);
 
   const loadAuditLogs = useCallback(async () => {
     if (!isAdmin) return;
@@ -219,9 +114,8 @@ const AdminSettings = () => {
 
   useEffect(() => {
     if (!user || !isAdmin) return;
-    void loadUsers();
     void loadAuditLogs();
-  }, [isAdmin, user, loadAuditLogs, loadUsers]);
+  }, [isAdmin, user, loadAuditLogs]);
 
   useEffect(() => {
     if (!canUseBrowserStorage) return;
@@ -235,103 +129,11 @@ const AdminSettings = () => {
       } catch (error) {
         console.warn("Failed to load map preferences", error);
       }
-      try {
-        const storedLayers = localStorage.getItem(GEO_LAYER_STORAGE_KEY);
-        if (storedLayers) {
-          const parsed = JSON.parse(storedLayers) as Partial<GeoLayerSettings>;
-          setGeoLayerSettings((prev) => ({ ...prev, ...parsed }));
-        }
-      } catch (error) {
-        console.warn("Failed to load geo layer settings", error);
-      }
-      try {
-        const storedNotifications = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
-        if (storedNotifications) {
-          const parsed = JSON.parse(storedNotifications) as Partial<NotificationSettings>;
-          setNotificationSettings((prev) => ({ ...prev, ...parsed }));
-        }
-      } catch (error) {
-        console.warn("Failed to load notification settings", error);
-      }
-      try {
-        const storedSecurity = localStorage.getItem(SECURITY_STORAGE_KEY);
-        if (storedSecurity) {
-          const parsed = JSON.parse(storedSecurity) as Partial<SecuritySettings>;
-          setSecuritySettings((prev) => ({ ...prev, ...parsed }));
-        }
-      } catch (error) {
-        console.warn("Failed to load security settings", error);
-      }
     };
     loadFromLocalStorage();
   }, [canUseBrowserStorage]);
 
-  useEffect(() => {
-    if (!canUseBrowserStorage) return;
-    try {
-      const storedMap = localStorage.getItem(MAP_PREFS_STORAGE_KEY);
-      if (storedMap) {
-        const parsed = JSON.parse(storedMap) as Partial<MapPreferences>;
-        setMapPreferences((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (error) {
-      console.warn("Failed to load map preferences", error);
-    }
-    try {
-      const storedLayers = localStorage.getItem(GEO_LAYER_STORAGE_KEY);
-      if (storedLayers) {
-        const parsed = JSON.parse(storedLayers) as Partial<GeoLayerSettings>;
-        setGeoLayerSettings((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (error) {
-      console.warn("Failed to load geo layer settings", error);
-    }
-    try {
-      const storedNotifications = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
-      if (storedNotifications) {
-        const parsed = JSON.parse(storedNotifications) as Partial<NotificationSettings>;
-        setNotificationSettings((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (error) {
-      console.warn("Failed to load notification settings", error);
-    }
-    try {
-      const storedSecurity = localStorage.getItem(SECURITY_STORAGE_KEY);
-      if (storedSecurity) {
-        const parsed = JSON.parse(storedSecurity) as Partial<SecuritySettings>;
-        setSecuritySettings((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (error) {
-      console.warn("Failed to load security settings", error);
-    }
-  }, [canUseBrowserStorage]);
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "user") => {
-    if (!isAdmin) return;
-    setUserRoleUpdating(userId);
-    try {
-      if (newRole === "admin") {
-        const { error } = await supabase
-          .from("user_roles")
-          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userId)
-          .eq("role", "admin");
-        if (error) throw error;
-      }
-      toast.success("Role pengguna diperbarui");
-      void loadUsers();
-    } catch (error) {
-      console.error("Failed to update user role", error);
-      toast.error("Gagal memperbarui role pengguna");
-    } finally {
-      setUserRoleUpdating(null);
-    }
-  };
 
   const saveMapPreferences = async () => {
     setMapPrefSaving(true);
@@ -365,128 +167,6 @@ const AdminSettings = () => {
       console.error("Failed to save map preferences", error);
     } finally {
       setMapPrefSaving(false);
-    }
-  };
-
-  const saveGeoLayerSettings = async () => {
-    setGeoLayerSaving(true);
-    try {
-      if (geoLayerSettings.maxUploadSizeMb <= 0) {
-        toast.error("Batas unggah harus lebih dari 0 MB");
-        return;
-      }
-      await saveSetting('geo', 'layer_settings', geoLayerSettings);
-      if (canUseBrowserStorage) localStorage.setItem(GEO_LAYER_STORAGE_KEY, JSON.stringify(geoLayerSettings));
-    } catch (error) {
-      console.error("Failed to save geo layer settings", error);
-    } finally {
-      setGeoLayerSaving(false);
-    }
-  };
-
-  const saveNotificationSettings = async () => {
-    setNotificationSaving(true);
-    try {
-      await saveSetting('notification', 'preferences', notificationSettings);
-      if (canUseBrowserStorage) localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificationSettings));
-    } catch (error) {
-      console.error("Failed to save notification settings", error);
-    } finally {
-      setNotificationSaving(false);
-    }
-  };
-
-  const saveSecuritySettings = async () => {
-    setSecuritySaving(true);
-    try {
-      if (securitySettings.sessionTimeoutMinutes < 5) {
-        toast.error("Durasi sesi minimal 5 menit");
-        return;
-      }
-      await saveSetting('security', 'preferences', securitySettings);
-      if (canUseBrowserStorage) localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(securitySettings));
-    } catch (error) {
-      console.error("Failed to save security settings", error);
-    } finally {
-      setSecuritySaving(false);
-    }
-  };
-
-  const handleBackupGeoLayers = async () => {
-    if (!isAdmin) return;
-    setBackupInProgress(true);
-    try {
-      const { data, error } = await supabase
-        .from("geo_layers")
-        .select("key,name,geometry_type,data,created_at");
-      if (error) throw error;
-      const payload = {
-        exported_at: new Date().toISOString(),
-        layers: (data ?? []).map((layer) => ({
-          key: layer.key,
-          name: layer.name,
-          geometry_type: layer.geometry_type,
-          data: layer.data,
-          created_at: layer.created_at,
-        })),
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `geo-layers-backup-${Date.now()}.json`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      toast.success("Backup geo layer berhasil dibuat");
-    } catch (error) {
-      console.error("Failed to backup geo layers", error);
-      toast.error("Gagal membuat backup geo layer");
-    } finally {
-      setBackupInProgress(false);
-    }
-  };
-
-  const handleTriggerRestore = () => {
-    if (restoreInProgress) return;
-    restoreInputRef.current?.click();
-  };
-
-  const handleRestoreFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setRestoreInProgress(true);
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text) as { layers?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
-      const layersArray = Array.isArray(parsed) ? parsed : parsed.layers;
-      if (!Array.isArray(layersArray)) throw new Error("Format file backup tidak valid");
-      const sanitized = layersArray
-        .map((layer) => {
-          const item = layer as { key?: string; name?: string; geometry_type?: string | null; data?: unknown };
-          if (!item.key || !item.name) return null;
-          return {
-            key: item.key,
-            name: item.name,
-            geometry_type: item.geometry_type ?? null,
-            data: item.data ?? null,
-          };
-        })
-        .filter(Boolean) as Array<{ key: string; name: string; geometry_type: string | null; data: unknown }>;
-      if (sanitized.length === 0) throw new Error("Tidak ada layer yang valid untuk dipulihkan");
-      const chunkSize = 20;
-      for (let i = 0; i < sanitized.length; i += chunkSize) {
-        const slice = sanitized.slice(i, i + chunkSize);
-        const { error } = await supabase.from("geo_layers").upsert(slice, { onConflict: "key" });
-        if (error) throw error;
-      }
-      toast.success("Pemulihan geo layer selesai");
-    } catch (error) {
-      console.error("Failed to restore geo layers", error);
-      const description = error instanceof Error ? error.message : undefined;
-      toast.error("Gagal memulihkan geo layer", { description });
-    } finally {
-      setRestoreInProgress(false);
-      if (event.target) event.target.value = "";
     }
   };
 
@@ -760,92 +440,7 @@ const AdminSettings = () => {
       </TabsContent>
 
       <TabsContent value="geo" className="mt-6 space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <DatabaseIcon className="h-5 w-5 text-blue-500" />
-            Pengaturan GeoLayer
-          </CardTitle>
-          <CardDescription>Kelola validasi dan publikasi layer geografis</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Wajibkan CRS EPSG:4326</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Pastikan data yang diunggah sesuai koordinat standar.</p>
-                </div>
-                <Switch
-                  checked={geoLayerSettings.enforceCRS}
-                  onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, enforceCRS: checked }))}
-                />
-              </label>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Publikasikan otomatis ke peta</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Setiap layer baru langsung tersedia di MapView.</p>
-                </div>
-                <Switch
-                  checked={geoLayerSettings.autoPublishToMap}
-                  onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, autoPublishToMap: checked }))}
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CRS default</label>
-              <Input
-                className="h-9"
-                value={geoLayerSettings.defaultCRS}
-                onChange={(event) => setGeoLayerSettings((prev) => ({ ...prev, defaultCRS: event.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Batas ukuran unggah (MB)</label>
-              <Input
-                className="h-9"
-                type="number"
-                inputMode="numeric"
-                value={geoLayerSettings.maxUploadSizeMb}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setGeoLayerSettings((prev) => ({
-                    ...prev,
-                    maxUploadSizeMb: Number.isNaN(value) ? prev.maxUploadSizeMb : value,
-                  }));
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="bg-muted/30 rounded-lg p-3 border">
-            <label className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Wajibkan metadata layer</div>
-                <p className="text-xs text-muted-foreground mt-0.5">Pastikan informasi deskriptif terisi saat impor.</p>
-              </div>
-              <Switch
-                checked={geoLayerSettings.requireMetadata}
-                onCheckedChange={(checked) => setGeoLayerSettings((prev) => ({ ...prev, requireMetadata: checked }))}
-              />
-            </label>
-          </div>
-
-          <Separator />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Validasi akan diterapkan pada unggahan berikutnya</p>
-            <Button onClick={saveGeoLayerSettings} disabled={geoLayerSaving} size="sm" className="w-full sm:w-auto">
-              {geoLayerSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Pengaturan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <GeoLayerSettings />
       </TabsContent>
 
       <TabsContent value="reports" className="mt-6 space-y-4">
@@ -857,305 +452,19 @@ const AdminSettings = () => {
       </TabsContent>
 
       <TabsContent value="notification" className="mt-6 space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Bell className="h-5 w-5 text-amber-500" />
-            Notifikasi
-          </CardTitle>
-          <CardDescription>Atur preferensi pemberitahuan sistem</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Email</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Kirim pemberitahuan via email untuk laporan penting.</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.email}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, email: checked }))}
-                />
-              </label>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Push</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Tampilkan notifikasi push pada dashboard.</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.push}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: checked }))}
-                />
-              </label>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Ringkasan harian</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Terima rekap aktivitas setiap pagi.</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.dailyDigest}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, dailyDigest: checked }))}
-                />
-              </label>
-            </div>
-          </div>
-
-          <Separator />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Notifikasi akan aktif sesuai preferensi</p>
-            <Button onClick={saveNotificationSettings} disabled={notificationSaving} size="sm" className="w-full sm:w-auto">
-              {notificationSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Pengaturan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Activity className="h-5 w-5 text-primary" />
-            Audit Log
-          </CardTitle>
-          <CardDescription>Riwayat aktivitas sistem terbaru</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <div className="bg-muted/30 rounded-lg p-4 border">
-            <div className="flex items-center gap-2 mb-3">
-              <RefreshCcw className="h-4 w-4 text-muted-foreground" />
-              <div className="text-sm font-semibold">Audit Terbaru</div>
-            </div>
-            {auditLoading ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Memuat catatan audit...
-              </div>
-            ) : sortedAuditLogs.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">Tidak ada catatan audit.</div>
-            ) : (
-              <ul className="space-y-2 max-h-48 overflow-auto pr-2 text-xs">
-                {sortedAuditLogs.map((log) => (
-                  <li key={log.id} className="bg-background rounded p-2 border">
-                    <div className="text-muted-foreground mb-1">
-                      {formatDateTime(log.created_at)} · {log.actor_email || "-"}
-                    </div>
-                    <div className="font-medium">{log.action} · {log.report_id}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
+        <NotificationSettings />
       </TabsContent>
 
       <TabsContent value="security" className="mt-6 space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Lock className="h-5 w-5 text-red-500" />
-            Keamanan
-          </CardTitle>
-          <CardDescription>Konfigurasi pengaturan keamanan dan akses sistem</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="bg-muted/30 rounded-lg p-3 border">
-            <label className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Wajibkan MFA</div>
-                <p className="text-xs text-muted-foreground mt-0.5">Minta administrator menyalakan multi-factor authentication.</p>
-              </div>
-              <Switch
-                checked={securitySettings.requireMFA}
-                onCheckedChange={(checked) => setSecuritySettings((prev) => ({ ...prev, requireMFA: checked }))}
-              />
-            </label>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Durasi sesi (menit)</label>
-            <Input
-              className="h-9"
-              type="number"
-              inputMode="numeric"
-              value={securitySettings.sessionTimeoutMinutes}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                setSecuritySettings((prev) => ({
-                  ...prev,
-                  sessionTimeoutMinutes: Number.isNaN(value) ? prev.sessionTimeoutMinutes : value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Daftar IP yang diizinkan</label>
-            <Textarea
-              className="text-sm"
-              placeholder="Pisahkan dengan koma, contoh: 192.168.0.1, 10.0.0.2"
-              value={securitySettings.ipAllowlist}
-              onChange={(event) => setSecuritySettings((prev) => ({ ...prev, ipAllowlist: event.target.value }))}
-            />
-          </div>
-
-          <div className="flex items-start gap-3 rounded-lg border-2 border-destructive/40 bg-destructive/10 p-3 text-xs">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-            <span className="text-destructive">
-              Pastikan perubahan keamanan dikomunikasikan ke seluruh administrator agar tidak mengganggu operasional.
-            </span>
-          </div>
-
-          <Separator />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Perubahan keamanan memerlukan restart sesi</p>
-            <Button onClick={saveSecuritySettings} disabled={securitySaving} size="sm" className="w-full sm:w-auto">
-              {securitySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Pengaturan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <SecuritySettings />
       </TabsContent>
 
       <TabsContent value="backup" className="mt-6 space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <DownloadCloud className="h-5 w-5 text-green-500" />
-            Backup &amp; Restore
-          </CardTitle>
-          <CardDescription>Kelola cadangan dan pemulihan data geo layer</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-xs text-blue-900 dark:text-blue-100">
-              Buat salinan data geo layer untuk cadangan, atau pulihkan dari file JSON yang telah diekspor sebelumnya.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Button onClick={handleBackupGeoLayers} disabled={backupInProgress} variant="outline" size="sm" className="h-auto py-3">
-              {backupInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-              <div className="text-left">
-                <div className="font-semibold">Backup GeoLayer</div>
-                <div className="text-xs text-muted-foreground font-normal">Unduh semua layer ke file JSON</div>
-              </div>
-            </Button>
-            <Button onClick={handleTriggerRestore} disabled={restoreInProgress} variant="outline" size="sm" className="h-auto py-3">
-              {restoreInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              <div className="text-left">
-                <div className="font-semibold">Restore dari File</div>
-                <div className="text-xs text-muted-foreground font-normal">Pulihkan layer dari backup</div>
-              </div>
-            </Button>
-            <input
-              ref={restoreInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleRestoreFileChange}
-            />
-          </div>
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-            <p className="text-xs text-amber-900 dark:text-amber-100">
-              ⚠️ Saat restore, data layer dengan key yang sama akan digantikan.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        <BackupSettings />
       </TabsContent>
 
       <TabsContent value="users" className="mt-6 space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Users className="h-5 w-5 text-primary" />
-            Manajemen Pengguna
-          </CardTitle>
-          <CardDescription>Kelola role dan akses pengguna sistem</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary">{users.length} Pengguna</Badge>
-              <Badge variant="outline">{users.filter(u => u.role === 'admin').length} Admin</Badge>
-            </div>
-            <Button onClick={loadUsers} disabled={usersLoading} size="sm" variant="outline">
-              {usersLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-              Refresh
-            </Button>
-          </div>
-
-          {usersLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : users.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-sm text-muted-foreground">Tidak ada pengguna ditemukan</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <div className="inline-block min-w-full align-middle">
-              <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[150px]">Nama</TableHead>
-                    <TableHead className="min-w-[120px]">Kontak</TableHead>
-                    <TableHead className="min-w-[140px]">Terdaftar</TableHead>
-                    <TableHead className="min-w-[80px]">Role</TableHead>
-                    <TableHead className="text-right min-w-[120px]">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <UserCog className="h-4 w-4 text-muted-foreground" />
-                          {u.full_name || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{u.phone || '-'}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDateTime(u.created_at)}</TableCell>
-                      <TableCell>
-                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
-                          {u.role === 'admin' ? 'Admin' : 'User'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select
-                          value={u.role}
-                          onValueChange={(value) => handleRoleChange(u.id, value as 'admin' | 'user')}
-                          disabled={userRoleUpdating === u.id}
-                        >
-                          <SelectTrigger className="w-[110px] h-8 text-xs ml-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <UserManagementSettings />
       </TabsContent>
       </Tabs>
     </div>

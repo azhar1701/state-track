@@ -20,18 +20,24 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          email: string | null
+          nik_nip: string | null
         }
         Insert: {
           created_at?: string
           full_name?: string | null
           id: string
           phone?: string | null
+          email?: string | null
+          nik_nip?: string | null
         }
         Update: {
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          email?: string | null
+          nik_nip?: string | null
         }
         Relationships: []
       }
@@ -207,6 +213,198 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          id: string
+          category: string
+          key: string
+          value: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          key: string
+          value: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          key?: string
+          value?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      security_audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          event_type: string
+          ip_address: string | null
+          user_agent: string | null
+          details: Json | null
+          severity: "info" | "warning" | "critical"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          event_type: string
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json | null
+          severity?: "info" | "warning" | "critical"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          event_type?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json | null
+          severity?: "info" | "warning" | "critical"
+          created_at?: string
+        }
+        Relationships: []
+      }
+      login_attempts: {
+        Row: {
+          id: string
+          email: string
+          ip_address: string
+          success: boolean
+          attempted_at: string
+          locked_until: string | null
+        }
+        Insert: {
+          id?: string
+          email: string
+          ip_address: string
+          success?: boolean
+          attempted_at?: string
+          locked_until?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          ip_address?: string
+          success?: boolean
+          attempted_at?: string
+          locked_until?: string | null
+        }
+        Relationships: []
+      }
+      active_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          session_token: string
+          ip_address: string | null
+          user_agent: string | null
+          expires_at: string
+          created_at: string
+          last_activity: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          session_token: string
+          ip_address?: string | null
+          user_agent?: string | null
+          expires_at: string
+          created_at?: string
+          last_activity?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          session_token?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          expires_at?: string
+          created_at?: string
+          last_activity?: string
+        }
+        Relationships: []
+      }
+      geo_layers: {
+        Row: {
+          id: string
+          key: string
+          name: string
+          geometry_type: string | null
+          data: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          name: string
+          geometry_type?: string | null
+          data?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          name?: string
+          geometry_type?: string | null
+          data?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      backup_history: {
+        Row: {
+          id: string
+          backup_type: string
+          file_name: string
+          file_size: number | null
+          tables_included: string[] | null
+          record_count: number | null
+          status: "success" | "failed" | "in_progress"
+          error_message: string | null
+          created_by: string | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          backup_type: string
+          file_name: string
+          file_size?: number | null
+          tables_included?: string[] | null
+          record_count?: number | null
+          status?: "success" | "failed" | "in_progress"
+          error_message?: string | null
+          created_by?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          backup_type?: string
+          file_name?: string
+          file_size?: number | null
+          tables_included?: string[] | null
+          record_count?: number | null
+          status?: "success" | "failed" | "in_progress"
+          error_message?: string | null
+          created_by?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -218,6 +416,53 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      cleanup_old_audit_logs: {
+        Args: {
+          retention_days: number
+        }
+        Returns: number
+      }
+      cleanup_expired_sessions: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      is_account_locked: {
+        Args: {
+          user_email: string
+          max_attempts?: number
+          lockout_minutes?: number
+        }
+        Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          p_user_id: string | null
+          p_event_type: string
+          p_ip_address?: string | null
+          p_user_agent?: string | null
+          p_details?: Json | null
+          p_severity?: string
+        }
+        Returns: string
+      }
+      cleanup_old_backups: {
+        Args: {
+          retention_days?: number
+        }
+        Returns: number
+      }
+      log_backup: {
+        Args: {
+          p_backup_type: string
+          p_file_name: string
+          p_file_size?: number | null
+          p_tables_included?: string[] | null
+          p_record_count?: number | null
+          p_status?: string
+          p_error_message?: string | null
+        }
+        Returns: string
       }
     }
     Enums: {

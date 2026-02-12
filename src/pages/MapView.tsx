@@ -984,11 +984,11 @@ const MapView = () => {
       // Clean up temporary layer
       tmp.remove();
     } catch (e) {
-      // ignore
+      console.warn('Failed to fit bounds', sanitizeForLog(e));
     }
     // run only on first availability of adminGeoJson while overlay is on
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapInstance, overlays.adminBoundaries, !!adminGeoJson]);
+  }, [mapInstance, overlays.adminBoundaries, !!adminGeoJson, userLocation]);
 
   // Load list of available geo_layers to display as toggles and apply default visibility
   useEffect(() => {
@@ -1520,7 +1520,9 @@ const MapView = () => {
         const parsed = JSON.parse(stored) as { clusterRadius?: number };
         if (parsed.clusterRadius) clusterRadius = parsed.clusterRadius;
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to load cluster radius', sanitizeForLog(e));
+    }
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mcg = new (L as any).MarkerClusterGroup({
@@ -1563,7 +1565,9 @@ const MapView = () => {
         const parsed = JSON.parse(stored) as { heatmapRadius?: number };
         if (parsed.heatmapRadius) heatmapRadius = parsed.heatmapRadius;
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to load heatmap radius', sanitizeForLog(e));
+    }
     
     const pts: Array<[number, number, number]> = filteredReports.map((r) => [r.latitude, r.longitude, 0.6]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { User, Mail, Lock, Droplets, Waves, Shield } from "lucide-react";
+import { User, Mail, Lock, Droplets, Waves, Shield, Phone } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -13,7 +13,8 @@ const authSchema = z.object({
   email: z.string().email({ message: "Email tidak valid" }),
   password: z.string().min(6, { message: "Password minimal 6 karakter" }),
   fullName: z.string().min(2, { message: "Nama minimal 2 karakter" }).optional(),
-  nik: z.string().optional(),
+  phone: z.string().min(10, { message: "Nomor telepon minimal 10 digit" }),
+  nikNip: z.string().min(16, { message: "NIK/NIP minimal 16 karakter" }),
 });
 
 const Auth = () => {
@@ -26,7 +27,8 @@ const Auth = () => {
     email: "",
     password: "",
     fullName: "",
-    nik: "",
+    phone: "",
+    nikNip: "",
   });
 
   useEffect(() => {
@@ -44,7 +46,7 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const validation = authSchema.omit({ fullName: true, nik: true }).safeParse(formData);
+      const validation = authSchema.omit({ fullName: true, phone: true, nikNip: true }).safeParse(formData);
       if (!validation.success) {
         toast.error(validation.error.errors[0].message);
         return;
@@ -107,14 +109,15 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: formData.fullName,
-            nik: formData.nik,
+            phone: formData.phone,
+            nik_nip: formData.nikNip,
           },
         },
       });
@@ -124,9 +127,27 @@ const Auth = () => {
         return;
       }
 
+      // Profile will be created automatically by trigger
+      // But we can also manually ensure it exists
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: data.user.id,
+            full_name: formData.fullName,
+            phone: formData.phone,
+            nik_nip: formData.nikNip,
+            email: formData.email,
+          }, { onConflict: "id" });
+
+        if (profileError) {
+          console.warn("Profile creation warning:", profileError);
+        }
+      }
+
       toast.success("Registrasi berhasil! Silakan login.");
       setIsLogin(true);
-      setFormData({ email: formData.email, password: "", fullName: "", nik: "" });
+      setFormData({ email: formData.email, password: "", fullName: "", phone: "", nikNip: "" });
     } catch (error) {
       toast.error("Terjadi kesalahan saat registrasi");
       console.error("Signup error:", error);
@@ -261,14 +282,32 @@ const Auth = () => {
 
               {!isLogin && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">NIK (Opsional)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Nomor Telepon</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <Input
+                      type="tel"
+                      placeholder="08123456789"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">NIK/NIP</label>
                   <div className="relative">
                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <Input
                       type="text"
-                      placeholder="Nomor Induk Kependudukan"
-                      value={formData.nik}
-                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                      placeholder="Nomor Induk Kependudukan/Pegawai"
+                      value={formData.nikNip}
+                      onChange={(e) => setFormData({ ...formData, nikNip: e.target.value })}
+                      required
                       className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                     />
                   </div>

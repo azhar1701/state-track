@@ -4,6 +4,29 @@ Komponen reusable untuk membangun halaman pengaturan yang konsisten dan mudah di
 
 ## Components
 
+### GeoLayerSettings (NEW)
+Komponen lengkap untuk mengelola pengaturan layer geografis dengan 3 tab:
+- **Umum**: Validasi CRS, publikasi otomatis, metadata, konfigurasi default
+- **Style**: Warna, ketebalan garis, opacity dengan preview real-time
+- **Lanjutan**: Clustering dan heatmap configuration
+
+```tsx
+import { GeoLayerSettings } from '@/components/admin/settings/GeoLayerSettings';
+
+<GeoLayerSettings />
+```
+
+Fitur:
+- Tab navigation untuk organisasi yang lebih baik
+- Color picker terintegrasi untuk style configuration
+- Slider untuk opacity control
+- Real-time preview untuk style
+- Validasi input yang comprehensive
+- Integrasi dengan database schema yang enhanced
+- Support untuk 5 tipe layer: geojson, wms, cluster, heatmap, tile
+
+Lihat [GeoLayerSettings.md](./GeoLayerSettings.md) untuk dokumentasi lengkap.
+
 ### SettingsSection
 Wrapper untuk setiap section pengaturan dengan header, icon, dan badge.
 
