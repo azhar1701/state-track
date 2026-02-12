@@ -211,7 +211,7 @@ export const geoFixer = {
     if (fixInvalidGeometry || fixPolygonRings || fixOutOfBounds) {
       features = features.map((f, idx) => {
         try {
-          let geom = f.geometry;
+          const geom = f.geometry;
           
           if (!geom) {
             if (removeInvalidFeatures) {

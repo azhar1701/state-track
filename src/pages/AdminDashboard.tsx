@@ -1905,10 +1905,12 @@ const AdminDetail = lazy(async () => {
               : (fullReport?.photo_url ? [fullReport.photo_url] : []);
             return photos.length > 0 ? (
               <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-                <DialogContent className="sm:max-w-[90vw] p-0 rounded-xl shadow-lg transition-all duration-300 border border-border bg-background">
+                <DialogContent className="sm:max-w-[90vw] p-0 rounded-xl shadow-lg transition-all duration-300 border border-border bg-background" aria-describedby="lightbox-description">
                   <DialogHeader className="px-4 pt-4 pb-2">
-                    <DialogTitle>Dokumentasi</DialogTitle>
-                    <DialogDescription>Klik di luar gambar untuk menutup.</DialogDescription>
+                    <DialogTitle>Dokumentasi Foto</DialogTitle>
+                    <DialogDescription id="lightbox-description">
+                      Foto {activePhotoIndex + 1} dari {photos.length}. Klik di luar gambar untuk menutup.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="w-full flex items-center justify-center p-2">
                     <img

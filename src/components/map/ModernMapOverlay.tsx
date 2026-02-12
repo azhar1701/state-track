@@ -264,7 +264,7 @@ export const ModernMapOverlay = ({
                             <span
                               className="inline-block w-4 h-0.5 rounded-full shadow-sm"
                               style={{
-                                backgroundColor: item.color,
+                                backgroundColor: item.dashArray ? 'transparent' : item.color,
                                 borderTop: item.dashArray ? `1px dashed ${item.color}` : undefined,
                               }}
                             />

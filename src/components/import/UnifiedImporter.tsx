@@ -547,7 +547,7 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
                 Data mungkin tidak bisa ditampilkan dengan benar.
               </span>
               <Button size="sm" variant="outline" onClick={() => {
-                const result = geoFixer.autoFix(fc!, {
+                const result = geoFixer.autoFix(fc! as import('geojson').FeatureCollection, {
                   fixInvalidGeometry: true,
                   removeInvalidFeatures: false,
                   fixPolygonRings: true,
