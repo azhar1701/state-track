@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import UnifiedImporter from '@/components/import/UnifiedImporter';
 import LayerInspector from '@/components/geodata/LayerInspector';
+import LayerUploader from '@/components/geodata/LayerUploader';
 import { Loader2, Map as MapIcon, Eye, EyeOff, RefreshCw, Download, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as turf from '@turf/turf';
@@ -240,38 +241,24 @@ export default function GeoDataManager() {
         </div>
       </div>
 
-      <Card className="mb-6 border-2">
+      <Card className="mb-6">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Impor Data</CardTitle>
+          <div className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-lg">Impor Layer Geospasial</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Upload file GeoJSON, Shapefile, atau CSV untuk menambah layer baru
+              </p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <UnifiedImporter
-            mode="layer"
-            initialKey={keyVal}
-            initialName={name}
-            onSaveLayer={async ({ key, name, geometry_type, data }) => {
-              try {
-                const fc = (data as { featureCollection?: { features?: Array<{ geometry?: { type?: string } }> } }).featureCollection;
-                if (fc && Array.isArray(fc.features) && fc.features.length > 0) {
-                  const counter = new Map<string, number>();
-                  fc.features.forEach((f) => {
-                    const t = f?.geometry?.type;
-                    if (t) counter.set(t, (counter.get(t) || 0) + 1);
-                  });
-                  const best = Array.from(counter.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
-                  if (best) geometry_type = best;
-                }
-              } catch {
-                // Ignore auto-detect errors
-              }
+          <LayerUploader
+            onSave={async ({ key, name, geometry_type, data }) => {
               const { error } = await supabase.from('geo_layers').upsert({ key, name, geometry_type, data }, { onConflict: 'key' });
-              if (error) toast.error('Gagal menyimpan layer');
-              else {
-                toast.success('Layer disimpan');
-                setKeyVal(key);
-                setName(name);
-                void fetchLayers();
-              }
+              if (error) throw error;
+              void fetchLayers();
             }}
           />
         </CardContent>
