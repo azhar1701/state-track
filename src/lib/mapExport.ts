@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import domtoimage from 'dom-to-image-more';
 import { Map } from 'leaflet';
 import { sanitizeText } from './security';
 
@@ -12,45 +12,61 @@ export type ExportOptions = {
 const toggleControls = (map: Map, show: boolean) => {
   const container = map.getContainer();
   const selectors = [
-    '.leaflet-control-container',
+    '.modern-map-overlay',
+    '.leaflet-top',
+    '.leaflet-bottom',
+    '.leaflet-control-zoom',
+    '.leaflet-control-attribution',
+    '.basemap-switcher',
     '.legend-container',
-    '.map-toolbar-container',
+    '.custom-scale-control',
   ];
   selectors.forEach((sel) => {
-    const el = container.querySelector(sel) as HTMLElement | null;
-    if (el) el.style.visibility = show ? '' : 'hidden';
+    const elements = container.querySelectorAll(sel);
+    elements.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.display = show ? '' : 'none';
+      }
+    });
+  });
+  
+  // Hide tile borders
+  const tiles = container.querySelectorAll('.leaflet-tile');
+  tiles.forEach((tile) => {
+    if (tile instanceof HTMLElement) {
+      tile.style.border = show ? '' : 'none';
+    }
   });
 };
 
 export const exportMapToPNG = async (map: Map, options: ExportOptions = {}): Promise<void> => {
+  const container = map.getContainer();
+  
   try {
-    const container = map.getContainer();
+    // Hide all controls including legend and scale
+    toggleControls(map, false);
+    
+    // Wait for render
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-    if (options.includeControls === false) toggleControls(map, false);
-
-    const canvas = await html2canvas(container, {
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: options.backgroundColor ?? '#ffffff',
-      scale: options.scale && options.scale > 0 ? options.scale : 1,
+    const dataUrl = await domtoimage.toPng(container, {
+      quality: 0.95,
+      bgcolor: options.backgroundColor || '#ffffff',
     });
 
-    if (options.includeControls === false) toggleControls(map, true);
+    // Restore controls
+    toggleControls(map, true);
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const safeFilename = sanitizeText(options.filename || 'map-export.png');
-        link.download = safeFilename;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-      }
-    });
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = options.filename || 'map-export.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   } catch (error) {
-    console.error('Error exporting map:', error);
+    toggleControls(map, true);
+    console.error('Export failed:', error);
+    alert('Gagal mengekspor peta. Error: ' + (error instanceof Error ? error.message : String(error)));
     throw error;
   }
 };
