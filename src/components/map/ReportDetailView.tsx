@@ -350,20 +350,12 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                 />
               )}
               
-              <div className="grid grid-cols-2 gap-3">
-                <InfoCard
-                  icon={<Calendar className="w-4 h-4" />}
-                  label="Tanggal"
-                  value={format(new Date(report.created_at), 'dd MMM yyyy')}
-                  color="purple"
-                />
-                <InfoCard
-                  icon={<Tag className="w-4 h-4" />}
-                  label="Kategori"
-                  value={categoryLabels[report.category] || report.category}
-                  color="amber"
-                />
-              </div>
+              <InfoCard
+                icon={<Calendar className="w-4 h-4" />}
+                label="Tanggal Dibuat"
+                value={format(new Date(report.created_at), 'dd MMM yyyy HH:mm')}
+                color="purple"
+              />
 
               {report.severity && (
                 <InfoCard
@@ -375,8 +367,8 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
               )}
             </motion.div>
 
-            {/* Reporter & Location Information */}
-            {(report.reporter_name || report.phone || report.kecamatan || report.desa) && (
+            {/* Reporter Information */}
+            {(report.reporter_name || report.phone) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -417,7 +409,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
               </motion.div>
             )}
 
-            {/* Location Description */}
+            {/* Administrative Location */}
             {(report.kecamatan || report.desa) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -427,7 +419,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
               >
                 <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-blue-600" />
-                  Detail Wilayah
+                  Identifikasi Lokasi
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2.5">

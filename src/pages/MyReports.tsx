@@ -33,6 +33,10 @@ type ReportRow = {
   photo_urls: string[] | null;
   severity?: 'ringan' | 'sedang' | 'berat' | null;
   resolution?: string | null;
+  reporter_name?: string | null;
+  phone?: string | null;
+  kecamatan?: string | null;
+  desa?: string | null;
 };
 
 const categoryLabels: Record<string, string> = {
@@ -76,11 +80,11 @@ export default function MyReports() {
     setLoading(true);
     setError(null);
     try {
-      // Primary query with extended columns (location_name removed due to schema mismatch)
+      // Primary query without location_name (column doesn't exist)
       let query = supabase
         .from('reports')
         .select(
-          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution',
+          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution,reporter_name,phone,kecamatan,desa',
           { count: 'exact' }
         )
         .eq('user_id', user.id)
@@ -117,10 +121,10 @@ export default function MyReports() {
             return await q;
           };
 
-          const selKeepPhotos = 'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution';
+          const selKeepPhotos = 'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution,reporter_name,phone,kecamatan,desa';
           let attempt = await trySelect(selKeepPhotos);
           if (attempt.error) {
-            // Fallback B: minimal if even photo_urls not available
+            // Fallback B: minimal
             attempt = await trySelect('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url');
           }
           data = attempt.data as unknown[] | null;
@@ -132,7 +136,7 @@ export default function MyReports() {
         }
       }
 
-      // Map to ReportRow with safe defaults for missing fields (location_name always null)
+      // Map to ReportRow with safe defaults
       type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
         id: string;
         created_at: string;
@@ -153,12 +157,17 @@ export default function MyReports() {
           user_id: rr.user_id,
           latitude: typeof rr.latitude === 'string' ? Number(rr.latitude) : (rr.latitude as number),
           longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
-          location_name: null,
+          location_name: (rr.location_name as string) ?? null,
           photo_url: (rr.photo_url as string) ?? null,
           photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
           severity: (rr.severity as ReportRow['severity']) ?? null,
           resolution: (rr.resolution as string | null | undefined) ?? null,
+          reporter_name: (rr.reporter_name as string | null | undefined) ?? null,
+          phone: (rr.phone as string | null | undefined) ?? null,
+          kecamatan: (rr.kecamatan as string | null | undefined) ?? null,
+          desa: (rr.desa as string | null | undefined) ?? null,
         };
+        console.log('MyReports - Mapped row:', { id: row.id, reporter_name: row.reporter_name, phone: row.phone, kecamatan: row.kecamatan, desa: row.desa });
         return row;
       });
       setRows(mapped);
