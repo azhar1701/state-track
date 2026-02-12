@@ -10,11 +10,12 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Upload, FileUp, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Upload, FileUp, AlertTriangle, Wrench } from 'lucide-react';
 import shp from 'shpjs';
 import proj4 from 'proj4';
 import * as turf from '@turf/turf';
 import type { Geometry, LineString, MultiLineString, Polygon, MultiPolygon, Feature as GJFeature } from 'geojson';
+import { geoFixer, type FixResult } from '@/lib/geoFixer';
 
 // Types for importer modes
 export type ImportMode = 'layer' | 'assets';
@@ -308,6 +309,10 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
   const [progressOpen, setProgressOpen] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
   const [progressText, setProgressText] = useState('');
+  const [showQualityReport, setShowQualityReport] = useState(false);
+  const [uploadHistory, setUploadHistory] = useState<Array<{ name: string; time: string; status: 'success' | 'error' }>>([]);
+  const [fixResult, setFixResult] = useState<FixResult | null>(null);
+  const [showFixDialog, setShowFixDialog] = useState(false);
 
   const displayCRS = crs === 'custom' ? customCrs : crs;
 
@@ -349,6 +354,22 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
     try {
       const ext = file.name.toLowerCase().split('.').pop();
       let raw: unknown = null;
+      
+      // Support CSV with coordinates
+      if (ext === 'csv') {
+        const text = await file.text();
+        const csvFC = parseCSVWithCoordinates(text);
+        if (csvFC) {
+          setFileName(file.name);
+          setFc(csvFC);
+          setCrs('EPSG:4326');
+          toast.success('CSV berhasil diparse');
+          return;
+        } else {
+          return toast.error('CSV tidak memiliki kolom koordinat yang valid');
+        }
+      }
+      
       if (ext === 'geojson' || ext === 'json') raw = JSON.parse(await file.text());
       else if (ext === 'zip') raw = await shp(await file.arrayBuffer());
       else if (ext === 'shp' || ext === 'dbf' || ext === 'prj') return toast.error('Shapefile harus dalam .zip berisi .shp, .dbf, dan .prj');
@@ -358,12 +379,14 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
       if (!Array.isArray(collection.features) || collection.features.length === 0) return toast.error('FeatureCollection kosong');
       setFileName(file.name);
       setFc(collection);
-      // try guess CRS quickly
       const g = guessCRSFromNumbers(collection);
       if (g) setCrs(g);
+      
+      setUploadHistory(prev => [{ name: file.name, time: new Date().toLocaleTimeString('id-ID'), status: 'success' }, ...prev.slice(0, 4)]);
     } catch (e) {
       console.error(e);
       toast.error('Gagal membaca file', { description: e instanceof Error ? e.message : 'Unknown error' });
+      setUploadHistory(prev => [{ name: file.name, time: new Date().toLocaleTimeString('id-ID'), status: 'error' }, ...prev.slice(0, 4)]);
     }
   };
 
@@ -466,9 +489,100 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{mode === 'layer' ? 'Impor / Unggah Layer' : 'Impor Aset'}</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          <span>{mode === 'layer' ? 'Impor / Unggah Layer' : 'Impor Aset'}</span>
+          {dataQuality && (
+            <Button size="sm" variant="outline" onClick={() => setShowQualityReport(true)}>
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Laporan Kualitas
+            </Button>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Drag & Drop Zone */}
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files[0];
+            if (file) void onChooseFile(file);
+          }}
+        >
+          <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-sm font-medium mb-2">
+            {isDragging ? 'Lepaskan file di sini' : 'Drag & drop file atau klik tombol di bawah'}
+          </p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Format: GeoJSON, Shapefile (.zip), CSV (dengan koordinat)
+          </p>
+          <Button variant="outline" onClick={() => inputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            {fileName ? 'Ganti File' : 'Pilih File'}
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".geojson,.json,.zip,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onChooseFile(f);
+              e.currentTarget.value = '';
+            }}
+          />
+        </div>
+
+        {dataQuality && dataQuality.invalidGeometries > 0 && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Ditemukan {dataQuality.invalidGeometries} geometri invalid.
+                Data mungkin tidak bisa ditampilkan dengan benar.
+              </span>
+              <Button size="sm" variant="outline" onClick={() => {
+                const result = geoFixer.autoFix(fc!, {
+                  fixInvalidGeometry: true,
+                  removeInvalidFeatures: false,
+                  fixPolygonRings: true,
+                  removeDuplicates: true,
+                  normalizeProperties: true,
+                  standardizeFieldNames: true,
+                  fixOutOfBounds: true,
+                });
+                setFixResult(result);
+                setShowFixDialog(true);
+              }}>
+                <Wrench className="h-4 w-4 mr-2" />
+                Perbaiki Otomatis
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Upload History */}
+        {uploadHistory.length > 0 && (
+          <div className="text-xs space-y-1">
+            <div className="font-medium text-muted-foreground">Riwayat Upload:</div>
+            {uploadHistory.map((h, i) => (
+              <div key={i} className="flex items-center gap-2">
+                {h.status === 'success' ? (
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-3 w-3 text-destructive" />
+                )}
+                <span>{h.name}</span>
+                <span className="text-muted-foreground">• {h.time}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {mode === 'layer' && (
             <>
@@ -640,6 +754,181 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
             <Progress value={progressValue} />
             <div className="text-right text-xs text-muted-foreground">{Math.max(0, Math.min(100, progressValue))}%</div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data Quality Report Modal */}
+      <Dialog open={showQualityReport} onOpenChange={setShowQualityReport}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Laporan Kualitas Data</DialogTitle>
+            <DialogDescription>Analisis kualitas geometri dan data</DialogDescription>
+          </DialogHeader>
+          {dataQuality && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Total Fitur</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{dataQuality.totalFeatures}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Geometri Valid</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{dataQuality.validGeometries}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Geometri Invalid</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-destructive">{dataQuality.invalidGeometries}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Koordinat Duplikat</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-amber-600">{dataQuality.duplicateCoordinates}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Tipe Geometri</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {Array.from(dataQuality.geometryTypes.entries()).map(([type, count]) => (
+                      <div key={type} className="flex justify-between items-center">
+                        <span className="text-sm">{type}</span>
+                        <span className="font-semibold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {dataQuality.issues.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Issues ({dataQuality.issues.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1 max-h-64 overflow-auto">
+                      {dataQuality.issues.slice(0, 50).map((issue, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          {issue.severity === 'error' ? (
+                            <AlertCircle className="h-3 w-3 text-destructive mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5" />
+                          )}
+                          <span>
+                            <strong>Fitur #{issue.featureIdx + 1}:</strong> {issue.message}
+                          </span>
+                        </div>
+                      ))}
+                      {dataQuality.issues.length > 50 && (
+                        <div className="text-xs text-muted-foreground italic">
+                          ...dan {dataQuality.issues.length - 50} issue lainnya
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-Fix Result Dialog */}
+      <Dialog open={showFixDialog} onOpenChange={setShowFixDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Hasil Perbaikan Otomatis</DialogTitle>
+            <DialogDescription>Data telah diperbaiki secara otomatis</DialogDescription>
+          </DialogHeader>
+          {fixResult && (
+            <div className="space-y-4">
+              <Alert>
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertDescription>
+                  Data berhasil diperbaiki! Review perubahan di bawah.
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs">Geometri Diperbaiki</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{fixResult.changes.invalidGeometriesFixed}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs">Fitur Dihapus</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{fixResult.changes.invalidFeaturesRemoved}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs">Duplikat Dihapus</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{fixResult.changes.duplicatesRemoved}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs">Field Distandarisasi</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{fixResult.changes.fieldsStandardized}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {fixResult.errors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="text-sm font-medium mb-2">Beberapa error tidak bisa diperbaiki:</div>
+                    <div className="text-xs space-y-1 max-h-32 overflow-auto">
+                      {fixResult.errors.slice(0, 10).map((err, i) => (
+                        <div key={i}>{err}</div>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowFixDialog(false)}>
+                  Batal
+                </Button>
+                <Button onClick={() => {
+                  setFc(fixResult.fixed);
+                  setShowFixDialog(false);
+                  toast.success('Data berhasil diperbaiki dan diterapkan');
+                }}>
+                  Terapkan Perbaikan
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>

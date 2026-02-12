@@ -284,7 +284,9 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
             {loading ? 'Memuat...' : row ? row.name : 'Layer Detail'}
             {row && <span className="ml-2 text-xs text-muted-foreground font-normal">({row.key})</span>}
           </DialogTitle>
-          <DialogDescription className="sr-only">Detail layer geospasial</DialogDescription>
+          <DialogDescription>
+            Detail informasi layer geospasial
+          </DialogDescription>
         </DialogHeader>
         {loading ? (
           <div className="flex items-center justify-center py-12">
