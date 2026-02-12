@@ -4,7 +4,7 @@ import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
+import { Loader as Loader2, FileText, Clock, CheckCircle, Activity, Route, Pencil, Flame, ChevronDown, ChevronUp } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -32,6 +32,13 @@ import proj4 from 'proj4';
 import { sanitizeText, sanitizeForLog } from '@/lib/security';
 import { MobileMapControls } from '@/components/map/MobileMapControls';
 import { ReportCardSkeleton } from '@/components/common/Skeleton';
+import { AdvancedMapToolbar } from '@/components/map/AdvancedMapToolbar';
+import { SpatialAnalysisPanel } from '@/components/map/SpatialAnalysisPanel';
+import { RouteOptimizationPanel } from '@/components/map/RouteOptimizationPanel';
+import { DrawMeasureTools } from '@/components/map/DrawMeasureTools';
+import { MultiLayerHeatmap } from '@/components/map/MultiLayerHeatmap';
+import type { DensityCell } from '@/lib/spatialAnalysis';
+import type { OptimizedRoute } from '@/lib/routeOptimization';
 
 interface Report {
   id: string;
@@ -522,6 +529,16 @@ const MapView = () => {
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
   const [isPlaying, setIsPlaying] = useState(false);
   const [sliderValue, setSliderValue] = useState(0);
+
+  // New geospatial features state
+  const [showSpatialAnalysis, setShowSpatialAnalysis] = useState(false);
+  const [showRouteOptimization, setShowRouteOptimization] = useState(false);
+  const [showDrawTools, setShowDrawTools] = useState(false);
+  const [multiLayerHeatmap, setMultiLayerHeatmap] = useState(false);
+  const [densityCells, setDensityCells] = useState<DensityCell[]>([]);
+  const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
+  const [bufferZones, setBufferZones] = useState<L.Layer[]>([]);
+  const [showGeoToolbar, setShowGeoToolbar] = useState(false);
 
   // Calculate maxDate from reports (must be before useEffect hooks that use it)
   const maxDate = useMemo(() => {
@@ -1884,6 +1901,60 @@ const MapView = () => {
             statusCounts={statusCounts}
           />
 
+          {/* Geospatial Toolbar */}
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border-slate-200 dark:border-slate-700"
+              onClick={() => setShowGeoToolbar(!showGeoToolbar)}
+            >
+              {showGeoToolbar ? <ChevronUp className="w-3.5 h-3.5 mr-1.5" /> : <ChevronDown className="w-3.5 h-3.5 mr-1.5" />}
+              <span className="text-xs font-medium">Analisis Geospasial</span>
+            </Button>
+            
+            {showGeoToolbar && (
+              <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-2 flex items-center gap-1.5">
+                <Button 
+                  size="sm" 
+                  variant={showSpatialAnalysis ? 'default' : 'ghost'} 
+                  onClick={() => setShowSpatialAnalysis(!showSpatialAnalysis)} 
+                  title="Analisis Spasial"
+                  className="h-9 w-9 p-0"
+                >
+                  <Activity className="w-4 h-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={showRouteOptimization ? 'default' : 'ghost'} 
+                  onClick={() => setShowRouteOptimization(!showRouteOptimization)} 
+                  title="Optimasi Rute"
+                  className="h-9 w-9 p-0"
+                >
+                  <Route className="w-4 h-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={showDrawTools ? 'default' : 'ghost'} 
+                  onClick={() => setShowDrawTools(!showDrawTools)} 
+                  title="Gambar & Ukur"
+                  className="h-9 w-9 p-0"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={multiLayerHeatmap ? 'default' : 'ghost'} 
+                  onClick={() => setMultiLayerHeatmap(!multiLayerHeatmap)} 
+                  title="Heatmap Multi-Layer"
+                  className="h-9 w-9 p-0"
+                >
+                  <Flame className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Search panel centered below toolbar */}
           {showSearchPanel && (
             <div className={`absolute z-[1200] top-20 left-1/2 -translate-x-1/2 ${isMobile ? 'w-[calc(100%-1rem)]' : 'w-auto'}`}>
@@ -1950,6 +2021,133 @@ const MapView = () => {
             feature={selectedLayer?.feature || null}
             onZoomToFeature={handleZoomToLayer}
           />
+
+          {/* Spatial Analysis Panel */}
+          {showSpatialAnalysis && (
+            <SpatialAnalysisPanel
+              reports={filteredReports.map(r => ({
+                id: r.id,
+                coords: [r.latitude, r.longitude],
+                category: r.category,
+                status: r.status,
+              }))}
+              onBufferCreated={(buffer) => {
+                if (!mapInstance) return;
+                const layer = L.geoJSON(buffer, {
+                  style: { color: '#3b82f6', weight: 2, fillOpacity: 0.1 }
+                }).addTo(mapInstance);
+                setBufferZones(prev => [...prev, layer]);
+                toast.success('Buffer zone berhasil dibuat');
+              }}
+              onDensityCalculated={(cells) => {
+                setDensityCells(cells);
+                toast.success(`${cells.length} density cells dihitung`);
+              }}
+              onStatsCalculated={(stats) => {
+                toast.success('Analisis statistik selesai', {
+                  description: `NNI: ${stats.nni.toFixed(3)} - ${stats.clustered ? 'Clustered' : 'Dispersed'}`
+                });
+              }}
+              onClose={() => setShowSpatialAnalysis(false)}
+            />
+          )}
+
+          {/* Route Optimization Panel */}
+          {showRouteOptimization && (
+            <RouteOptimizationPanel
+              reports={filteredReports.map(r => ({
+                id: r.id,
+                title: r.title,
+                coords: [r.latitude, r.longitude],
+                category: r.category,
+                status: r.status,
+                severity: r.severity,
+              }))}
+              onRouteGenerated={(route) => {
+                setOptimizedRoute(route);
+                if (mapInstance) {
+                  const coords = route.points.map(p => [p.coords[0], p.coords[1]] as [number, number]);
+                  L.polyline(coords, {
+                    color: '#10b981',
+                    weight: 4,
+                    opacity: 0.8,
+                  }).addTo(mapInstance);
+                  
+                  route.points.forEach((point, idx) => {
+                    L.marker([point.coords[0], point.coords[1]], {
+                      icon: L.divIcon({
+                        html: `<div style="background: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${idx + 1}</div>`,
+                        className: 'route-marker',
+                        iconSize: [24, 24],
+                      })
+                    }).addTo(mapInstance);
+                  });
+                }
+              }}
+              onClose={() => setShowRouteOptimization(false)}
+            />
+          )}
+
+
+
+          {/* Draw & Measure Tools */}
+          {showDrawTools && (
+            <DrawMeasureTools
+              onPolygonDrawn={(polygon) => {
+                setDrawnPolygon(polygon);
+                toast.success('Polygon berhasil digambar');
+              }}
+              onMeasurement={(measurement) => {
+                if (measurement.distance) {
+                  toast.success(`Jarak: ${measurement.distance.toFixed(2)} km`);
+                }
+                if (measurement.area) {
+                  toast.success(`Luas: ${measurement.area.toFixed(3)} km²`);
+                }
+              }}
+            />
+          )}
+
+          {/* Multi-Layer Heatmap */}
+          {multiLayerHeatmap && (
+            <MultiLayerHeatmap
+              points={filteredReports.map(r => ({
+                coords: [r.latitude, r.longitude],
+                category: r.category,
+                severity: r.severity,
+              }))}
+              enabled={multiLayerHeatmap}
+              categories={Array.from(new Set(reports.map(r => r.category)))}
+            />
+          )}
+
+          {/* Density Visualization */}
+          {densityCells.length > 0 && (
+            <Pane name="density-cells" style={{ zIndex: 370 }}>
+              {densityCells.map(cell => (
+                <RLGeoJSON
+                  key={cell.id}
+                  data={{
+                    type: 'Feature',
+                    geometry: cell.geometry,
+                    properties: { count: cell.count }
+                  }}
+                  style={() => {
+                    const opacity = Math.min(cell.count / 10, 1);
+                    return {
+                      fillColor: '#ef4444',
+                      fillOpacity: opacity * 0.6,
+                      color: '#dc2626',
+                      weight: 1,
+                    };
+                  }}
+                  onEachFeature={(feature, layer) => {
+                    layer.bindTooltip(`${cell.count} laporan`, { sticky: true });
+                  }}
+                />
+              ))}
+            </Pane>
+          )}
 
           {/* Coordinates readout below scale at bottom-left */}
           {cursorLatLng && !selectedReport && (
@@ -2042,32 +2240,4 @@ const MapView = () => {
 };
 
 export default MapView;
-
-// Small helper component to add Leaflet scale control
-const ScaleBar = ({ map, position = 'bottomright' }: { map: L.Map; position?: 'bottomleft' | 'bottomright' }) => {
-  useEffect(() => {
-    const control = L.control.scale({ metric: true, imperial: false, position });
-    control.addTo(map);
-    return () => {
-      // Leaflet Map has removeControl in runtime; TS types may not expose it on our import.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const m = map as any;
-      if (typeof m.removeControl === 'function') {
-        m.removeControl(control);
-      }
-    };
-  }, [map, position]);
-  return null;
-};
-
-
-
-
-
-
-
-
-
-
-
 
