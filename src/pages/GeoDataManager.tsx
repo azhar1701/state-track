@@ -156,7 +156,7 @@ export default function GeoDataManager() {
 
   const handleViewOnMap = (row: LayerData) => {
     localStorage.setItem('focusLayer', row.key);
-    navigate('/peta');
+    navigate('/map');
   };
 
   const handleBatchExport = async () => {
