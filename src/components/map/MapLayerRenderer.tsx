@@ -40,16 +40,18 @@ const MapLayerRendererComponent = ({ layer, data, onFeatureClick }: MapLayerRend
     };
   }, [layer.popup_config]);
 
-  // Heatmap rendering
+  // Heatmap rendering - extract points outside conditional
+  const points = useMemo(() => {
+    if (layer.layer_type !== 'heatmap') return null;
+    return data.features
+      .filter((f) => f.geometry.type === 'Point')
+      .map((f) => {
+        const coords = (f.geometry as Geometry & { coordinates: [number, number] }).coordinates;
+        return [coords[1], coords[0], 1] as [number, number, number];
+      });
+  }, [data, layer.layer_type]);
+
   if (layer.layer_type === 'heatmap') {
-    const points = useMemo(() => {
-      return data.features
-        .filter((f) => f.geometry.type === 'Point')
-        .map((f) => {
-          const coords = (f.geometry as any).coordinates;
-          return [coords[1], coords[0], 1] as [number, number, number];
-        });
-    }, [data]);
 
     // Note: Heatmap requires custom implementation with useMap hook
     return null; // Implement separately with L.heatLayer

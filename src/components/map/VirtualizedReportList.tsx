@@ -15,6 +15,12 @@ interface Report {
   longitude: number;
   created_at: string;
   photo_url?: string | null;
+  // Reporter information
+  reporter_name?: string | null;
+  phone?: string | null;
+  // Administrative location
+  kecamatan?: string | null;
+  desa?: string | null;
 }
 
 interface VirtualizedReportListProps {

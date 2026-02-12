@@ -7,7 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { AlertCircle, CheckCircle2, Upload, FileUp, AlertTriangle } from 'lucide-react';
 import shp from 'shpjs';
 import proj4 from 'proj4';
 import * as turf from '@turf/turf';
@@ -15,6 +18,18 @@ import type { Geometry, LineString, MultiLineString, Polygon, MultiPolygon, Feat
 
 // Types for importer modes
 export type ImportMode = 'layer' | 'assets';
+
+// Data quality metrics
+type DataQualityResult = {
+  totalFeatures: number;
+  validGeometries: number;
+  invalidGeometries: number;
+  missingCoordinates: number;
+  duplicateCoordinates: number;
+  outOfBoundCoordinates: number;
+  geometryTypes: Map<string, number>;
+  issues: Array<{ featureIdx: number; code: string; severity: 'error' | 'warning'; message: string }>;
+};
 
 // Minimal shapes for preview and mapping
 type AnyProps = Record<string, unknown>;
@@ -24,13 +39,149 @@ export type GeoJSONFeatureCollection = { type?: string; features?: GeoJSONFeatur
 
 const isFC = (v: unknown): v is GeoJSONFeatureCollection => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection';
 
-// Supported CRS for reprojection
+// Validate geometry structure and report issues
+function validateGeometry(geom: GeoJSONGeometry): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  if (!geom || !geom.type) {
+    errors.push('Missing geometry type');
+    return { valid: false, errors };
+  }
+  
+  const coords = (geom as { coordinates?: unknown }).coordinates;
+  if (!coords) {
+    errors.push('Missing coordinates');
+    return { valid: false, errors };
+  }
+  
+  if (geom.type === 'Point') {
+    const c = coords as number[];
+    if (!Array.isArray(c) || c.length < 2 || typeof c[0] !== 'number' || typeof c[1] !== 'number') {
+      errors.push('Invalid Point coordinates');
+    } else if (Math.abs(c[0]) > 180 || Math.abs(c[1]) > 90) {
+      errors.push('Coordinates out of bounds (WGS84)');
+    }
+  } else if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+    const rings = geom.type === 'Polygon' ? [(coords as number[][][])[0]] : (coords as number[][][][]).map(p => p[0]);
+    rings.forEach((ring, idx) => {
+      if (!Array.isArray(ring) || ring.length < 4) {
+        errors.push(`Ring ${idx}: must have ≥4 points`);
+      } else {
+        const first = ring[0], last = ring[ring.length - 1];
+        if (!Array.isArray(first) || !Array.isArray(last) || 
+            first[0] !== last[0] || first[1] !== last[1]) {
+          errors.push(`Ring ${idx}: first and last coordinates must match`);
+        }
+      }
+    });
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+// Comprehensive data quality analysis
+function analyzeDataQuality(fc: GeoJSONFeatureCollection): DataQualityResult {
+  const result: DataQualityResult = {
+    totalFeatures: 0,
+    validGeometries: 0,
+    invalidGeometries: 0,
+    missingCoordinates: 0,
+    duplicateCoordinates: 0,
+    outOfBoundCoordinates: 0,
+    geometryTypes: new Map(),
+    issues: [],
+  };
+  
+  const coords = new Set<string>();
+  const feats = fc.features ?? [];
+  result.totalFeatures = feats.length;
+  
+  feats.forEach((feat, idx) => {
+    const geom = feat.geometry;
+    
+    if (!geom) {
+      result.missingCoordinates++;
+      result.issues.push({ featureIdx: idx, code: 'NO_GEOMETRY', severity: 'error', message: 'Feature has no geometry' });
+      return;
+    }
+    
+    const gtype = geom.type;
+    if (gtype) {
+      result.geometryTypes.set(gtype, (result.geometryTypes.get(gtype) || 0) + 1);
+    }
+    
+    const vr = validateGeometry(geom);
+    if (!vr.valid) {
+      result.invalidGeometries++;
+      vr.errors.forEach(err => {
+        result.issues.push({ featureIdx: idx, code: 'INVALID_GEOM', severity: 'error', message: err });
+      });
+    } else {
+      result.validGeometries++;
+    }
+    
+    // Check for duplicates and bounding
+    if (gtype === 'Point') {
+      const c = (geom as { coordinates?: number[] }).coordinates as number[];
+      const key = `${c[0]},${c[1]}`;
+      if (coords.has(key)) {
+        result.duplicateCoordinates++;
+        result.issues.push({ featureIdx: idx, code: 'DUPLICATE_COORD', severity: 'warning', message: 'Duplicate coordinate found' });
+      }
+      coords.add(key);
+      
+      if (Math.abs(c[0]) > 180 || Math.abs(c[1]) > 90) {
+        result.outOfBoundCoordinates++;
+      }
+    }
+  });
+  
+  return result;
+}
+
+// Util to normalize any shpjs or nested json into one FeatureCollection
 const supportedCRS = ['EPSG:4326', 'EPSG:3857', 'EPSG:32749'] as const;
 export type SupportedCRS = typeof supportedCRS[number] | string; // allow custom string to future-proof
 
 proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
 proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
 proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
+
+// Parse CSV with coordinate columns
+function parseCSVWithCoordinates(text: string): GeoJSONFeatureCollection | null {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return null;
+  
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const latIdx = header.findIndex(h => ['lat', 'latitude', 'lintang', 'y'].includes(h));
+  const lngIdx = header.findIndex(h => ['lng', 'lon', 'longitude', 'bujur', 'x'].includes(h));
+  
+  if (latIdx === -1 || lngIdx === -1) return null;
+  
+  const features: GeoJSONFeature[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',').map(p => p.trim());
+    if (parts.length <= Math.max(latIdx, lngIdx)) continue;
+    
+    const lat = parseFloat(parts[latIdx]);
+    const lng = parseFloat(parts[lngIdx]);
+    if (isNaN(lat) || isNaN(lng)) continue;
+    
+    const props: AnyProps = {};
+    header.forEach((h, idx) => {
+      if (idx !== latIdx && idx !== lngIdx && parts[idx]) {
+        props[h] = parts[idx];
+      }
+    });
+    
+    features.push({
+      type: 'Feature',
+      properties: props,
+      geometry: { type: 'Point', coordinates: [lng, lat] }
+    });
+  }
+  
+  return features.length > 0 ? { type: 'FeatureCollection', features } : null;
+}
 
 // Util to normalize any shpjs or nested json into one FeatureCollection
 function normalizeToFC(data: unknown): GeoJSONFeatureCollection | null {
@@ -147,6 +298,8 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
   const [crs, setCrs] = useState<SupportedCRS>('EPSG:4326');
   const [customCrs, setCustomCrs] = useState('');
   const [fieldNames, setFieldNames] = useState<string[]>([]);
+  const [dataQuality, setDataQuality] = useState<DataQualityResult | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [keyVal, setKeyVal] = useState(initialKey || 'layer_key');
   const [name, setName] = useState(initialName || 'Layer');
   const [mapping, setMapping] = useState<{ code?: string; name?: string; category?: string; keterangan?: string }>(() => ({ code: 'code', name: 'name', category: 'category', keterangan: 'keterangan' }));
@@ -159,7 +312,11 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
   const displayCRS = crs === 'custom' ? customCrs : crs;
 
   useEffect(() => {
-    if (fc) setFieldNames(collectFieldNames(fc));
+    if (fc) {
+      setFieldNames(collectFieldNames(fc));
+      const quality = analyzeDataQuality(fc);
+      setDataQuality(quality);
+    }
   }, [fc]);
 
   const normalizedDisplayCRS = useMemo(() => {

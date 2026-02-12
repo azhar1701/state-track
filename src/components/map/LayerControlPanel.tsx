@@ -3,8 +3,9 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { GripVertical, Eye, EyeOff, Palette } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { useMutation } from '@tanstack/react-query';
 import { useMapLayers, type GeoLayer } from '@/hooks/useMapLayers';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface LayerControlPanelProps {
   open: boolean;
@@ -24,8 +25,9 @@ export const LayerControlPanel = ({ open, onOpenChange }: LayerControlPanelProps
     // Update z-index for all affected layers
     items.forEach((layer, index) => {
       const newZIndex = 400 + index * 10;
-      if (layer.z_index !== newZIndex) {
-        updateZIndex.mutate({ id: layer.id, z_index: newZIndex });
+      const layerWithTypes = layer as unknown as { z_index?: number; id?: string };
+      if (layerWithTypes.z_index !== newZIndex) {
+        updateZIndex.mutate({ id: layerWithTypes.id || '', z_index: newZIndex });
       }
     });
   };

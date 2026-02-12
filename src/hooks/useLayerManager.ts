@@ -47,7 +47,7 @@ export const useLayerManager = () => {
         new Map(rows.map((l) => [l.id, { ...l, data: null } as LayerData])).values()
       );
       
-      setLayers(uniqueLayers);
+      setLayers(uniqueLayers as LayerData[]);
     } catch (error) {
       console.error('[useLayerManager] Fetch failed:', error);
       toast.error('Gagal memuat layers', { id: 'fetch-layers-error' });
@@ -268,9 +268,9 @@ export const useLayerManager = () => {
       abortControllersRef.current.delete(key);
 
       return fc;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ignore abort errors
-      if (error?.name === 'AbortError') {
+      if ((error as { name?: string })?.name === 'AbortError') {
         return null;
       }
 
@@ -283,7 +283,7 @@ export const useLayerManager = () => {
       // Single toast with static ID
       toast.error(`Gagal memuat layer: ${key}`, { 
         id: toastId,
-        description: error?.message || 'Layer tidak ditemukan atau format tidak valid'
+        description: (error instanceof Error ? error.message : String(error)) || 'Layer tidak ditemukan atau format tidak valid'
       });
 
       return null;

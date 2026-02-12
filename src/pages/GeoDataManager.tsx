@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLayerManager, type LayerData } from '@/hooks/useLayerManager';
@@ -495,6 +495,11 @@ export default function GeoDataManager() {
 
   // Popup configurator handlers removed
 
+  // Pre-compute filtered and sorted layers (outside conditional return for React hooks)
+  const filteredLayers = useMemo(() => layers
+    .filter((r) => r.key.toLowerCase().includes(layerSearch.toLowerCase()) || r.name.toLowerCase().includes(layerSearch.toLowerCase()))
+    .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()), [layers, layerSearch, layerSort]);
+
   if (!user || !isAdmin) return (
     <div className="container mx-auto px-4 py-6">
       <Card>
@@ -639,9 +644,7 @@ export default function GeoDataManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {React.useMemo(() => layers
-                    .filter((r) => r.key.toLowerCase().includes(layerSearch.toLowerCase()) || r.name.toLowerCase().includes(layerSearch.toLowerCase()))
-                    .sort((a, b) => layerSort === 'name_asc' ? a.name.localeCompare(b.name) : new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()), [layers, layerSearch, layerSort])
+                  {filteredLayers
                     .map((r) => (
                     <TableRow key={r.id} className="hover:bg-muted/30">
                       <TableCell className="font-mono text-xs">{r.key}</TableCell>

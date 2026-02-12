@@ -96,12 +96,6 @@ export const useMapLayers = () => {
       gcTime: LAYER_CACHE_TIME * 2,
       enabled,
       retry: false,
-      onError: (err: Error) => {
-        toast.error(`Failed to load layer: ${layerKey}`, {
-          id: `layer-error-${layerKey}`,
-          description: err.message,
-        });
-      },
     });
   };
 
