@@ -282,13 +282,8 @@ const AdminDashboard = () => {
       });
       if (selectedReport) {
         const updated = items.find((item) => item.id === selectedReport.id);
-        if (updated) {
+        if (updated && detailOpen) {
           setSelectedReport((prev) => (prev ? { ...prev, ...updated } : updated));
-          if (!detailOpen) {
-            setEditTitle(updated.title);
-            setEditSeverity(updated.severity ?? '');
-            setEditResolution(updated.resolution ?? '');
-          }
         }
       }
     };
@@ -360,13 +355,14 @@ const AdminDashboard = () => {
 
   const openDetail = (r: ReportListItem) => {
     try {
+      const reportId = r.id;
       setSelectedReport(r);
       setEditTitle(r?.title ?? '');
       setEditSeverity(r?.severity ?? '');
       setEditResolution(r?.resolution ?? '');
       setDetailOpen(true);
-      fetchReportLogs(r.id);
-      fetchReportDetail(r.id);
+      fetchReportLogs(reportId);
+      fetchReportDetail(reportId);
     } catch (e) {
       console.error('Failed to open detail:', e);
       toast.error('Gagal membuka detail laporan');
