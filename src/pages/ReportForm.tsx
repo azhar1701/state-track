@@ -20,9 +20,10 @@ import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } f
 import { enqueueReportForSync } from '@/hooks/useOutboxSync';
 import { sanitizeForLog } from '@/lib/security';
 import { LiveCamera } from '@/components/common/LiveCamera';
+import { useEffect as useEffectCategories, useState as useStateCategories } from 'react';
 
 type Severity = 'ringan' | 'sedang' | 'berat';
-type Category = 'irigasi' | 'sungai' | 'lainnya';
+type Category = string;
 
 type ReportFormData = {
   title: string;
@@ -118,6 +119,7 @@ const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: numbe
 const ReportForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [categories, setCategories] = useStateCategories<Array<{ value: string; label: string }>>([]);
 
   const [loading, setLoading] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -220,6 +222,45 @@ const ReportForm = () => {
     }
     getUserLocation();
   }, [user, navigate, getUserLocation]);
+
+  // Load categories from database
+  useEffectCategories(() => {
+    const loadCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('custom_categories')
+          .select('value, label')
+          .eq('is_active', true)
+          .order('label');
+        
+        if (!error && data) {
+          setCategories(data as Array<{ value: string; label: string }>);
+        } else {
+          // Fallback to default categories
+          setCategories([
+            { value: 'jalan', label: 'Jalan' },
+            { value: 'jembatan', label: 'Jembatan' },
+            { value: 'irigasi', label: 'Irigasi' },
+            { value: 'drainase', label: 'Drainase' },
+            { value: 'sungai', label: 'Sungai' },
+            { value: 'lainnya', label: 'Lainnya' }
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+        // Fallback to default categories
+        setCategories([
+          { value: 'jalan', label: 'Jalan' },
+          { value: 'jembatan', label: 'Jembatan' },
+          { value: 'irigasi', label: 'Irigasi' },
+          { value: 'drainase', label: 'Drainase' },
+          { value: 'sungai', label: 'Sungai' },
+          { value: 'lainnya', label: 'Lainnya' }
+        ]);
+      }
+    };
+    void loadCategories();
+  }, []);
 
   // Load kecamatan and all desa on mount
   useEffect(() => {
@@ -638,9 +679,9 @@ const ReportForm = () => {
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="irigasi">Irigasi</SelectItem>
-                      <SelectItem value="sungai">Sungai</SelectItem>
-                      <SelectItem value="lainnya">Lainnya</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}

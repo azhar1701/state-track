@@ -357,6 +357,14 @@ const MapView = () => {
         basemap: BasemapType;
         showAdminBoundaries: boolean;
         showAssets: boolean;
+        enableClustering: boolean;
+        clusterRadius: number;
+        enableHeatmap: boolean;
+        heatmapRadius: number;
+        maxZoom: number;
+        minZoom: number;
+        enableGeolocation: boolean;
+        defaultOpacity: number;
       }>;
 
       setOverlays((prev) => {
@@ -373,14 +381,26 @@ const MapView = () => {
           ? parsed.showAdminBoundaries
           : prev.adminBoundaries;
         const adminChanged = nextAdminBoundaries !== prev.adminBoundaries;
+        
+        const nextClustering = typeof parsed.enableClustering === 'boolean'
+          ? parsed.enableClustering
+          : prev.clustering;
+        const clusterChanged = nextClustering !== prev.clustering;
+        
+        const nextHeatmap = typeof parsed.enableHeatmap === 'boolean'
+          ? parsed.enableHeatmap
+          : prev.heatmap;
+        const heatChanged = nextHeatmap !== prev.heatmap;
 
-        if (!adminChanged && !dynamicChanged) {
+        if (!adminChanged && !dynamicChanged && !clusterChanged && !heatChanged) {
           return prev;
         }
 
         return {
           ...prev,
           adminBoundaries: nextAdminBoundaries,
+          clustering: nextClustering,
+          heatmap: nextHeatmap,
           dynamic: dynamicChanged ? nextDynamic : prev.dynamic,
         };
       });
@@ -402,6 +422,11 @@ const MapView = () => {
 
       if (!hasUrlBasemap && parsed.basemap) {
         setBasemap(parsed.basemap);
+      }
+      
+      // Apply geolocation if enabled
+      if (parsed.enableGeolocation && !userLocation) {
+        getUserLocation();
       }
     } catch (error) {
       console.warn('Failed to apply stored map preferences', sanitizeForLog(error));
@@ -1486,10 +1511,21 @@ const MapView = () => {
       setClusterLayer(null);
     }
     if (!overlays.clustering) return;
+    
+    // Get cluster radius from settings or use default
+    let clusterRadius = 80;
+    try {
+      const stored = window.localStorage.getItem(MAP_PREFS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { clusterRadius?: number };
+        if (parsed.clusterRadius) clusterRadius = parsed.clusterRadius;
+      }
+    } catch {}
+    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mcg = new (L as any).MarkerClusterGroup({
       chunkedLoading: true,
-      maxClusterRadius: 60,
+      maxClusterRadius: clusterRadius,
       showCoverageOnHover: true,
       spiderfyOnMaxZoom: true,
       iconCreateFunction: createClusterCustomIcon,
@@ -1518,9 +1554,20 @@ const MapView = () => {
       setHeatLayer(null);
     }
     if (!overlays.heatmap) return;
+    
+    // Get heatmap radius from settings or use default
+    let heatmapRadius = 25;
+    try {
+      const stored = window.localStorage.getItem(MAP_PREFS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { heatmapRadius?: number };
+        if (parsed.heatmapRadius) heatmapRadius = parsed.heatmapRadius;
+      }
+    } catch {}
+    
     const pts: Array<[number, number, number]> = filteredReports.map((r) => [r.latitude, r.longitude, 0.6]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hl = (L as any).heatLayer(pts, { radius: 22, blur: 15, maxZoom: 17, minOpacity: 0.25 }) as L.Layer;
+    const hl = (L as any).heatLayer(pts, { radius: heatmapRadius, blur: 15, maxZoom: 17, minOpacity: 0.25 }) as L.Layer;
     hl.addTo(mapInstance);
     setHeatLayer(hl);
     return () => {

@@ -2,15 +2,25 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, RefreshCcw, DownloadCloud, UploadCloud, ShieldAlert } from "lucide-react";
+import { Loader2, RefreshCcw, DownloadCloud, UploadCloud, ShieldAlert, Users, Settings, Database as DatabaseIcon, Bell, Lock, UserCog, Activity, Mail, FileText, Tags, Wrench, Plug } from "lucide-react";
+import { EmailSettings } from "@/components/admin/settings/EmailSettings";
+import { ReportSettings } from "@/components/admin/settings/ReportSettings";
+import { SystemSettings } from "@/components/admin/settings/SystemSettings";
+import { APISettings } from "@/components/admin/settings/APISettings";
+import { CategorySettings } from "@/components/admin/settings/CategorySettings";
 
 type UserManagementRow = {
   id: string;
@@ -27,6 +37,14 @@ type MapPreferences = {
   basemap: "osm" | "satellite" | "terrain" | "dark";
   showAdminBoundaries: boolean;
   showAssets: boolean;
+  enableClustering: boolean;
+  clusterRadius: number;
+  enableHeatmap: boolean;
+  heatmapRadius: number;
+  maxZoom: number;
+  minZoom: number;
+  enableGeolocation: boolean;
+  defaultOpacity: number;
 };
 
 type GeoLayerSettings = {
@@ -76,6 +94,7 @@ const formatDateTime = (iso?: string | null) => {
 
 const AdminSettings = () => {
   const { user, isAdmin } = useAuth();
+  const { fetchSetting, saveSetting } = useSystemSettings();
   const [users, setUsers] = useState<UserManagementRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userRoleUpdating, setUserRoleUpdating] = useState<string | null>(null);
@@ -87,6 +106,14 @@ const AdminSettings = () => {
     basemap: "osm",
     showAdminBoundaries: true,
     showAssets: true,
+    enableClustering: true,
+    clusterRadius: 80,
+    enableHeatmap: false,
+    heatmapRadius: 25,
+    maxZoom: 18,
+    minZoom: 8,
+    enableGeolocation: true,
+    defaultOpacity: 0.8,
   });
   const [mapPrefSaving, setMapPrefSaving] = useState(false);
 
@@ -130,10 +157,19 @@ const AdminSettings = () => {
         .from("profiles")
         .select("id,full_name,phone,created_at")
         .order("created_at", { ascending: false });
-      if (profilesError) throw profilesError;
+      
+      console.log('[AdminSettings] Profiles loaded:', profiles?.length, profiles);
+      if (profilesError) {
+        console.error('[AdminSettings] Profiles error:', profilesError);
+        throw profilesError;
+      }
 
       const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id,role");
-      if (rolesError) throw rolesError;
+      console.log('[AdminSettings] Roles loaded:', roles?.length, roles);
+      if (rolesError) {
+        console.error('[AdminSettings] Roles error:', rolesError);
+        throw rolesError;
+      }
 
       const adminIds = new Set((roles ?? []).filter((role) => role.role === "admin").map((role) => role.user_id));
       const list: UserManagementRow[] = (profiles ?? []).map((profile) => ({
@@ -143,6 +179,7 @@ const AdminSettings = () => {
         created_at: profile.created_at,
         role: adminIds.has(profile.id) ? "admin" : "user",
       }));
+      console.log('[AdminSettings] Final user list:', list);
       setUsers(list);
     } catch (error) {
       console.error("Failed to load users", error);
@@ -185,6 +222,49 @@ const AdminSettings = () => {
     void loadUsers();
     void loadAuditLogs();
   }, [isAdmin, user, loadAuditLogs, loadUsers]);
+
+  useEffect(() => {
+    if (!canUseBrowserStorage) return;
+    const loadFromLocalStorage = () => {
+      try {
+        const storedMap = localStorage.getItem(MAP_PREFS_STORAGE_KEY);
+        if (storedMap) {
+          const parsed = JSON.parse(storedMap) as Partial<MapPreferences>;
+          setMapPreferences((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch (error) {
+        console.warn("Failed to load map preferences", error);
+      }
+      try {
+        const storedLayers = localStorage.getItem(GEO_LAYER_STORAGE_KEY);
+        if (storedLayers) {
+          const parsed = JSON.parse(storedLayers) as Partial<GeoLayerSettings>;
+          setGeoLayerSettings((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch (error) {
+        console.warn("Failed to load geo layer settings", error);
+      }
+      try {
+        const storedNotifications = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+        if (storedNotifications) {
+          const parsed = JSON.parse(storedNotifications) as Partial<NotificationSettings>;
+          setNotificationSettings((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch (error) {
+        console.warn("Failed to load notification settings", error);
+      }
+      try {
+        const storedSecurity = localStorage.getItem(SECURITY_STORAGE_KEY);
+        if (storedSecurity) {
+          const parsed = JSON.parse(storedSecurity) as Partial<SecuritySettings>;
+          setSecuritySettings((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch (error) {
+        console.warn("Failed to load security settings", error);
+      }
+    };
+    loadFromLocalStorage();
+  }, [canUseBrowserStorage]);
 
   useEffect(() => {
     if (!canUseBrowserStorage) return;
@@ -254,10 +334,6 @@ const AdminSettings = () => {
   };
 
   const saveMapPreferences = async () => {
-    if (!canUseBrowserStorage) {
-      toast.error("Penyimpanan browser tidak tersedia");
-      return;
-    }
     setMapPrefSaving(true);
     try {
       const lat = Number(mapPreferences.centerLat);
@@ -271,70 +347,66 @@ const AdminSettings = () => {
         toast.error("Nilai zoom harus antara 1 sampai 22");
         return;
       }
-      localStorage.setItem(MAP_PREFS_STORAGE_KEY, JSON.stringify(mapPreferences));
-      toast.success("Preferensi peta disimpan");
+      if (mapPreferences.clusterRadius < 20 || mapPreferences.clusterRadius > 200) {
+        toast.error("Radius cluster harus antara 20-200 pixel");
+        return;
+      }
+      if (mapPreferences.heatmapRadius < 10 || mapPreferences.heatmapRadius > 100) {
+        toast.error("Radius heatmap harus antara 10-100 pixel");
+        return;
+      }
+      if (mapPreferences.defaultOpacity < 0 || mapPreferences.defaultOpacity > 1) {
+        toast.error("Opacity harus antara 0-1");
+        return;
+      }
+      await saveSetting('map', 'preferences', mapPreferences);
+      if (canUseBrowserStorage) localStorage.setItem(MAP_PREFS_STORAGE_KEY, JSON.stringify(mapPreferences));
     } catch (error) {
       console.error("Failed to save map preferences", error);
-      toast.error("Gagal menyimpan preferensi peta");
     } finally {
       setMapPrefSaving(false);
     }
   };
 
   const saveGeoLayerSettings = async () => {
-    if (!canUseBrowserStorage) {
-      toast.error("Penyimpanan browser tidak tersedia");
-      return;
-    }
     setGeoLayerSaving(true);
     try {
       if (geoLayerSettings.maxUploadSizeMb <= 0) {
         toast.error("Batas unggah harus lebih dari 0 MB");
         return;
       }
-      localStorage.setItem(GEO_LAYER_STORAGE_KEY, JSON.stringify(geoLayerSettings));
-      toast.success("Pengaturan geo layer disimpan");
+      await saveSetting('geo', 'layer_settings', geoLayerSettings);
+      if (canUseBrowserStorage) localStorage.setItem(GEO_LAYER_STORAGE_KEY, JSON.stringify(geoLayerSettings));
     } catch (error) {
       console.error("Failed to save geo layer settings", error);
-      toast.error("Gagal menyimpan pengaturan geo layer");
     } finally {
       setGeoLayerSaving(false);
     }
   };
 
   const saveNotificationSettings = async () => {
-    if (!canUseBrowserStorage) {
-      toast.error("Penyimpanan browser tidak tersedia");
-      return;
-    }
     setNotificationSaving(true);
     try {
-      localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificationSettings));
-      toast.success("Pengaturan notifikasi disimpan");
+      await saveSetting('notification', 'preferences', notificationSettings);
+      if (canUseBrowserStorage) localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificationSettings));
     } catch (error) {
       console.error("Failed to save notification settings", error);
-      toast.error("Gagal menyimpan pengaturan notifikasi");
     } finally {
       setNotificationSaving(false);
     }
   };
 
   const saveSecuritySettings = async () => {
-    if (!canUseBrowserStorage) {
-      toast.error("Penyimpanan browser tidak tersedia");
-      return;
-    }
     setSecuritySaving(true);
     try {
       if (securitySettings.sessionTimeoutMinutes < 5) {
         toast.error("Durasi sesi minimal 5 menit");
         return;
       }
-      localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(securitySettings));
-      toast.success("Pengaturan keamanan disimpan");
+      await saveSetting('security', 'preferences', securitySettings);
+      if (canUseBrowserStorage) localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(securitySettings));
     } catch (error) {
       console.error("Failed to save security settings", error);
-      toast.error("Gagal menyimpan pengaturan keamanan");
     } finally {
       setSecuritySaving(false);
     }
@@ -438,17 +510,67 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="space-y-5">
-      <Card className="border-l-4 border-l-primary">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <span className="text-2xl">🗺️</span>
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pengaturan Sistem</h2>
+          <p className="text-sm text-muted-foreground mt-1">Kelola konfigurasi aplikasi dan preferensi admin</p>
+        </div>
+        <Badge variant="outline" className="gap-1.5 w-fit">
+          <Activity className="h-3 w-3" />
+          Admin Panel
+        </Badge>
+      </div>
+
+      <Tabs defaultValue="map" className="w-full">
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <TabsList className="inline-flex w-auto min-w-full gap-1 h-auto p-1 bg-muted/50">
+          <TabsTrigger value="map" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Peta</span>
+          </TabsTrigger>
+          <TabsTrigger value="geo" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <DatabaseIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">GeoLayer</span>
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Laporan</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <Tags className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Kategori</span>
+          </TabsTrigger>
+          <TabsTrigger value="notification" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Notifikasi</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Keamanan</span>
+          </TabsTrigger>
+          <TabsTrigger value="backup" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <DownloadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Backup</span>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Pengguna</span>
+          </TabsTrigger>
+        </TabsList>
+        </div>
+
+        <TabsContent value="map" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Settings className="h-5 w-5 text-primary" />
             Preferensi Peta
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Atur tampilan default peta dan layer</p>
+          <CardDescription>Atur tampilan default peta dan layer geografis</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Latitude pusat</label>
               <Input
@@ -506,23 +628,148 @@ const AdminSettings = () => {
             </label>
           </div>
 
-          <Button onClick={saveMapPreferences} disabled={mapPrefSaving} size="sm" className="w-full md:w-auto">
-            {mapPrefSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Preferensi
-          </Button>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">Pengaturan Marker & Layer</h4>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-muted/30 rounded-lg p-3 border">
+                <label className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Clustering marker</div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Kelompokkan marker yang berdekatan.</p>
+                  </div>
+                  <Switch
+                    checked={mapPreferences.enableClustering}
+                    onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableClustering: checked }))}
+                  />
+                </label>
+              </div>
+
+              <div className="bg-muted/30 rounded-lg p-3 border">
+                <label className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Heatmap</div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Tampilkan peta panas untuk densitas laporan.</p>
+                  </div>
+                  <Switch
+                    checked={mapPreferences.enableHeatmap}
+                    onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableHeatmap: checked }))}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius cluster (px)</label>
+                <Input
+                  className="h-9"
+                  type="number"
+                  min="20"
+                  max="200"
+                  value={mapPreferences.clusterRadius}
+                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, clusterRadius: Number(e.target.value) }))}
+                  disabled={!mapPreferences.enableClustering}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius heatmap (px)</label>
+                <Input
+                  className="h-9"
+                  type="number"
+                  min="10"
+                  max="100"
+                  value={mapPreferences.heatmapRadius}
+                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, heatmapRadius: Number(e.target.value) }))}
+                  disabled={!mapPreferences.enableHeatmap}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">Batas Zoom & Tampilan</h4>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom minimal</label>
+                <Input
+                  className="h-9"
+                  type="number"
+                  min="1"
+                  max="18"
+                  value={mapPreferences.minZoom}
+                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, minZoom: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom maksimal</label>
+                <Input
+                  className="h-9"
+                  type="number"
+                  min="10"
+                  max="22"
+                  value={mapPreferences.maxZoom}
+                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, maxZoom: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Opacity layer (0-1)</label>
+                <Input
+                  className="h-9"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="1"
+                  value={mapPreferences.defaultOpacity}
+                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, defaultOpacity: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+
+            <div className="bg-muted/30 rounded-lg p-3 border">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Geolocation otomatis</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Deteksi lokasi pengguna saat membuka peta.</p>
+                </div>
+                <Switch
+                  checked={mapPreferences.enableGeolocation}
+                  onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableGeolocation: checked }))}
+                />
+              </label>
+            </div>
+          </div>
+
+          <Separator />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Perubahan akan diterapkan pada sesi berikutnya</p>
+            <Button onClick={saveMapPreferences} disabled={mapPrefSaving} size="sm" className="w-full sm:w-auto">
+              {mapPrefSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Preferensi
+            </Button>
+          </div>
         </CardContent>
       </Card>
+      </TabsContent>
 
-      <Card className="border-l-4 border-l-blue-500">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <span className="text-2xl">🌍</span>
+      <TabsContent value="geo" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <DatabaseIcon className="h-5 w-5 text-blue-500" />
             Pengaturan GeoLayer
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Kelola validasi dan publikasi layer geografis</p>
+          <CardDescription>Kelola validasi dan publikasi layer geografis</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-muted/30 rounded-lg p-3 border">
               <label className="flex items-center justify-between">
                 <div>
@@ -549,7 +796,7 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CRS default</label>
               <Input
@@ -589,23 +836,37 @@ const AdminSettings = () => {
             </label>
           </div>
 
-          <Button onClick={saveGeoLayerSettings} disabled={geoLayerSaving} size="sm" className="w-full md:w-auto">
-            {geoLayerSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengaturan GeoLayer
-          </Button>
+          <Separator />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Validasi akan diterapkan pada unggahan berikutnya</p>
+            <Button onClick={saveGeoLayerSettings} disabled={geoLayerSaving} size="sm" className="w-full sm:w-auto">
+              {geoLayerSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Pengaturan
+            </Button>
+          </div>
         </CardContent>
       </Card>
+      </TabsContent>
 
-      <Card className="border-l-4 border-l-amber-500">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <span className="text-2xl">🔔</span>
-            Notifikasi &amp; Audit
+      <TabsContent value="reports" className="mt-6 space-y-4">
+        <ReportSettings />
+      </TabsContent>
+
+      <TabsContent value="categories" className="mt-6 space-y-4">
+        <CategorySettings />
+      </TabsContent>
+
+      <TabsContent value="notification" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Bell className="h-5 w-5 text-amber-500" />
+            Notifikasi
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Atur preferensi notifikasi dan lihat aktivitas sistem</p>
+          <CardDescription>Atur preferensi pemberitahuan sistem</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-muted/30 rounded-lg p-3 border">
               <label className="flex items-center justify-between">
                 <div>
@@ -644,12 +905,27 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          <Button onClick={saveNotificationSettings} disabled={notificationSaving} size="sm" className="w-full md:w-auto">
-            {notificationSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengaturan Notifikasi
-          </Button>
+          <Separator />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Notifikasi akan aktif sesuai preferensi</p>
+            <Button onClick={saveNotificationSettings} disabled={notificationSaving} size="sm" className="w-full sm:w-auto">
+              {notificationSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Pengaturan
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-          <div className="bg-muted/50 rounded-lg p-4 border-2 border-dashed">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Activity className="h-5 w-5 text-primary" />
+            Audit Log
+          </CardTitle>
+          <CardDescription>Riwayat aktivitas sistem terbaru</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          <div className="bg-muted/30 rounded-lg p-4 border">
             <div className="flex items-center gap-2 mb-3">
               <RefreshCcw className="h-4 w-4 text-muted-foreground" />
               <div className="text-sm font-semibold">Audit Terbaru</div>
@@ -677,60 +953,18 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-green-500">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <span className="text-2xl">💾</span>
-            Backup &amp; Restore
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Kelola cadangan dan pemulihan data geo layer</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-xs text-blue-900 dark:text-blue-100">
-              Buat salinan data geo layer untuk cadangan, atau pulihkan dari file JSON yang telah diekspor sebelumnya.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Button onClick={handleBackupGeoLayers} disabled={backupInProgress} variant="outline" size="sm" className="h-auto py-3">
-              {backupInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-              <div className="text-left">
-                <div className="font-semibold">Backup GeoLayer</div>
-                <div className="text-xs text-muted-foreground font-normal">Unduh semua layer ke file JSON</div>
-              </div>
-            </Button>
-            <Button onClick={handleTriggerRestore} disabled={restoreInProgress} variant="outline" size="sm" className="h-auto py-3">
-              {restoreInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              <div className="text-left">
-                <div className="font-semibold">Restore dari File</div>
-                <div className="text-xs text-muted-foreground font-normal">Pulihkan layer dari backup</div>
-              </div>
-            </Button>
-            <input
-              ref={restoreInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleRestoreFileChange}
-            />
-          </div>
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-            <p className="text-xs text-amber-900 dark:text-amber-100">
-              ⚠️ Saat restore, data layer dengan key yang sama akan digantikan.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      </TabsContent>
 
-      <Card className="border-l-4 border-l-red-500">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <span className="text-2xl">🔒</span>
+      <TabsContent value="security" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Lock className="h-5 w-5 text-red-500" />
             Keamanan
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Konfigurasi pengaturan keamanan dan akses sistem</p>
+          <CardDescription>Konfigurasi pengaturan keamanan dan akses sistem</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="bg-muted/30 rounded-lg p-3 border">
             <label className="flex items-center justify-between">
               <div>
@@ -778,12 +1012,152 @@ const AdminSettings = () => {
             </span>
           </div>
 
-          <Button onClick={saveSecuritySettings} disabled={securitySaving} size="sm" className="w-full md:w-auto">
-            {securitySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengaturan Keamanan
-          </Button>
+          <Separator />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Perubahan keamanan memerlukan restart sesi</p>
+            <Button onClick={saveSecuritySettings} disabled={securitySaving} size="sm" className="w-full sm:w-auto">
+              {securitySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Pengaturan
+            </Button>
+          </div>
         </CardContent>
       </Card>
+      </TabsContent>
+
+      <TabsContent value="backup" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <DownloadCloud className="h-5 w-5 text-green-500" />
+            Backup &amp; Restore
+          </CardTitle>
+          <CardDescription>Kelola cadangan dan pemulihan data geo layer</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-xs text-blue-900 dark:text-blue-100">
+              Buat salinan data geo layer untuk cadangan, atau pulihkan dari file JSON yang telah diekspor sebelumnya.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button onClick={handleBackupGeoLayers} disabled={backupInProgress} variant="outline" size="sm" className="h-auto py-3">
+              {backupInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+              <div className="text-left">
+                <div className="font-semibold">Backup GeoLayer</div>
+                <div className="text-xs text-muted-foreground font-normal">Unduh semua layer ke file JSON</div>
+              </div>
+            </Button>
+            <Button onClick={handleTriggerRestore} disabled={restoreInProgress} variant="outline" size="sm" className="h-auto py-3">
+              {restoreInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+              <div className="text-left">
+                <div className="font-semibold">Restore dari File</div>
+                <div className="text-xs text-muted-foreground font-normal">Pulihkan layer dari backup</div>
+              </div>
+            </Button>
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={handleRestoreFileChange}
+            />
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <p className="text-xs text-amber-900 dark:text-amber-100">
+              ⚠️ Saat restore, data layer dengan key yang sama akan digantikan.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      </TabsContent>
+
+      <TabsContent value="users" className="mt-6 space-y-4">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Users className="h-5 w-5 text-primary" />
+            Manajemen Pengguna
+          </CardTitle>
+          <CardDescription>Kelola role dan akses pengguna sistem</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary">{users.length} Pengguna</Badge>
+              <Badge variant="outline">{users.filter(u => u.role === 'admin').length} Admin</Badge>
+            </div>
+            <Button onClick={loadUsers} disabled={usersLoading} size="sm" variant="outline">
+              {usersLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+              Refresh
+            </Button>
+          </div>
+
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Tidak ada pengguna ditemukan</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle">
+              <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Nama</TableHead>
+                    <TableHead className="min-w-[120px]">Kontak</TableHead>
+                    <TableHead className="min-w-[140px]">Terdaftar</TableHead>
+                    <TableHead className="min-w-[80px]">Role</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <UserCog className="h-4 w-4 text-muted-foreground" />
+                          {u.full_name || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{u.phone || '-'}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDateTime(u.created_at)}</TableCell>
+                      <TableCell>
+                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
+                          {u.role === 'admin' ? 'Admin' : 'User'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Select
+                          value={u.role}
+                          onValueChange={(value) => handleRoleChange(u.id, value as 'admin' | 'user')}
+                          disabled={userRoleUpdating === u.id}
+                        >
+                          <SelectTrigger className="w-[110px] h-8 text-xs ml-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 };
