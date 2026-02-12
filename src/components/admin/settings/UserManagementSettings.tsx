@@ -57,25 +57,45 @@ export const UserManagementSettings = () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
+      // Test basic query first
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, phone, nik_nip, email, created_at")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (profilesError) {
         console.error("Profiles error:", profilesError);
-        throw profilesError;
+        toast.error(`Error loading profiles: ${profilesError.message}`);
+        return;
       }
 
-      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+      console.log("Profiles loaded:", profiles);
+
+      // Load roles with error handling
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) {
+        console.error("Roles error:", rolesError);
+      }
 
       const adminIds = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
 
-      // Get report counts
-      const { data: reports } = await supabase.from("reports").select("user_id");
+      // Get report counts with error handling
+      const { data: reports, error: reportsError } = await supabase
+        .from("reports")
+        .select("user_id");
+
+      if (reportsError) {
+        console.error("Reports error:", reportsError);
+      }
+
       const reportCounts: Record<string, number> = {};
       reports?.forEach((r) => {
-        reportCounts[r.user_id] = (reportCounts[r.user_id] || 0) + 1;
+        if (r.user_id) {
+          reportCounts[r.user_id] = (reportCounts[r.user_id] || 0) + 1;
+        }
       });
 
       const userList: UserRow[] = (profiles ?? []).map((profile) => ({
@@ -89,10 +109,12 @@ export const UserManagementSettings = () => {
         report_count: reportCounts[profile.id] || 0,
       }));
 
+      console.log("User list:", userList);
       setUsers(userList);
+      toast.success(`${userList.length} pengguna berhasil dimuat`);
     } catch (error) {
       console.error("Failed to load users", error);
-      toast.error("Gagal memuat pengguna");
+      toast.error(`Gagal memuat pengguna: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -139,21 +161,27 @@ export const UserManagementSettings = () => {
       if (newRole === "admin") {
         const { error } = await supabase
           .from("user_roles")
-          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
-        if (error) throw error;
+          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id" });
+        if (error) {
+          console.error("Upsert error:", error);
+          throw error;
+        }
       } else {
         const { error } = await supabase
           .from("user_roles")
           .delete()
           .eq("user_id", userId)
           .eq("role", "admin");
-        if (error) throw error;
+        if (error) {
+          console.error("Delete error:", error);
+          throw error;
+        }
       }
-      toast.success("Role pengguna berhasil diperbarui");
+      toast.success(`Role berhasil diubah menjadi ${newRole === "admin" ? "Admin" : "User"}`);
       await loadUsers();
     } catch (error) {
       console.error("Failed to update role", error);
-      toast.error("Gagal memperbarui role");
+      toast.error(`Gagal memperbarui role: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUpdatingUserId(null);
     }
