@@ -18,7 +18,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Polygon',
       color: 'text-blue-600',
       action: () => {
-        // @ts-ignore
         map.pm.enableDraw('Polygon', { snappable: true, snapDistance: 20 });
       }
     },
@@ -28,7 +27,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Garis',
       color: 'text-green-600',
       action: () => {
-        // @ts-ignore
         map.pm.enableDraw('Line', { snappable: true, snapDistance: 20 });
       }
     },
@@ -38,7 +36,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Kotak',
       color: 'text-purple-600',
       action: () => {
-        // @ts-ignore
         map.pm.enableDraw('Rectangle');
       }
     },
@@ -48,7 +45,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Lingkaran',
       color: 'text-orange-600',
       action: () => {
-        // @ts-ignore
         map.pm.enableDraw('Circle');
       }
     },
@@ -58,7 +54,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Edit',
       color: 'text-amber-600',
       action: () => {
-        // @ts-ignore
         map.pm.toggleGlobalEditMode();
       }
     },
@@ -68,7 +63,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       label: 'Hapus',
       color: 'text-red-600',
       action: () => {
-        // @ts-ignore
         map.pm.toggleGlobalRemovalMode();
       }
     },

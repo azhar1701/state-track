@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Search, Navigation, Filter as FilterIcon, Layers, Share2, Download,
   Play, Pause, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, ChevronUp,
-  PenTool, Ruler
+  Ruler
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { format } from 'date-fns';
@@ -24,7 +24,6 @@ interface ModernMapOverlayProps {
   
   // Drawing & Measurement
   onToggleDrawing?: () => void;
-  onToggleMeasurement?: () => void;
   drawToolbarContent?: React.ReactNode;
   
   // Share & Export
@@ -58,7 +57,6 @@ export const ModernMapOverlay = ({
   onToggleFilters,
   onToggleOverlays,
   onToggleDrawing,
-  onToggleMeasurement,
   drawToolbarContent,
   onShare,
   onExport,
@@ -78,21 +76,12 @@ export const ModernMapOverlay = ({
 }: ModernMapOverlayProps) => {
   const [legendCollapsed, setLegendCollapsed] = useState(false);
   const [drawingActive, setDrawingActive] = useState(false);
-  const [measureActive, setMeasureActive] = useState(false);
 
   // Sync drawing state from parent
   const handleDrawClick = () => {
     const newState = !drawingActive;
     setDrawingActive(newState);
-    setMeasureActive(false);
     onToggleDrawing?.();
-  };
-
-  const handleMeasureClick = () => {
-    const newState = !measureActive;
-    setMeasureActive(newState);
-    setDrawingActive(false);
-    onToggleMeasurement?.();
   };
 
   const statusItems = [
@@ -150,18 +139,7 @@ export const ModernMapOverlay = ({
             variant={drawingActive ? 'default' : 'ghost'} 
             size="sm" 
             className="h-9 w-9 p-0" 
-            title="Alat Gambar (Geoman)"
-          >
-            <PenTool className="w-4 h-4" />
-          </Button>
-
-          {/* Measurement */}
-          <Button 
-            onClick={handleMeasureClick}
-            variant={measureActive ? 'default' : 'ghost'} 
-            size="sm" 
-            className="h-9 w-9 p-0" 
-            title="Ukur Jarak"
+            title="Alat Gambar & Ukur"
           >
             <Ruler className="w-4 h-4" />
           </Button>
@@ -195,17 +173,9 @@ export const ModernMapOverlay = ({
         {/* Tool Instructions */}
         {drawingActive && (
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium pointer-events-auto border-2 border-white/20">
-            <div className="font-bold mb-1">✏️ Alat Gambar Aktif</div>
+            <div className="font-bold mb-1">📏 Alat Gambar & Ukur</div>
             <div className="text-xs opacity-90">
-              Gunakan toolbar di kanan atas untuk menggambar polygon, garis, lingkaran, dll.
-            </div>
-          </div>
-        )}
-        {measureActive && (
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium pointer-events-auto border-2 border-white/20">
-            <div className="font-bold mb-1">📏 Ukur Jarak</div>
-            <div className="text-xs opacity-90">
-              Klik: tambah titik • Backspace: undo • Esc: batal
+              Gunakan toolbar untuk menggambar polygon, garis, lingkaran, dan mengukur jarak
             </div>
           </div>
         )}
@@ -339,13 +309,21 @@ export const ModernMapOverlay = ({
                       if (item.type === 'line') {
                         return (
                           <div key={idx} className="flex items-center gap-1.5 py-0.5">
-                            <span
-                              className="inline-block w-4 h-0.5 rounded-full shadow-sm"
-                              style={{
-                                backgroundColor: item.dashArray ? 'transparent' : item.color,
-                                borderTop: item.dashArray ? `1px dashed ${item.color}` : undefined,
-                              }}
-                            />
+                            {item.dashArray ? (
+                              <span
+                                className="inline-block w-4 h-0.5 rounded-full"
+                                style={{
+                                  borderTop: `1px dashed ${item.color}`,
+                                }}
+                              />
+                            ) : (
+                              <span
+                                className="inline-block w-4 h-0.5 rounded-full shadow-sm"
+                                style={{
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                            )}
                             <span className="text-foreground/90 truncate">{item.label}</span>
                           </div>
                         );

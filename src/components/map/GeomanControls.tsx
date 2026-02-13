@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import * as turf from '@turf/turf';
@@ -13,7 +14,7 @@ interface GeomanControlsProps {
 
 export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: GeomanControlsProps) {
   const map = useMap();
-  const pmRef = useRef<any>(null);
+  const pmRef = useRef<unknown>(null);
   const onPolygonDrawnRef = useRef(onPolygonDrawn);
   const onDrawModeChangeRef = useRef(onDrawModeChange);
 
@@ -26,10 +27,8 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
     if (!map) return;
 
     if (enabled) {
-      // @ts-ignore
       pmRef.current = map.pm;
 
-      // @ts-ignore
       map.pm.setLang('id', {
         tooltips: {
           placeMarker: 'Klik untuk menempatkan marker',
@@ -48,10 +47,8 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
         },
       });
 
-      // @ts-ignore
       map.pm.setLang('id');
 
-      // @ts-ignore
       map.on('pm:create', (e) => {
         const layer = e.layer;
         
@@ -98,50 +95,36 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
         onDrawModeChangeRef.current?.(null);
       });
 
-      // @ts-ignore
       map.on('pm:remove', () => {
         toast.info('Layer dihapus');
       });
 
-      // @ts-ignore
       map.on('pm:drawstart', ({ shape }) => {
         onDrawModeChangeRef.current?.(shape);
       });
 
-      // @ts-ignore
       map.on('pm:drawend', () => {
         onDrawModeChangeRef.current?.(null);
       });
 
     } else {
-      // @ts-ignore
       if (map.pm) {
-        // @ts-ignore
         map.pm.disableDraw();
-        // @ts-ignore
         if (map.pm.globalEditModeEnabled()) {
-          // @ts-ignore
           map.pm.disableGlobalEditMode();
         }
-        // @ts-ignore
         if (map.pm.globalRemovalModeEnabled()) {
-          // @ts-ignore
           map.pm.disableGlobalRemovalMode();
         }
       }
     }
 
     return () => {
-      // @ts-ignore
       if (map && map.pm) {
         try {
-          // @ts-ignore
           map.off('pm:create');
-          // @ts-ignore
           map.off('pm:remove');
-          // @ts-ignore
           map.off('pm:drawstart');
-          // @ts-ignore
           map.off('pm:drawend');
         } catch (e) {
           // Ignore cleanup errors

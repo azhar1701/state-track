@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, FileText, CheckCircle, Settings2, Bell, FileCheck, Workflow } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, Settings2, Bell, FileCheck, Workflow, Upload, Download, AlertCircle } from 'lucide-react';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import type { Database } from '@/integrations/supabase/types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type ReportConfig = {
   autoApprove: boolean;
@@ -78,10 +82,14 @@ const defaultNotification: NotificationConfig = {
 
 export const ReportSettings = () => {
   const { saveSetting } = useSystemSettings();
+  const { user } = useAuth();
   const [config, setConfig] = useState<ReportConfig>(defaultConfig);
   const [exportConfig, setExportConfig] = useState<ExportConfig>(defaultExport);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig>(defaultNotification);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -132,6 +140,161 @@ export const ReportSettings = () => {
     }
   }, [config, exportConfig, notificationConfig, saveSetting]);
 
+  const downloadTemplate = () => {
+    const headers = [
+      'title',
+      'description',
+      'category',
+      'severity',
+      'status',
+      'latitude',
+      'longitude',
+      'location_name',
+      'kecamatan',
+      'desa',
+      'reporter_name',
+      'phone',
+      'incident_date',
+      'resolution'
+    ];
+    
+    const example = [
+      'Jalan Rusak di Desa Sukamaju',
+      'Jalan berlubang sepanjang 50 meter',
+      'jalan',
+      'sedang',
+      'baru',
+      '-7.325',
+      '108.353',
+      'Jl. Raya Sukamaju',
+      'Ciamis',
+      'Sukamaju',
+      'Budi Santoso',
+      '081234567890',
+      '2024-01-15',
+      ''
+    ];
+
+    const csv = [
+      headers.join(','),
+      example.map(v => `"${v}"`).join(',')
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-import-laporan.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success('Template berhasil diunduh');
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('File harus berformat CSV');
+      return;
+    }
+
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      
+      if (lines.length < 2) {
+        toast.error('File CSV kosong atau tidak valid');
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const rows = lines.slice(1);
+
+      const validCategories: Database['public']['Enums']['report_category'][] = ['jalan', 'jembatan', 'irigasi', 'drainase', 'sungai', 'lainnya'];
+      const validSeverities: Database['public']['Enums']['report_severity'][] = ['ringan', 'sedang', 'berat'];
+      const validStatuses: Database['public']['Enums']['report_status'][] = ['baru', 'diproses', 'selesai'];
+
+      let success = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        try {
+          const values = rows[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] || '';
+          });
+
+          if (!row.title || !row.description) {
+            errors.push(`Baris ${i + 2}: Judul dan deskripsi wajib diisi`);
+            failed++;
+            continue;
+          }
+
+          const lat = parseFloat(row.latitude);
+          const lng = parseFloat(row.longitude);
+          if (isNaN(lat) || isNaN(lng)) {
+            errors.push(`Baris ${i + 2}: Koordinat tidak valid`);
+            failed++;
+            continue;
+          }
+
+          const category = validCategories.includes(row.category as any) ? row.category as Database['public']['Enums']['report_category'] : 'lainnya';
+          const severity = validSeverities.includes(row.severity as any) ? row.severity as Database['public']['Enums']['report_severity'] : null;
+          const status = validStatuses.includes(row.status as any) ? row.status as Database['public']['Enums']['report_status'] : 'baru';
+
+          const { error } = await supabase.from('reports').insert({
+            title: row.title,
+            description: row.description,
+            category,
+            severity,
+            status,
+            latitude: lat,
+            longitude: lng,
+            location_name: row.location_name || null,
+            kecamatan: row.kecamatan || null,
+            desa: row.desa || null,
+            reporter_name: row.reporter_name || null,
+            phone: row.phone || null,
+            incident_date: row.incident_date || null,
+            resolution: row.resolution || null,
+            user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+          });
+
+          if (error) throw error;
+          success++;
+        } catch (err) {
+          failed++;
+          errors.push(`Baris ${i + 2}: ${err instanceof Error ? err.message : 'Error tidak diketahui'}`);
+        }
+      }
+
+      setImportResult({ success, failed, errors: errors.slice(0, 10) });
+      
+      if (success > 0) {
+        toast.success(`Berhasil import ${success} laporan`);
+      }
+      if (failed > 0) {
+        toast.error(`${failed} laporan gagal diimport`);
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Gagal memproses file CSV');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <Card className="border-0 shadow-md">
       <CardHeader className="p-4 sm:p-6">
@@ -153,7 +316,7 @@ export const ReportSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="workflow" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="workflow" className="gap-1.5 text-xs sm:text-sm">
               <Workflow className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Workflow</span>
@@ -161,6 +324,10 @@ export const ReportSettings = () => {
             <TabsTrigger value="validation" className="gap-1.5 text-xs sm:text-sm">
               <FileCheck className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Validasi</span>
+            </TabsTrigger>
+            <TabsTrigger value="import" className="gap-1.5 text-xs sm:text-sm">
+              <Upload className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Import</span>
             </TabsTrigger>
             <TabsTrigger value="export" className="gap-1.5 text-xs sm:text-sm">
               <FileText className="h-3.5 w-3.5" />
@@ -393,6 +560,130 @@ export const ReportSettings = () => {
                   />
                 </div>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="import" className="space-y-4 mt-0">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold">Import Bulk Data Laporan</h4>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Import data laporan dalam jumlah besar menggunakan file CSV. Pastikan format sesuai dengan template yang disediakan.
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-muted/30 rounded-lg p-4 border space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <h5 className="text-sm font-medium mb-1">Template CSV</h5>
+                    <p className="text-xs text-muted-foreground">
+                      Download template untuk memastikan format data sesuai dengan sistem
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={downloadTemplate}
+                    className="gap-2 flex-shrink-0"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Template
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Format Kolom CSV</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">Wajib</Badge>
+                      <div>
+                        <code className="text-xs bg-muted px-1 rounded">title</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">description</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">latitude</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">longitude</code>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">Opsional</Badge>
+                      <div>
+                        <code className="text-xs bg-muted px-1 rounded">category</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">severity</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">status</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">kecamatan</code>,
+                        <code className="text-xs bg-muted px-1 rounded ml-1">desa</code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Nilai Valid</h5>
+                  <div className="space-y-1.5 text-xs">
+                    <div>
+                      <span className="font-medium">category:</span> jalan, jembatan, irigasi, drainase, sungai, lainnya
+                    </div>
+                    <div>
+                      <span className="font-medium">severity:</span> ringan, sedang, berat
+                    </div>
+                    <div>
+                      <span className="font-medium">status:</span> baru, diproses, selesai
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 rounded-lg p-4 border space-y-3">
+                <h5 className="text-sm font-medium">Upload File CSV</h5>
+                <div className="flex items-center gap-3">
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    disabled={importing}
+                    className="h-9"
+                  />
+                  {importing && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  File CSV maksimal 5MB. Proses import akan berjalan di background.
+                </p>
+              </div>
+
+              {importResult && (
+                <div className="bg-muted/30 rounded-lg p-4 border space-y-3">
+                  <h5 className="text-sm font-medium">Hasil Import</h5>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Berhasil</div>
+                      <div className="text-2xl font-bold text-green-600">{importResult.success}</div>
+                    </div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Gagal</div>
+                      <div className="text-2xl font-bold text-red-600">{importResult.failed}</div>
+                    </div>
+                  </div>
+                  {importResult.errors.length > 0 && (
+                    <div>
+                      <h6 className="text-xs font-medium mb-2">Error Log (10 pertama):</h6>
+                      <div className="bg-background rounded border p-2 max-h-32 overflow-y-auto space-y-1">
+                        {importResult.errors.map((err, idx) => (
+                          <div key={idx} className="text-xs text-red-600">{err}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
 

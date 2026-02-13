@@ -563,7 +563,7 @@ const MapView = () => {
   useEffect(() => {
     const currentDays = Math.max(0, differenceInCalendarDays(startOfDay(timeFilterDate), minDate));
     setSliderValue(currentDays);
-  }, [timeFilterDate, minDate]);
+  }, [timeFilterDate, minDate, userLocation]);
 
   // Auto-play timeline
   useEffect(() => {
@@ -1892,12 +1892,6 @@ const MapView = () => {
             onToggleDrawing={() => {
               setShowGeomanDraw(prev => !prev);
               setActiveMapTool(null);
-              setShowSpatialAnalysis(false);
-              setShowRouteOptimization(false);
-            }}
-            onToggleMeasurement={() => {
-              setActiveMapTool(prev => prev === 'measure' ? null : 'measure');
-              setShowGeomanDraw(false);
               setShowSpatialAnalysis(false);
               setShowRouteOptimization(false);
             }}
