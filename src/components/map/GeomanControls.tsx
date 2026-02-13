@@ -17,6 +17,7 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
   const pmRef = useRef<unknown>(null);
   const onPolygonDrawnRef = useRef(onPolygonDrawn);
   const onDrawModeChangeRef = useRef(onDrawModeChange);
+  const editTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     onPolygonDrawnRef.current = onPolygonDrawn;
@@ -107,12 +108,17 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
         onDrawModeChangeRef.current?.(null);
       });
 
+      map.on('pm:globalremovalon', () => {
+        toast.info('Mode hapus aktif');
+      });
+
+      map.on('pm:globalremovaloff', () => {
+        toast.info('Mode hapus nonaktif');
+      });
+
     } else {
       if (map.pm) {
         map.pm.disableDraw();
-        if (map.pm.globalEditModeEnabled()) {
-          map.pm.disableGlobalEditMode();
-        }
         if (map.pm.globalRemovalModeEnabled()) {
           map.pm.disableGlobalRemovalMode();
         }
@@ -120,12 +126,16 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
     }
 
     return () => {
+      if (editTimeoutRef.current) clearTimeout(editTimeoutRef.current);
+      
       if (map && map.pm) {
         try {
           map.off('pm:create');
           map.off('pm:remove');
           map.off('pm:drawstart');
           map.off('pm:drawend');
+          map.off('pm:globalremovalon');
+          map.off('pm:globalremovaloff');
         } catch (e) {
           // Ignore cleanup errors
         }

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
-import { Hexagon, Minus, Square, Circle, Edit, Trash2 } from 'lucide-react';
+import { Hexagon, Minus, Square, Circle, Trash2 } from 'lucide-react';
 import L from 'leaflet';
+import { useEffect, useState } from 'react';
 
 interface DrawToolbarProps {
   visible: boolean;
@@ -9,6 +10,25 @@ interface DrawToolbarProps {
 }
 
 export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+
+  useEffect(() => {
+    if (!map || !map.pm) return;
+
+    const handleRemovalOn = () => setIsDeleteMode(true);
+    const handleRemovalOff = () => setIsDeleteMode(false);
+
+    map.on('pm:globalremovalon', handleRemovalOn);
+    map.on('pm:globalremovaloff', handleRemovalOff);
+
+    setIsDeleteMode(map.pm.globalRemovalModeEnabled());
+
+    return () => {
+      map.off('pm:globalremovalon', handleRemovalOn);
+      map.off('pm:globalremovaloff', handleRemovalOff);
+    };
+  }, [map]);
+
   if (!visible) return null;
 
   const tools = [
@@ -49,15 +69,6 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       }
     },
     { 
-      id: 'edit', 
-      icon: Edit, 
-      label: 'Edit',
-      color: 'text-amber-600',
-      action: () => {
-        map.pm.toggleGlobalEditMode();
-      }
-    },
-    { 
       id: 'delete', 
       icon: Trash2, 
       label: 'Hapus',
@@ -71,7 +82,9 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
   return (
     <div className="flex items-center gap-1">
       {tools.map((tool) => {
-        const isActive = activeMode === tool.id;
+        const isActive = tool.id === 'delete' 
+          ? isDeleteMode 
+          : activeMode === tool.id;
         return (
           <Button
             key={tool.id}

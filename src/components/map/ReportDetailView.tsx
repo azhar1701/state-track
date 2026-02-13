@@ -172,19 +172,19 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
         animate={{ x: 0, y: 0 }}
         exit={{ x: '100%', y: 0 }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0, bottom: 0.5 }}
-        onDragEnd={handleDragEnd}
-        style={{ y, opacity }}
+        style={{ opacity }}
         className={cn(
           'fixed z-[1401] bg-white/95 dark:bg-slate-900/95 shadow-2xl backdrop-blur-md',
-          'lg:top-0 lg:right-0 lg:h-full lg:w-[420px] lg:drag-none',
+          'lg:top-0 lg:right-0 lg:h-full lg:w-[420px]',
           'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[90vh]'
         )}
       >
         {/* Mobile Drag Handle */}
         <motion.div 
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={handleDragEnd}
           className="lg:hidden flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none"
           whileHover={{ opacity: 0.7 }}
         >

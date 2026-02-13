@@ -82,6 +82,14 @@ const MAP_OVERLAY_STORAGE_KEY = 'map:overlays';
 
 // Deterministic color generator per layer key to provide visual distinction
 const getColorForKey = (key: string) => {
+  const lower = key.toLowerCase();
+  // Predefined colors for specific layer types
+  if (lower.includes('sungai') || lower.includes('river')) return '#3b82f6'; // Blue
+  if (lower.includes('jalan') || lower.includes('road')) return '#6b7280'; // Gray
+  if (lower.includes('irigasi') || lower.includes('irrigation')) return '#06b6d4'; // Cyan
+  if (lower.includes('drainase') || lower.includes('drainage')) return '#8b5cf6'; // Purple
+  
+  // Fallback to hash-based color for other layers
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (hash << 5) - hash + key.charCodeAt(i);
