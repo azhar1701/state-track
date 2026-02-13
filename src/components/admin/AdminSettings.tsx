@@ -207,11 +207,7 @@ const AdminSettings = () => {
         <TabsList className="inline-flex w-auto min-w-full gap-1 h-auto p-1 bg-muted/50">
           <TabsTrigger value="map" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Peta</span>
-          </TabsTrigger>
-          <TabsTrigger value="geo" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <DatabaseIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">GeoLayer</span>
+            <span className="hidden sm:inline">Peta & Layer</span>
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -241,6 +237,13 @@ const AdminSettings = () => {
         </div>
 
         <TabsContent value="map" className="mt-6 space-y-4">
+          <Tabs defaultValue="display" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="display">Tampilan Peta</TabsTrigger>
+              <TabsTrigger value="layers">Pengaturan Layer</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="display" className="space-y-4">
       <Card className="border-0 shadow-md">
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -437,10 +440,12 @@ const AdminSettings = () => {
           </div>
         </CardContent>
       </Card>
-      </TabsContent>
+            </TabsContent>
 
-      <TabsContent value="geo" className="mt-6 space-y-4">
-        <GeoLayerSettings />
+            <TabsContent value="layers" className="space-y-4">
+              <GeoLayerSettings />
+            </TabsContent>
+          </Tabs>
       </TabsContent>
 
       <TabsContent value="reports" className="mt-6 space-y-4">

@@ -18,16 +18,10 @@ type GeoLayerSettings = {
   autoPublishToMap: boolean;
   maxUploadSizeMb: number;
   requireMetadata: boolean;
-  defaultLayerType: 'geojson' | 'wms' | 'cluster' | 'heatmap' | 'tile';
+  defaultLayerType: 'geojson' | 'wms' | 'tile';
   defaultZIndex: number;
   defaultOpacity: number;
   defaultVisible: boolean;
-  enableClustering: boolean;
-  clusterRadius: number;
-  enableHeatmap: boolean;
-  heatmapRadius: number;
-  heatmapBlur: number;
-  heatmapMaxZoom: number;
 };
 
 const STORAGE_KEY = 'admin:geoLayerSettings';
@@ -42,12 +36,6 @@ const defaultSettings: GeoLayerSettings = {
   defaultZIndex: 400,
   defaultOpacity: 1.0,
   defaultVisible: true,
-  enableClustering: true,
-  clusterRadius: 80,
-  enableHeatmap: false,
-  heatmapRadius: 25,
-  heatmapBlur: 15,
-  heatmapMaxZoom: 18,
 };
 
 export const GeoLayerSettings = () => {
@@ -122,24 +110,12 @@ export const GeoLayerSettings = () => {
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm">
-                <Settings2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Umum</span>
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="gap-1.5 text-xs sm:text-sm">
-                <Eye className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Lanjutan</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="general" className="space-y-4 mt-0">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-sm font-semibold">Validasi & Publikasi</h4>
-                </div>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold">Validasi & Publikasi</h4>
+              </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-muted/30 rounded-lg p-3 border">
@@ -272,8 +248,6 @@ export const GeoLayerSettings = () => {
                       <SelectContent>
                         <SelectItem value="geojson">GeoJSON</SelectItem>
                         <SelectItem value="wms">WMS</SelectItem>
-                        <SelectItem value="cluster">Cluster</SelectItem>
-                        <SelectItem value="heatmap">Heatmap</SelectItem>
                         <SelectItem value="tile">Tile</SelectItem>
                       </SelectContent>
                     </Select>
@@ -315,144 +289,9 @@ export const GeoLayerSettings = () => {
                   />
                 </div>
               </div>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="advanced" className="space-y-4 mt-0">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-sm font-semibold">Clustering & Heatmap</h4>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Enable clustering</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Kelompokkan marker yang berdekatan
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.enableClustering}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, enableClustering: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Enable heatmap</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Tampilkan peta panas untuk densitas
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.enableHeatmap}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, enableHeatmap: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Radius cluster (px)
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="20"
-                      max="200"
-                      value={settings.clusterRadius}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          clusterRadius: Number(e.target.value),
-                        }))
-                      }
-                      disabled={!settings.enableClustering}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Radius heatmap (px)
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="10"
-                      max="100"
-                      value={settings.heatmapRadius}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          heatmapRadius: Number(e.target.value),
-                        }))
-                      }
-                      disabled={!settings.enableHeatmap}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Blur heatmap (px)
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="5"
-                      max="50"
-                      value={settings.heatmapBlur}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          heatmapBlur: Number(e.target.value),
-                        }))
-                      }
-                      disabled={!settings.enableHeatmap}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Max zoom heatmap
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="10"
-                      max="22"
-                      value={settings.heatmapMaxZoom}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          heatmapMaxZoom: Number(e.target.value),
-                        }))
-                      }
-                      disabled={!settings.enableHeatmap}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <p className="text-xs text-blue-900 dark:text-blue-100">
-                  💡 Pengaturan clustering dan heatmap akan diterapkan pada layer baru yang
-                  menggunakan tipe 'cluster' atau 'heatmap'.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <Separator className="my-6" />
+            <Separator className="my-6" />
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
