@@ -1,0 +1,47 @@
+/* Geoman Controls - Hide default toolbar */
+.leaflet-pm-toolbar {
+  display: none !important;
+}
+
+/* Hide default Geoman actions */
+.leaflet-pm-actions-container {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  padding: 4px !important;
+}
+
+.leaflet-pm-actions-container .leaflet-pm-action {
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-pm-actions-container .leaflet-pm-action:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .leaflet-pm-actions-container {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-color: rgba(51, 65, 85, 0.8) !important;
+    color: white !important;
+  }
+}
+
+.leaflet-tooltip.leaflet-pm-tooltip {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(59, 130, 246, 0.5) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: white !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3) !important;
+}

@@ -4,7 +4,7 @@ import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader as Loader2, FileText, Clock, CheckCircle, Activity, Route, Pencil, Flame, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -35,7 +35,10 @@ import { ReportCardSkeleton } from '@/components/common/Skeleton';
 import { AdvancedMapToolbar } from '@/components/map/AdvancedMapToolbar';
 import { SpatialAnalysisPanel } from '@/components/map/SpatialAnalysisPanel';
 import { RouteOptimizationPanel } from '@/components/map/RouteOptimizationPanel';
-import { DrawMeasureTools } from '@/components/map/DrawMeasureTools';
+import { MapInteractionLayer } from '@/components/map/MapInteractionLayer';
+import { GeomanControls } from '@/components/map/GeomanControls';
+import { DrawToolbar } from '@/components/map/DrawToolbar';
+import '@/styles/geoman-custom.css';
 import { MultiLayerHeatmap } from '@/components/map/MultiLayerHeatmap';
 import type { DensityCell } from '@/lib/spatialAnalysis';
 import type { OptimizedRoute } from '@/lib/routeOptimization';
@@ -531,14 +534,15 @@ const MapView = () => {
   const [sliderValue, setSliderValue] = useState(0);
 
   // New geospatial features state
+  const [activeMapTool, setActiveMapTool] = useState<'draw' | 'measure' | null>(null);
+  const [showGeomanDraw, setShowGeomanDraw] = useState(false);
+  const [geomanDrawMode, setGeomanDrawMode] = useState<string | null>(null);
   const [showSpatialAnalysis, setShowSpatialAnalysis] = useState(false);
   const [showRouteOptimization, setShowRouteOptimization] = useState(false);
-  const [showDrawTools, setShowDrawTools] = useState(false);
   const [multiLayerHeatmap, setMultiLayerHeatmap] = useState(false);
   const [densityCells, setDensityCells] = useState<DensityCell[]>([]);
   const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
   const [bufferZones, setBufferZones] = useState<L.Layer[]>([]);
-  const [showGeoToolbar, setShowGeoToolbar] = useState(false);
 
   // Calculate maxDate from reports (must be before useEffect hooks that use it)
   const maxDate = useMemo(() => {
@@ -1709,11 +1713,11 @@ const MapView = () => {
           </div>
         </div>
 
-        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-120px)]' : 'h-[calc(100vh-180px)]'}`}>
+        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-120px)]' : 'h-[calc(100vh-180px)]'} ${activeMapTool ? 'cursor-crosshair' : ''}`}>
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
-            className="h-full w-full"
+            className={`h-full w-full ${activeMapTool ? 'cursor-crosshair' : ''}`}
             zoomControl={false}
             ref={setMapInstance}
           >
@@ -1838,6 +1842,32 @@ const MapView = () => {
                 })}
               />
             )}
+
+            {/* Map Interaction Layer - handles measuring inside MapContainer */}
+            <MapInteractionLayer
+              activeMapTool={activeMapTool}
+              onPolygonDrawn={(polygon) => {
+                setDrawnPolygon(polygon);
+                toast.success('Polygon berhasil digambar');
+              }}
+              onMeasurement={(measurement) => {
+                if (measurement.distance) {
+                  toast.success(`Jarak: ${measurement.distance.toFixed(2)} km`);
+                }
+                if (measurement.area) {
+                  toast.success(`Luas: ${measurement.area.toFixed(3)} km²`);
+                }
+              }}
+            />
+
+            {/* Geoman Drawing Controls */}
+            <GeomanControls
+              enabled={showGeomanDraw}
+              onPolygonDrawn={(polygon) => {
+                setDrawnPolygon(polygon);
+              }}
+              onDrawModeChange={setGeomanDrawMode}
+            />
           </MapContainer>
 
           <ModernMapOverlay
@@ -1859,6 +1889,23 @@ const MapView = () => {
               setShowSearchPanel(false);
               setShowFilterPanel(false);
             }}
+            onToggleDrawing={() => {
+              setShowGeomanDraw(prev => !prev);
+              setActiveMapTool(null);
+              setShowSpatialAnalysis(false);
+              setShowRouteOptimization(false);
+            }}
+            onToggleMeasurement={() => {
+              setActiveMapTool(prev => prev === 'measure' ? null : 'measure');
+              setShowGeomanDraw(false);
+              setShowSpatialAnalysis(false);
+              setShowRouteOptimization(false);
+            }}
+            drawToolbarContent={
+              mapInstance && showGeomanDraw ? (
+                <DrawToolbar visible={showGeomanDraw} activeMode={geomanDrawMode} map={mapInstance} />
+              ) : null
+            }
             onShare={handleShare}
             onExport={() => handleExport()}
             minDate={minDate}
@@ -1901,59 +1948,6 @@ const MapView = () => {
             statusCounts={statusCounts}
           />
 
-          {/* Geospatial Toolbar */}
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border-slate-200 dark:border-slate-700"
-              onClick={() => setShowGeoToolbar(!showGeoToolbar)}
-            >
-              {showGeoToolbar ? <ChevronUp className="w-3.5 h-3.5 mr-1.5" /> : <ChevronDown className="w-3.5 h-3.5 mr-1.5" />}
-              <span className="text-xs font-medium">Analisis Geospasial</span>
-            </Button>
-            
-            {showGeoToolbar && (
-              <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-2 flex items-center gap-1.5">
-                <Button 
-                  size="sm" 
-                  variant={showSpatialAnalysis ? 'default' : 'ghost'} 
-                  onClick={() => setShowSpatialAnalysis(!showSpatialAnalysis)} 
-                  title="Analisis Spasial"
-                  className="h-9 w-9 p-0"
-                >
-                  <Activity className="w-4 h-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={showRouteOptimization ? 'default' : 'ghost'} 
-                  onClick={() => setShowRouteOptimization(!showRouteOptimization)} 
-                  title="Optimasi Rute"
-                  className="h-9 w-9 p-0"
-                >
-                  <Route className="w-4 h-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={showDrawTools ? 'default' : 'ghost'} 
-                  onClick={() => setShowDrawTools(!showDrawTools)} 
-                  title="Gambar & Ukur"
-                  className="h-9 w-9 p-0"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={multiLayerHeatmap ? 'default' : 'ghost'} 
-                  onClick={() => setMultiLayerHeatmap(!multiLayerHeatmap)} 
-                  title="Heatmap Multi-Layer"
-                  className="h-9 w-9 p-0"
-                >
-                  <Flame className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-          </div>
 
           {/* Search panel centered below toolbar */}
           {showSearchPanel && (
@@ -2089,24 +2083,6 @@ const MapView = () => {
           )}
 
 
-
-          {/* Draw & Measure Tools */}
-          {showDrawTools && (
-            <DrawMeasureTools
-              onPolygonDrawn={(polygon) => {
-                setDrawnPolygon(polygon);
-                toast.success('Polygon berhasil digambar');
-              }}
-              onMeasurement={(measurement) => {
-                if (measurement.distance) {
-                  toast.success(`Jarak: ${measurement.distance.toFixed(2)} km`);
-                }
-                if (measurement.area) {
-                  toast.success(`Luas: ${measurement.area.toFixed(3)} km²`);
-                }
-              }}
-            />
-          )}
 
           {/* Multi-Layer Heatmap */}
           {multiLayerHeatmap && (

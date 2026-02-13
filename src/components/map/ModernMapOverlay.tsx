@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Search, Navigation, Filter as FilterIcon, Layers, Share2, Download,
-  Play, Pause, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, ChevronUp
+  Play, Pause, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, ChevronUp,
+  PenTool, Ruler
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { format } from 'date-fns';
@@ -20,6 +21,11 @@ interface ModernMapOverlayProps {
   // Filters & Overlays
   onToggleFilters?: () => void;
   onToggleOverlays?: () => void;
+  
+  // Drawing & Measurement
+  onToggleDrawing?: () => void;
+  onToggleMeasurement?: () => void;
+  drawToolbarContent?: React.ReactNode;
   
   // Share & Export
   onShare: () => void;
@@ -51,6 +57,9 @@ export const ModernMapOverlay = ({
   onLocate,
   onToggleFilters,
   onToggleOverlays,
+  onToggleDrawing,
+  onToggleMeasurement,
+  drawToolbarContent,
   onShare,
   onExport,
   minDate,
@@ -68,6 +77,23 @@ export const ModernMapOverlay = ({
   statusCounts,
 }: ModernMapOverlayProps) => {
   const [legendCollapsed, setLegendCollapsed] = useState(false);
+  const [drawingActive, setDrawingActive] = useState(false);
+  const [measureActive, setMeasureActive] = useState(false);
+
+  // Sync drawing state from parent
+  const handleDrawClick = () => {
+    const newState = !drawingActive;
+    setDrawingActive(newState);
+    setMeasureActive(false);
+    onToggleDrawing?.();
+  };
+
+  const handleMeasureClick = () => {
+    const newState = !measureActive;
+    setMeasureActive(newState);
+    setDrawingActive(false);
+    onToggleMeasurement?.();
+  };
 
   const statusItems = [
     { color: '#f59e0b', label: 'Baru', count: statusCounts.baru },
@@ -83,9 +109,11 @@ export const ModernMapOverlay = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[1000]">
-      {/* Top Section: Floating Search Bar with Actions */}
-      <div className="absolute top-4 left-4 right-4 flex justify-center pointer-events-none">
-        <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-3 py-2 pointer-events-auto">
+      {/* Top Section */}
+      <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
+        {/* Main Toolbar */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-3 py-2 pointer-events-auto">
           {/* Search Button */}
           <Button
             onClick={onToggleSearch}
@@ -112,8 +140,30 @@ export const ModernMapOverlay = ({
           </Button>
 
           {/* Overlay */}
-          <Button onClick={onToggleOverlays} variant="ghost" size="sm" className="h-9 w-9 p-0">
+          <Button onClick={onToggleOverlays} variant="ghost" size="sm" className="h-9 w-9 p-0" title="Layers/Overlay">
             <Layers className="w-4 h-4" />
+          </Button>
+
+          {/* Drawing */}
+          <Button 
+            onClick={handleDrawClick}
+            variant={drawingActive ? 'default' : 'ghost'} 
+            size="sm" 
+            className="h-9 w-9 p-0" 
+            title="Alat Gambar (Geoman)"
+          >
+            <PenTool className="w-4 h-4" />
+          </Button>
+
+          {/* Measurement */}
+          <Button 
+            onClick={handleMeasureClick}
+            variant={measureActive ? 'default' : 'ghost'} 
+            size="sm" 
+            className="h-9 w-9 p-0" 
+            title="Ukur Jarak"
+          >
+            <Ruler className="w-4 h-4" />
           </Button>
 
           <div className="w-px h-6 bg-border" />
@@ -130,8 +180,36 @@ export const ModernMapOverlay = ({
         </div>
       </div>
 
+      {/* Draw Sub-Toolbar */}
+      {drawingActive && drawToolbarContent && (
+        <div className="flex justify-center">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-3 py-2 pointer-events-auto border border-white/20">
+            {drawToolbarContent}
+          </div>
+        </div>
+      )}
+    </div>
+
       {/* Bottom Section: Timeline Player */}
       <div className="absolute bottom-4 left-4 right-4 flex justify-center pointer-events-none">
+        {/* Tool Instructions */}
+        {drawingActive && (
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium pointer-events-auto border-2 border-white/20">
+            <div className="font-bold mb-1">✏️ Alat Gambar Aktif</div>
+            <div className="text-xs opacity-90">
+              Gunakan toolbar di kanan atas untuk menggambar polygon, garis, lingkaran, dll.
+            </div>
+          </div>
+        )}
+        {measureActive && (
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium pointer-events-auto border-2 border-white/20">
+            <div className="font-bold mb-1">📏 Ukur Jarak</div>
+            <div className="text-xs opacity-90">
+              Klik: tambah titik • Backspace: undo • Esc: batal
+            </div>
+          </div>
+        )}
+        
         <div className="w-full max-w-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-4 py-3 pointer-events-auto">
           <div className="flex items-center gap-3 mb-2">
             {/* Play Controls */}
