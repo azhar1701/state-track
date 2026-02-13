@@ -51,7 +51,7 @@ export function AdvancedClustering({
     }
 
     // Create cluster group with custom icon
-    const mcg = (L as any).markerClusterGroup({
+    const mcg = (L as typeof L & { markerClusterGroup: (options: Record<string, unknown>) => L.MarkerClusterGroup }).markerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: radius,
       showCoverageOnHover: true,
@@ -70,7 +70,7 @@ export function AdvancedClustering({
       });
 
       // Store report data
-      (marker as any)._reportData = report;
+      (marker as L.Marker & { _reportData?: ClusterReport })._reportData = report;
 
       marker.on('click', () => {
         if (onClusterClick) {
@@ -82,11 +82,11 @@ export function AdvancedClustering({
     });
 
     // Handle cluster click
-    mcg.on('clusterclick', (e: any) => {
+    mcg.on('clusterclick', (e: L.LeafletEvent & { layer: L.MarkerCluster }) => {
       const cluster = e.layer;
       const markers = cluster.getAllChildMarkers();
       const clusterReports = markers
-        .map((m: any) => m._reportData)
+        .map((m: L.Marker & { _reportData?: ClusterReport }) => m._reportData)
         .filter(Boolean) as ClusterReport[];
 
       if (onClusterClick && clusterReports.length > 0) {
@@ -102,7 +102,7 @@ export function AdvancedClustering({
         map.removeLayer(mcg);
       }
     };
-  }, [map, reports, enabled, radius]);
+  }, [map, reports, enabled, radius, clusterGroup, createMarkerIcon, onClusterClick]);
 
   return null;
 }
@@ -115,8 +115,8 @@ function calculateBreakdown(markers: L.Marker[]): ClusterBreakdown {
     total: markers.length,
   };
 
-  markers.forEach((marker: any) => {
-    const report = marker._reportData as ClusterReport | undefined;
+  markers.forEach((marker: L.Marker & { _reportData?: ClusterReport }) => {
+    const report = marker._reportData;
     if (report?.severity) {
       breakdown[report.severity]++;
     }

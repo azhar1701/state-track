@@ -182,7 +182,7 @@ export function SpatialAnalysisPanel({
 
             <div>
               <Label className="text-xs">Satuan</Label>
-              <Select value={bufferUnits} onValueChange={(v: any) => setBufferUnits(v)}>
+              <Select value={bufferUnits} onValueChange={(v: 'kilometers' | 'meters') => setBufferUnits(v)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -214,7 +214,7 @@ export function SpatialAnalysisPanel({
           <TabsContent value="density" className="mt-0 space-y-4">
             <div>
               <Label className="text-xs">Metode</Label>
-              <Select value={densityType} onValueChange={(v: any) => setDensityType(v)}>
+              <Select value={densityType} onValueChange={(v: 'hex' | 'kde') => setDensityType(v)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>

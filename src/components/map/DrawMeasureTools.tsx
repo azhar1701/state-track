@@ -3,7 +3,7 @@
  * Provides drawing and measurement capabilities on the map
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
@@ -22,38 +22,64 @@ export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureT
   const [drawnItems, setDrawnItems] = useState<L.Layer[]>([]);
   const [measurePoints, setMeasurePoints] = useState<L.LatLng[]>([]);
   const [measureLine, setMeasureLine] = useState<L.Polyline | null>(null);
-  const [measureMarkers, setMeasureMarkers] = useState<L.Marker[]>([]);
+  const [measureMarkers, setMeasureMarkers] = useState<Array<L.Marker | L.CircleMarker>>([]);
 
-  useEffect(() => {
+  const clearTemporary = useCallback(() => {
     if (!map) return;
+    if (measureLine) {
+      map.removeLayer(measureLine);
+      setMeasureLine(null);
+    }
+    measureMarkers.forEach(m => map.removeLayer(m));
+    setMeasureMarkers([]);
+    setMeasurePoints([]);
+  }, [map, measureLine, measureMarkers]);
 
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      if (mode === 'polygon') {
-        handlePolygonClick(e);
-      } else if (mode === 'measure') {
-        handleMeasureClick(e);
-      } else if (mode === 'area') {
-        handleAreaClick(e);
-      }
-    };
+  const finishDrawing = useCallback(() => {
+    if (measurePoints.length < 3) {
+      toast.error('Minimal 3 titik untuk membuat polygon');
+      return;
+    }
 
-    const handleDblClick = (e: L.LeafletMouseEvent) => {
-      e.originalEvent.preventDefault();
-      if (mode === 'polygon' || mode === 'area') {
-        finishDrawing();
-      }
-    };
+    // Calculate area
+    const coords = measurePoints.map(ll => [ll.lng, ll.lat] as [number, number]);
+    coords.push(coords[0]); // Close polygon
+    const polygon = turf.polygon([coords]);
+    const area = turf.area(polygon) / 1000000; // Convert to km²
 
-    map.on('click', handleClick);
-    map.on('dblclick', handleDblClick);
+    // Create final polygon
+    const finalPolygon = L.polygon(measurePoints, {
+      color: mode === 'polygon' ? '#3b82f6' : '#f59e0b',
+      weight: 2,
+      fillOpacity: 0.3,
+    }).addTo(map);
 
-    return () => {
-      map.off('click', handleClick);
-      map.off('dblclick', handleDblClick);
-    };
-  }, [map, mode, measurePoints]);
+    // Add area label
+    const center = finalPolygon.getBounds().getCenter();
+    const label = L.tooltip({
+      permanent: true,
+      direction: 'center',
+      className: 'measure-label',
+    })
+      .setLatLng(center)
+      .setContent(`${area.toFixed(3)} km²`)
+      .addTo(map);
 
-  const handlePolygonClick = (e: L.LeafletMouseEvent) => {
+    setDrawnItems(prev => [...prev, finalPolygon, label]);
+
+    if (mode === 'polygon') {
+      onPolygonDrawn?.(finalPolygon);
+    } else {
+      onMeasurement?.({ area });
+    }
+
+    // Clean up temporary items
+    clearTemporary();
+    setMode('none');
+    toast.success(mode === 'polygon' ? 'Polygon berhasil digambar' : `Luas area: ${area.toFixed(3)} km²`);
+  }, [map, measurePoints, mode, onPolygonDrawn, onMeasurement, clearTemporary]);
+
+  const handlePolygonClick = useCallback((e: L.LeafletMouseEvent) => {
     const newPoints = [...measurePoints, e.latlng];
     setMeasurePoints(newPoints);
 
@@ -79,9 +105,9 @@ export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureT
         setMeasureLine(line);
       }
     }
-  };
+  }, [map, measurePoints, measureLine]);
 
-  const handleMeasureClick = (e: L.LeafletMouseEvent) => {
+  const handleMeasureClick = useCallback((e: L.LeafletMouseEvent) => {
     const newPoints = [...measurePoints, e.latlng];
     setMeasurePoints(newPoints);
 
@@ -125,9 +151,9 @@ export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureT
       setDrawnItems(prev => [...prev, label]);
       onMeasurement?.({ distance });
     }
-  };
+  }, [map, measurePoints, measureLine, onMeasurement]);
 
-  const handleAreaClick = (e: L.LeafletMouseEvent) => {
+  const handleAreaClick = useCallback((e: L.LeafletMouseEvent) => {
     const newPoints = [...measurePoints, e.latlng];
     setMeasurePoints(newPoints);
 
@@ -152,61 +178,36 @@ export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureT
       }).addTo(map);
       setMeasureLine(polygon as unknown as L.Polyline);
     }
-  };
+  }, [map, measurePoints, measureLine]);
 
-  const finishDrawing = () => {
-    if (measurePoints.length < 3) {
-      toast.error('Minimal 3 titik untuk membuat polygon');
-      return;
-    }
+  useEffect(() => {
+    if (!map) return;
 
-    // Calculate area
-    const coords = measurePoints.map(ll => [ll.lng, ll.lat] as [number, number]);
-    coords.push(coords[0]); // Close polygon
-    const polygon = turf.polygon([coords]);
-    const area = turf.area(polygon) / 1000000; // Convert to km²
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      if (mode === 'polygon') {
+        handlePolygonClick(e);
+      } else if (mode === 'measure') {
+        handleMeasureClick(e);
+      } else if (mode === 'area') {
+        handleAreaClick(e);
+      }
+    };
 
-    // Create final polygon
-    const finalPolygon = L.polygon(measurePoints, {
-      color: mode === 'polygon' ? '#3b82f6' : '#f59e0b',
-      weight: 2,
-      fillOpacity: 0.3,
-    }).addTo(map);
+    const handleDblClick = (e: L.LeafletMouseEvent) => {
+      e.originalEvent.preventDefault();
+      if (mode === 'polygon' || mode === 'area') {
+        finishDrawing();
+      }
+    };
 
-    // Add area label
-    const center = finalPolygon.getBounds().getCenter();
-    const label = L.tooltip({
-      permanent: true,
-      direction: 'center',
-      className: 'measure-label',
-    })
-      .setLatLng(center)
-      .setContent(`${area.toFixed(3)} km²`)
-      .addTo(map);
+    map.on('click', handleClick);
+    map.on('dblclick', handleDblClick);
 
-    setDrawnItems(prev => [...prev, finalPolygon, label]);
-
-    if (mode === 'polygon') {
-      onPolygonDrawn?.(finalPolygon);
-    } else {
-      onMeasurement?.({ area });
-    }
-
-    // Clean up temporary items
-    clearTemporary();
-    setMode('none');
-    toast.success(mode === 'polygon' ? 'Polygon berhasil digambar' : `Luas area: ${area.toFixed(3)} km²`);
-  };
-
-  const clearTemporary = () => {
-    if (measureLine) {
-      map.removeLayer(measureLine);
-      setMeasureLine(null);
-    }
-    measureMarkers.forEach(m => map.removeLayer(m));
-    setMeasureMarkers([]);
-    setMeasurePoints([]);
-  };
+    return () => {
+      map.off('click', handleClick);
+      map.off('dblclick', handleDblClick);
+    };
+  }, [map, mode, handlePolygonClick, handleMeasureClick, handleAreaClick, finishDrawing]);
 
   const clearAll = () => {
     clearTemporary();

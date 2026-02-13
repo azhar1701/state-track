@@ -2129,9 +2129,9 @@ const MapView = () => {
                   key={cell.id}
                   data={{
                     type: 'Feature',
+                    properties: { count: cell.count },
                     geometry: cell.geometry,
-                    properties: { count: cell.count }
-                  }}
+                  } as Feature<Geometry>}
                   style={() => {
                     const opacity = Math.min(cell.count / 10, 1);
                     return {

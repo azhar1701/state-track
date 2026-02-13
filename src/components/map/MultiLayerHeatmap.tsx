@@ -87,7 +87,7 @@ export function MultiLayerHeatmap({ points, enabled, categories }: MultiLayerHea
 
       const gradient = getCategoryGradient(category);
       
-      const heatLayer = (L as any).heatLayer(pts, {
+      const heatLayer = (L as typeof L & { heatLayer: (points: [number, number, number][], options: Record<string, unknown>) => L.Layer }).heatLayer(pts, {
         radius,
         blur,
         maxZoom: 17,
@@ -105,7 +105,7 @@ export function MultiLayerHeatmap({ points, enabled, categories }: MultiLayerHea
     return () => {
       newLayers.forEach(layer => map.removeLayer(layer));
     };
-  }, [map, points, enabled, activeCategories, radius, blur, maxIntensity]);
+  }, [map, points, enabled, activeCategories, radius, blur, maxIntensity, heatLayers]);
 
   const toggleCategory = (category: string) => {
     setActiveCategories(prev => {
