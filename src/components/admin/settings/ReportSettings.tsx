@@ -246,9 +246,9 @@ export const ReportSettings = () => {
             continue;
           }
 
-          const category = validCategories.includes(row.category as any) ? row.category as Database['public']['Enums']['report_category'] : 'lainnya';
-          const severity = validSeverities.includes(row.severity as any) ? row.severity as Database['public']['Enums']['report_severity'] : null;
-          const status = validStatuses.includes(row.status as any) ? row.status as Database['public']['Enums']['report_status'] : 'baru';
+          const category = validCategories.includes(row.category as Database['public']['Enums']['report_category']) ? row.category as Database['public']['Enums']['report_category'] : 'lainnya';
+          const severity = validSeverities.includes(row.severity as Database['public']['Enums']['report_severity']) ? row.severity as Database['public']['Enums']['report_severity'] : null;
+          const status = validStatuses.includes(row.status as Database['public']['Enums']['report_status']) ? row.status as Database['public']['Enums']['report_status'] : 'baru';
 
           const { error } = await supabase.from('reports').insert({
             title: row.title,

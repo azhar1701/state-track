@@ -449,7 +449,7 @@ const MapView = () => {
     } catch (error) {
       console.warn('Failed to apply stored map preferences', sanitizeForLog(error));
     }
-  }, [hasUrlBasemap, hasUrlCenter, hasUrlZoom]);
+  }, [hasUrlBasemap, hasUrlCenter, hasUrlZoom, userLocation]);
 
   // Restore last overlay toggles (if any)
   useEffect(() => {

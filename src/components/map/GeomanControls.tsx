@@ -126,7 +126,8 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
     }
 
     return () => {
-      if (editTimeoutRef.current) clearTimeout(editTimeoutRef.current);
+      const currentTimeout = editTimeoutRef.current;
+      if (currentTimeout) clearTimeout(currentTimeout);
       
       if (map && map.pm) {
         try {
