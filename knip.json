@@ -17,7 +17,15 @@
     "test-results/**/*",
     "dist/**/*",
     "build/**/*",
-    "node_modules/**/*"
+    "node_modules/**/*",
+    "docs/**/*",
+    "public/**/*",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "eslint.config.js"
   ],
   "ignoreDependencies": [
     "@playwright/test",
