@@ -4,6 +4,7 @@
 
 ### Getting Started
 - [README.md](../README.md) - Main project documentation
+- [ROADMAP.md](../ROADMAP.md) - Project roadmap & planned features
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick reference guide
 
 ### Architecture & Features
@@ -102,7 +103,7 @@ npm run health:storage  # Check storage
 
 ## 📝 Recent Updates
 
-See [COMPLETION_REPORT.md](../COMPLETION_REPORT.md) for latest changes.
+See [ROADMAP.md](../ROADMAP.md) for current status and planned features.
 
 ## 🆘 Troubleshooting
 

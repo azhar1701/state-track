@@ -1,39 +1,45 @@
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/main.tsx",
     "src/sw.ts",
-    "src/workers/**/*.ts"
+    "src/workers/**/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
-    "scripts/**/*.{js,mjs}"
+    "scripts/**/*.mjs"
   ],
   "ignore": [
-    "**/*.test.{ts,tsx}",
-    "**/*.spec.{ts,tsx}",
-    "e2e/**/*",
-    "playwright-report/**/*",
-    "test-results/**/*",
-    "dist/**/*",
-    "build/**/*",
-    "node_modules/**/*",
-    "docs/**/*",
-    "public/**/*",
-    "vite.config.ts",
-    "tailwind.config.ts",
-    "postcss.config.js",
-    "playwright.config.ts",
-    "vitest.config.ts",
-    "eslint.config.js"
+    "app/**",
+    "components/**",
+    "lib/**",
+    "docs/**",
+    "e2e/**",
+    "playwright-report/**",
+    "test-results/**",
+    "public/**",
+    "dist/**",
+    "supabase/**",
+    "**/*.config.{js,ts}",
+    "**/*.setup.ts",
+    "src/vite-env.d.ts"
   ],
   "ignoreDependencies": [
-    "@playwright/test",
-    "gh-pages",
-    "fake-indexeddb",
-    "jsdom",
-    "vitest"
+    "@types/*",
+    "vite",
+    "typescript",
+    "eslint",
+    "prettier",
+    "tailwindcss",
+    "postcss",
+    "autoprefixer",
+    "vitest",
+    "playwright",
+    "@vitejs/plugin-react-swc",
+    "vite-plugin-pwa"
   ],
-  "ignoreExportsUsedInFile": true,
-  "includeEntryExports": false
+  "ignoreBinaries": ["gh-pages"]
 }

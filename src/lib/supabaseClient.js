@@ -1,5 +1,5 @@
 // src/lib/supabase-client.js
-// NOTE: File ini tidak digunakan. Gunakan @/integrations/supabase/client sebagai gantinya.
+// NOTE: File ini tidak digunakan. Gunakan @/services/client sebagai gantinya.
 // File ini disimpan untuk referensi saja.
 
 import { createClient } from '@supabase/supabase-js';

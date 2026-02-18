@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { addReportToOutbox, clearOutbox, listOutboxReports, type OutboxReport } from '@/lib/outbox';
+import { addReportToOutbox, clearOutbox, listOutboxReports, type OutboxReport } from '@/features/reports/outbox';
 
 // jsdom provides indexedDB in test env via fake impls in modern runtimes
 

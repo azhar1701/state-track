@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/services/client';
+import { useAuth } from '@/features/auth/useAuth';
 import { toast } from 'sonner';
 
 export type NotificationItem = {

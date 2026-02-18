@@ -1,216 +1,247 @@
-# state-track
+# SIPASDA - Sistem Informasi Pelaporan SDA
 
-Important notes for this Vite + React app:
+[![Build Status](https://github.com/azhar1701/state-track/actions/workflows/deploy-gh-pages.yml/badge.svg)](https://github.com/azhar1701/state-track/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://reactjs.org/)
 
-- The `app/` folder contains some Next.js-style examples (pages and `app/api/*`). In this project they are placeholders only and are not executed by Vite. Actual pages are under `src/pages/*` and routing is handled by `react-router-dom`.
-- Submissions use Supabase directly from the client (see `src/pages/ReportForm.tsx`). The `app/api/reports/route.ts` file is not used in this setup. If you want a server endpoint under Vite, use a separate server or functions platform.
-	- VITE_SUPABASE_PUBLISHABLE_KEY
-	- VITE_MAPBOX_TOKEN (optional, for Mapbox-based form in components/report)
+> Platform pelaporan dan monitoring kondisi infrastruktur publik secara real-time dengan peta interaktif, analisis geospasial, dan dashboard admin.
 
-- `npm run dev` - start Vite dev server
-- `npm run build` - production build
-- `npm run typecheck` - TypeScript checks only
-- `npm run lint` - ESLint
-
-- Install: In supported browsers, use the browser menu “Install app” or the install prompt.
-- Offline: Static assets and core pages are cached. Data APIs require connectivity.
-## Keyboard shortcuts
-
-- Open Command Menu: Ctrl+K (Windows/Linux) or Cmd+K (macOS)
-- Toggle theme: Available in Navbar and Command Menu
-
-
-## Deploy to GitHub Pages
-
-Recommended (GitHub Actions): `.github/workflows/deploy-gh-pages.yml` builds Vite and deploys to Pages on pushes to `main`.
-
-- In GitHub Settings > Pages, set source to GitHub Actions (if not already).
-- Add repository secrets for the production build: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, optionally `VITE_ADMIN_EMAILS` and `VITE_MAPBOX_TOKEN`.
-- Push to `main` or run the workflow manually; it uploads `dist` and publishes via `actions/deploy-pages`.
-
-Manual fallback:
-
-```powershell
-npm install
-npm run deploy
-```
-
-The deploy script builds and pushes `dist` to the `gh-pages` branch via the `gh-pages` package. Vite is already configured with `base: '/state-track/'`, so the site will live at `https://<your-username>.github.io/state-track/`.
-
-For custom domains or more advanced options, see the [gh-pages documentation](https://github.com/tschaub/gh-pages) and [Vite deployment guide](https://vitejs.dev/guide/static-deploy.html#github-pages).
-
-Create `.env.local` at project root (copy from `.env.local.example`) and fill:
-
-- VITE_SUPABASE_URL
-- VITE_SUPABASE_PUBLISHABLE_KEY
-- VITE_ADMIN_EMAILS (optional; fallback allowlist for admin)
-- VITE_MAPBOX_TOKEN (optional; only for the example Mapbox form under `components/report`)
-
-Then install dependencies and run the app.
-
-For Node scripts (health checks, seeding), create `.env` (copy from `.env.example`) with:
-
-- SUPABASE_URL
-- SUPABASE_ANON_KEY (for health/storage checks)
-- SUPABASE_SERVICE_ROLE_KEY (for seed scripts that upsert; keep secret!)
-- REPORT_BUCKET (optional, default: `report-photos`)
-
-Notes:
-
-- Do NOT commit real keys. `.gitignore` already ignores `.env*`.
-- Client-side app only reads `VITE_*` variables; server-side scripts read from `.env` (via `dotenv`).
-
-Quick setup (Windows PowerShell):
-
-```powershell
-./scripts/setup-env.ps1
-# then edit .env.local and .env with your values
-```
-
-### Env Troubleshooting
-
-Gejala umum dan cara mengatasinya:
-
-1) Pesan: "Supabase belum dikonfigurasi. Set VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY di .env.local"
-- Penyebab: `.env.local` belum dibuat atau variabel belum terisi.
-- Solusi: Salin `.env.local.example` → `.env.local`, isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, lalu restart dev server.
-
-2) Auth gagal atau redirect tidak sesuai setelah login
-- Penyebab: Role admin tidak terbaca (tabel `user_roles` belum ada/terisi), atau fallback allowlist belum diisi.
-- Solusi: Pastikan migrasi Supabase sudah diterapkan (lihat bagian migrasi). Isi `VITE_ADMIN_EMAILS` dengan email admin jika perlu fallback.
-
-3) Upload foto gagal: peringatan policy atau bucket tidak ditemukan
-- Penyebab: Bucket Storage `report-photos` belum dibuat atau kebijakan (RLS) tidak mengizinkan.
-- Solusi: Buat bucket public `report-photos` sesuai migrasi/policy. Uji dengan skrip:
-
-```powershell
-node scripts/check-storage-upload.mjs
-```
-
-4) Error saat memuat data: kolom tidak ditemukan (schema mismatch)
-- Penyebab: Migrasi belum diterapkan lengkap di Supabase (kolom opsional: `photo_urls`, `incident_date`, `severity`, `resolution`, dll.).
-- Solusi: Terapkan migrasi SQL di folder `supabase/migrations`. Aplikasi akan coba fallback select minimal, tetapi sebaiknya sinkronkan skema penuh.
-
-5) Health check gagal dengan pesan missing env
-- Penyebab: `.env` untuk skrip Node belum diisi `SUPABASE_URL`/`SUPABASE_ANON_KEY`.
-- Solusi: Salin `.env.example` → `.env` dan isi, lalu jalankan:
-
-```powershell
-node scripts/check-app-health.mjs
-```
-
-6) Mapbox tidak berfungsi (jika pakai form contoh Mapbox)
-- Penyebab: `VITE_MAPBOX_TOKEN` belum diisi.
-- Solusi: Tambahkan token Mapbox ke `.env.local` (opsional, hanya untuk komponen terkait).
-
-Tips cepat:
-- Pastikan kunci client (yang diawali `VITE_`) hanya di `.env.local`. Kunci rahasia (service role) hanya di `.env` untuk skrip server-side; jangan pernah dipakai di kode browser.
-- Setelah mengubah `.env.local`, hentikan dan jalankan ulang dev server agar variabel termuat ulang.
-
-## Database migrations checklist (Supabase)
-
-Apply migrations in `supabase/migrations` using Supabase SQL editor or CLI. Ensure the following exist:
-
-- Tables: `reports`, `profiles`, `user_roles`, `report_logs`, `kecamatan`, `desa`
-- Enums: `report_status` (baru|diproses|selesai), `report_category` (jalan|jembatan|irigasi|drainase|sungai|lainnya), `report_severity` (ringan|sedang|berat)
-- Columns on `reports`: `incident_date`, `photo_urls` (jsonb), `severity`, `reporter_name`, `phone`, `kecamatan`, `desa`, `resolution`
-- Storage bucket: `report-photos` (public) with policies from initial migration
-
-Optional seeds for wilayah Ciamis tersedia di folder `supabase/seed/ciamis` dan skrip `scripts/seed-ciamis.mjs`.
-
-## Offline & Outbox
-
-Jika koneksi internet tidak tersedia saat submit laporan, data akan disimpan ke Outbox (IndexedDB) dan dikirim otomatis saat online. Service Worker juga mendaftarkan Background Sync dengan tag `submit-reports` bila browser mendukung.
-
-## Testing
-
-Proyek ini menggunakan Vitest untuk unit test ringan.
-
-- Jalankan semua test: `npm run test`
-- Mode watch: `npm run test:watch`
-
-Catatan: Test environment menggunakan `jsdom` dan polyfill IndexedDB via `fake-indexeddb` untuk menguji Outbox.
+[🚀 Live Demo](https://azhar1701.github.io/state-track/) | [📖 Documentation](docs/INDEX.md) | [🗺️ Roadmap](ROADMAP.md)
 
 ---
 
-## Stack & Teknologi (Bahasa Indonesia)
+## ✨ Features
 
-Ringkasan teknologi yang digunakan untuk membangun aplikasi ini:
+- 🗺️ **Interactive Map** - Leaflet-based mapping with clustering, heatmaps, and multi-layer support
+- 📊 **Geospatial Analysis** - Buffer zones, density analysis, route optimization, spatial queries
+- 📱 **Progressive Web App** - Offline support, installable, background sync
+- 🔐 **Secure Authentication** - Supabase Auth with role-based access control
+- 📸 **Photo Upload** - Multi-photo reports with compression and cloud storage
+- 📈 **Admin Dashboard** - Analytics, filtering, CSV/map export, user management
+- 🎨 **Modern UI/UX** - Glassmorphism design, dark mode, responsive mobile-first
+- ♿ **Accessible** - WCAG 2.1 AA compliant with keyboard navigation
 
-- Frontend: React 18 + TypeScript, dibangun dengan Vite 7 (plugin React SWC)
-- UI/Styling: Tailwind CSS 3 + shadcn/ui (berbasis Radix UI) + lucide-react (ikon) + sonner (toast)
-- Routing: react-router-dom v6 (lazy routes + Suspense)
-- Peta: Leaflet + react-leaflet, plugin leaflet.heat & leaflet.markercluster; caching tile OSM via Service Worker
-- Form & Validasi: react-hook-form + zod melalui @hookform/resolvers
-- Backend (BaaS): Supabase (Auth, Postgres, Storage). Skema DB dikelola via migrasi di `supabase/migrations/`
-- PWA & Offline: vite-plugin-pwa (InjectManifest) + Workbox (precache, runtime caching, background sync trigger)
-- Outbox: IndexedDB via `idb` untuk antrean submit laporan saat offline
-- Geospasial & Utilitas: @turf/turf, proj4, shpjs, html2canvas, jsPDF + autotable
-- Testing & Kualitas: Vitest + jsdom + fake-indexeddb; ESLint 9 + typescript-eslint; TypeScript 5
+## 🛠️ Tech Stack
 
-Detail implementasi:
+### Frontend
+- **Framework:** React 18 + TypeScript 5
+- **Build Tool:** Vite 7 (SWC)
+- **Styling:** Tailwind CSS 3 + shadcn/ui
+- **Routing:** React Router v6
+- **State:** React Context + Hooks
 
-- Entry app ada di `src/main.tsx`, root komponen `src/App.tsx`. Alias path `@` → `./src`.
-- Service Worker `src/sw.ts` melakukan precache, runtime caching (assets, data *.geojson, dan tile OSM) serta fallback tile SVG saat offline.
-- Outbox (`src/lib/outbox.ts`) menyimpan laporan di IndexedDB dan mendaftarkan Background Sync (`submit-reports`) bila didukung.
-- Hook `useOutboxSync` memproses antrean saat online atau saat menerima pesan `sync:submit-reports` dari Service Worker.
-- Integrasi Supabase di `src/integrations/supabase/client.ts` (dengan stub aman jika ENV belum diisi) dan tipe DB di `src/integrations/supabase/types.ts`.
-- Halaman admin menggunakan komponen shadcn/ui (Tabs, Select, Dialog, dll) dan mendukung ekspor CSV serta ekspor peta (`html2canvas`).
+### Backend & Services
+- **BaaS:** Supabase (Auth, PostgreSQL, Storage)
+- **Maps:** Leaflet + React Leaflet
+- **Geospatial:** @turf/turf, proj4, shpjs
+- **PWA:** vite-plugin-pwa + Workbox
 
-## Arsitektur Singkat
+### Quality & Testing
+- **Testing:** Vitest + Playwright
+- **Linting:** ESLint 9 + typescript-eslint
+- **Type Safety:** TypeScript strict mode
+- **Dead Code:** Knip
 
-- UI berbasis komponen React + Tailwind/shadcn. Routing dilakukan di `App.tsx` dengan `react-router-dom` (lazy-loaded).
-- Autentikasi via Supabase Auth; role admin dicek di tabel `user_roles` (fallback allowlist email via ENV `VITE_ADMIN_EMAILS`).
-- Data laporan (tabel `reports`) diakses langsung dari klien melalui Supabase; foto diunggah ke Storage bucket `report-photos` lalu URL publik disimpan ke DB.
-- PWA meng-cache aset dan data peta untuk pengalaman offline; Outbox memastikan laporan tetap tersimpan dan akan dikirim otomatis saat koneksi pulih.
+## 🚀 Quick Start
 
-## Cara Setup & Menjalankan (Windows PowerShell)
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account (for backend services)
 
-1) Prasyarat
+### Installation
 
-- Node.js LTS dan npm terpasang.
-- Buat file `.env.local` di root project dengan isi minimal:
+```bash
+# Clone repository
+git clone https://github.com/azhar1701/state-track.git
+cd state-track
 
-```
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<anon-publishable-key>
-# Opsional
-VITE_ADMIN_EMAILS=admin@example.com,another@example.com
-```
-
-2) Instalasi dependencies
-
-```powershell
+# Install dependencies
 npm install
+
+# Setup environment variables
+cp .env.local.example .env.local
+# Edit .env.local with your Supabase credentials
 ```
 
-3) Menjalankan development server
+### Environment Variables
 
-```powershell
+Create `.env.local` in project root:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+VITE_ADMIN_EMAILS=admin@example.com
+VITE_MAPBOX_TOKEN=optional-mapbox-token
+```
+
+### Development
+
+```bash
+# Start development server (port 8080)
 npm run dev
-```
 
-Server Vite default pada project ini menggunakan port 8080 (lihat `vite.config.ts`).
-
-4) Build produksi & preview lokal
-
-```powershell
-npm run build
-npm run preview
-```
-
-5) Perintah tambahan yang berguna
-
-```powershell
-# Cek tipe TypeScript (tanpa emit)
+# Type checking
 npm run typecheck
 
-# Lint kode
+# Linting
 npm run lint
 
-# Jalankan test
+# Run tests
 npm run test
 ```
 
-Jika Anda ingin menguji PWA offline, gunakan `npm run preview` lalu buka di browser yang mendukung Service Worker, install app, dan coba matikan koneksi untuk melihat caching berjalan (tile OSM juga di-cache dengan batasan umur/kuota).
+### Production Build
 
+```bash
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Deploy to GitHub Pages
+npm run deploy
+```
+
+## 📖 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) folder:
+
+- **[Getting Started](docs/INDEX.md)** - Complete documentation index
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - UI/UX patterns and components
+- **[Feature Summary](docs/FEATURE_SUMMARY.md)** - Complete feature list
+- **[Geospatial Features](docs/GEOSPATIAL_FEATURES.md)** - Advanced mapping capabilities
+- **[Admin Settings](docs/ADMIN_SETTINGS.md)** - Admin configuration guide
+- **[Security Settings](docs/Security-Settings.md)** - Security configuration
+
+### Guides
+- [Setup Guide](docs/guides/SETUP_GUIDE.md)
+- [Supabase Migration Guide](docs/guides/SUPABASE_MIGRATION_GUIDE.md)
+- [E2E Testing Guide](e2e/README.md)
+
+## 🗺️ Project Structure
+
+```
+state-track/
+├── src/
+│   ├── components/       # Reusable UI components
+│   │   ├── common/       # Shared components
+│   │   ├── layout/       # Layout components
+│   │   └── ui/           # shadcn/ui components
+│   ├── features/         # Feature modules
+│   │   ├── admin/        # Admin dashboard
+│   │   ├── auth/         # Authentication
+│   │   ├── geodata/      # Geospatial data management
+│   │   ├── home/         # Home page
+│   │   ├── map/          # Map features
+│   │   └── reports/      # Report management
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities and helpers
+│   ├── services/         # API services
+│   ├── views/            # Page views
+│   ├── App.tsx           # Root component
+│   ├── main.tsx          # Entry point
+│   └── sw.ts             # Service worker
+├── public/               # Static assets
+│   └── data/             # GeoJSON data files
+├── supabase/             # Database migrations
+│   ├── migrations/       # SQL migration files
+│   └── seed/             # Seed data
+├── docs/                 # Documentation
+├── e2e/                  # E2E tests
+├── scripts/              # Build & utility scripts
+└── README.md             # This file
+```
+
+## 🧪 Testing
+
+```bash
+# Unit tests
+npm run test
+npm run test:watch
+
+# E2E tests
+npm run e2e
+npm run e2e:ui          # With Playwright UI
+npm run e2e:headed      # With browser visible
+npm run e2e:debug       # Debug mode
+
+# Type checking
+npm run typecheck
+npm run typecheck:test
+
+# Dead code detection
+npm run knip
+```
+
+## 📦 Database Setup
+
+Apply migrations in `supabase/migrations/` via Supabase Dashboard or CLI:
+
+```bash
+# Health checks
+npm run health:app
+npm run health:storage
+
+# Seed Ciamis region data
+npm run seed:ciamis
+```
+
+Required tables: `reports`, `profiles`, `user_roles`, `kecamatan`, `desa`, `geo_layers`
+
+See [Supabase Migration Guide](docs/guides/SUPABASE_MIGRATION_GUIDE.md) for details.
+
+## 🌐 Deployment
+
+### GitHub Pages (Recommended)
+
+Automatic deployment via GitHub Actions on push to `main`:
+
+1. Set repository secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
+2. Enable GitHub Pages with source: GitHub Actions
+3. Push to `main` branch
+
+Manual deployment:
+```bash
+npm run deploy
+```
+
+### Other Platforms
+
+- **Vercel:** Use `vercel.json` configuration
+- **Netlify:** Build command: `npm run build`, publish directory: `dist`
+- **Custom:** Serve `dist/` folder after `npm run build`
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Supabase](https://supabase.com/) - Backend as a Service
+- [Leaflet](https://leafletjs.com/) - Interactive maps
+- [shadcn/ui](https://ui.shadcn.com/) - UI components
+- [Tailwind CSS](https://tailwindcss.com/) - Styling framework
+- [Vite](https://vitejs.dev/) - Build tool
+
+## 📞 Support
+
+- 📧 Email: [azhar1701@github.com](mailto:azhar1701@github.com)
+- 🐛 Issues: [GitHub Issues](https://github.com/azhar1701/state-track/issues)
+- 📖 Docs: [Documentation](docs/INDEX.md)
+
+---
+
+**Made with ❤️ using React + TypeScript + Supabase**
