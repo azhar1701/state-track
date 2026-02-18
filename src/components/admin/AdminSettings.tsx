@@ -204,32 +204,32 @@ const AdminSettings = () => {
 
       <Tabs defaultValue="map" className="w-full">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <TabsList className="inline-flex w-auto min-w-full gap-1 h-auto p-1 bg-muted/50">
-          <TabsTrigger value="map" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+        <TabsList className="flex w-full gap-1 h-auto p-1 bg-muted/50">
+          <TabsTrigger value="map" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Peta & Layer</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="reports" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Laporan</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="categories" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Tags className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Kategori</span>
           </TabsTrigger>
-          <TabsTrigger value="notification" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="notification" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Notifikasi</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="security" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Keamanan</span>
           </TabsTrigger>
-          <TabsTrigger value="backup" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="backup" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <DownloadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Backup</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+          <TabsTrigger value="users" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Pengguna</span>
           </TabsTrigger>

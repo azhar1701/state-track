@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "src/sw.ts",
+    "src/workers/**/*.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/**/*.{js,mjs}"
+  ],
+  "ignore": [
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "e2e/**/*",
+    "playwright-report/**/*",
+    "test-results/**/*",
+    "dist/**/*",
+    "build/**/*",
+    "node_modules/**/*"
+  ],
+  "ignoreDependencies": [
+    "@playwright/test",
+    "gh-pages",
+    "fake-indexeddb",
+    "jsdom",
+    "vitest"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "includeEntryExports": false
+}

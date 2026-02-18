@@ -1,14 +1,13 @@
 /**
  * Draw & Measure Tools Component
  * Provides drawing and measurement capabilities on the map
+ * MUST be rendered INSIDE MapContainer to access Leaflet context
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
-import { Button } from '@/components/ui/button';
-import { Pencil, Ruler, Square, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface DrawMeasureToolsProps {
@@ -16,7 +15,11 @@ export interface DrawMeasureToolsProps {
   onMeasurement?: (measurement: { distance?: number; area?: number }) => void;
 }
 
-export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureToolsProps) {
+/**
+ * Internal component that handles map interactions
+ * This MUST be inside MapContainer
+ */
+function DrawMeasureToolsLogic({ onPolygonDrawn, onMeasurement }: DrawMeasureToolsProps) {
   const map = useMap();
   const [mode, setMode] = useState<'none' | 'polygon' | 'measure' | 'area'>('none');
   const [drawnItems, setDrawnItems] = useState<L.Layer[]>([]);
@@ -222,105 +225,18 @@ export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureT
     setMode('none');
   };
 
+  return null; // This component only handles logic, no UI
+}
+
+/**
+ * Main export component - renders UI outside MapContainer
+ * and logic inside MapContainer
+ */
+export function DrawMeasureTools({ onPolygonDrawn, onMeasurement }: DrawMeasureToolsProps) {
   return (
-    <div className="absolute top-24 right-4 z-[1200] w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl">
-      <div className="p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold">Alat Gambar & Ukur</div>
-        </div>
-        
-        <Button
-          size="sm"
-          variant={mode === 'polygon' ? 'default' : 'outline'}
-          className="w-full justify-start"
-          onClick={() => {
-            if (mode === 'polygon') {
-              cancelDrawing();
-            } else {
-              clearTemporary();
-              setMode('polygon');
-              toast.info('Klik pada peta untuk menggambar polygon. Klik ganda untuk selesai.');
-            }
-          }}
-        >
-          <Square className="w-4 h-4 mr-2" />
-          {mode === 'polygon' ? 'Batal' : 'Gambar Polygon'}
-        </Button>
-
-        <Button
-          size="sm"
-          variant={mode === 'measure' ? 'default' : 'outline'}
-          className="w-full justify-start"
-          onClick={() => {
-            if (mode === 'measure') {
-              cancelDrawing();
-            } else {
-              clearTemporary();
-              setMode('measure');
-              toast.info('Klik pada peta untuk mengukur jarak');
-            }
-          }}
-        >
-          <Ruler className="w-4 h-4 mr-2" />
-          {mode === 'measure' ? 'Batal' : 'Ukur Jarak'}
-        </Button>
-
-        <Button
-          size="sm"
-          variant={mode === 'area' ? 'default' : 'outline'}
-          className="w-full justify-start"
-          onClick={() => {
-            if (mode === 'area') {
-              cancelDrawing();
-            } else {
-              clearTemporary();
-              setMode('area');
-              toast.info('Klik pada peta untuk mengukur luas. Klik ganda untuk selesai.');
-            }
-          }}
-        >
-          <Pencil className="w-4 h-4 mr-2" />
-          {mode === 'area' ? 'Batal' : 'Ukur Luas'}
-        </Button>
-
-        {(drawnItems.length > 0 || mode !== 'none') && (
-          <>
-            <div className="border-t pt-2">
-              <Button
-                size="sm"
-                variant="destructive"
-                className="w-full justify-start"
-                onClick={clearAll}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Hapus Semua
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-
-      {mode !== 'none' && (
-        <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs">
-          <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-            {mode === 'polygon' && 'Menggambar Polygon'}
-            {mode === 'measure' && 'Mengukur Jarak'}
-            {mode === 'area' && 'Mengukur Luas'}
-          </div>
-          <div className="text-blue-700 dark:text-blue-300">
-            {measurePoints.length} titik dipilih
-          </div>
-          {mode !== 'measure' && measurePoints.length >= 3 && (
-            <Button
-              size="sm"
-              className="w-full mt-2"
-              onClick={finishDrawing}
-            >
-              Selesai
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+    <>
+      {/* Logic component must be rendered inside MapContainer by parent */}
+      <DrawMeasureToolsLogic onPolygonDrawn={onPolygonDrawn} onMeasurement={onMeasurement} />
+    </>
   );
 }

@@ -23,8 +23,11 @@ export function MapInteractionLayer({ activeMapTool, onPolygonDrawn, onMeasureme
   
   useEffect(() => {
     onPolygonDrawnRef.current = onPolygonDrawn;
+  }, [onPolygonDrawn]);
+  
+  useEffect(() => {
     onMeasurementRef.current = onMeasurement;
-  }, [onPolygonDrawn, onMeasurement]);
+  }, [onMeasurement]);
 
   useEffect(() => {
     if (!activeMapTool) {

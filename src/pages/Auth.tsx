@@ -161,19 +161,19 @@ const Auth = () => {
       {/* Left Hero Section - Desktop Only */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-800 to-cyan-900">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1200')] bg-cover bg-center opacity-20" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE0YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnpNNiAzNGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA2LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6TTM2IDM0YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/60 to-slate-900/40" />
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-center">
-          <div className="mb-8 p-4 bg-blue-500/10 backdrop-blur-sm rounded-2xl border border-blue-500/20">
-            <Waves className="w-20 h-20 text-blue-400" />
+          <div className="mb-8 p-6 bg-blue-500/10 backdrop-blur-sm rounded-3xl border border-blue-500/20 shadow-2xl">
+            <Waves className="w-24 h-24 text-blue-400" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">SIPASDA</h1>
-          <p className="text-xl text-blue-200 mb-8 max-w-md leading-relaxed">
-            Sistem Informasi Pelaporan Sumber Daya Air
+          <h1 className="text-6xl font-bold text-white mb-6 tracking-tight">SIPASDA</h1>
+          <p className="text-2xl text-blue-200 mb-8 max-w-md leading-relaxed font-light">
+            Sistem Informasi Pelaporan<br />Sumber Daya Air
           </p>
-          <div className="flex items-center gap-3 text-cyan-300">
+          <div className="flex items-center gap-4 text-cyan-300 bg-cyan-500/10 px-6 py-3 rounded-full border border-cyan-500/20">
             <Droplets className="w-5 h-5" />
             <span className="text-sm font-medium">Monitoring • Reporting • Management</span>
           </div>

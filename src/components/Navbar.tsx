@@ -31,14 +31,14 @@ const Navbar = memo(() => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <nav className="sticky top-0 z-50 w-full border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-slate-900/20">
+      <div className="container flex h-16 items-center">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 mr-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Map className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+            <Map className="h-5 w-5 text-white" />
           </div>
-          <span className="hidden font-bold sm:inline-block">SIPASDA</span>
+          <span className="hidden font-bold text-lg sm:inline-block">SIPASDA</span>
         </Link>
 
         {/* Desktop Nav */}
