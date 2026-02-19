@@ -1,4 +1,3 @@
-import { expose } from 'comlink';
 import proj4 from 'proj4';
 import type { FeatureCollection, Geometry } from 'geojson';
 
@@ -77,6 +76,16 @@ const geoWorker = {
   },
 };
 
-expose(geoWorker);
+self.onmessage = async (e: MessageEvent) => {
+  const { id, method, args } = e.data;
+  try {
+    if (method === 'parseAndReproject') {
+      const result = await geoWorker.parseAndReproject(args[0]);
+      self.postMessage({ id, result });
+    }
+  } catch (error) {
+    self.postMessage({ id, error: (error as Error).message });
+  }
+};
 
 export type GeoWorker = typeof geoWorker;
