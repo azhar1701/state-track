@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -666,7 +667,18 @@ const ReportForm = () => {
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm"
                     autoComplete="off"
                   />
-                  {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
+                  <AnimatePresence>
+                    {errors.title && (
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-xs text-red-600 mt-1"
+                      >
+                        {errors.title}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="grid gap-3 md:gap-4 md:grid-cols-2">
@@ -686,7 +698,18 @@ const ReportForm = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
+                    <AnimatePresence>
+                      {errors.category && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-xs text-red-600 mt-1"
+                        >
+                          {errors.category}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="space-y-2">
@@ -718,7 +741,18 @@ const ReportForm = () => {
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                     autoComplete="off"
                   />
-                  {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
+                  <AnimatePresence>
+                    {errors.description && (
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-xs text-red-600 mt-1"
+                      >
+                        {errors.description}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Tanggal Kejadian */}

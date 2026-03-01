@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Map, FileText, PlusCircle, User, LayoutDashboard, Home } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 
 export const BottomNav = memo(() => {
   const location = useLocation();
@@ -39,12 +40,19 @@ export const BottomNav = memo(() => {
               key={item.path}
               to={item.path}
               aria-label={item.label}
-              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md ${
+              className={`relative flex flex-col items-center gap-1 px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md ${
                 active ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              {active && (
+                <motion.div
+                  layoutId="bottom-nav-active-indicator"
+                  className="absolute inset-0 bg-primary/10 rounded-md"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Icon className="w-5 h-5 relative z-10" />
+              <span className="text-[10px] font-medium relative z-10">{item.label}</span>
             </Link>
           );
         })}

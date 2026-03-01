@@ -322,6 +322,49 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-lifted);
   }
 
+  /* 3-Tier Liquid Glass Elevation System */
+  .glass-base {
+    @apply bg-white/5 backdrop-blur-none border border-white/5 shadow-none;
+  }
+  
+  .glass-surface {
+    @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-soft will-change-[backdrop-filter];
+    border-top-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-floating {
+    @apply bg-white/20 backdrop-blur-xl border border-white/30 shadow-float will-change-[backdrop-filter];
+    border-top-color: rgba(255, 255, 255, 0.4);
+    border-left-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-overlay {
+    @apply bg-white/30 backdrop-blur-2xl border border-white/40 shadow-lifted will-change-[backdrop-filter] saturate-150;
+    border-top-color: rgba(255, 255, 255, 0.6);
+    border-left-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .glass-base {
+    @apply bg-slate-900/20 border-white/5;
+  }
+
+  .dark .glass-surface {
+    @apply bg-slate-900/40 border-white/10;
+    border-top-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .glass-floating {
+    @apply bg-slate-900/60 border-white/15;
+    border-top-color: rgba(255, 255, 255, 0.25);
+    border-left-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .glass-overlay {
+    @apply bg-slate-900/80 border-white/20 saturate-150;
+    border-top-color: rgba(255, 255, 255, 0.3);
+    border-left-color: rgba(255, 255, 255, 0.2);
+  }
+
   /* Glassmorphism Foundation */
   .glass {
     @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-lifted;

@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/useAuth";
 import { Map, Bell, User, PlusCircle, LayoutDashboard, BarChart3, LogOut, Home } from "lucide-react";
@@ -30,6 +31,33 @@ const Navbar = memo(() => {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
+  const navLinks = [
+    {
+      path: "/",
+      label: "Beranda",
+      icon: Home,
+      active: isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin")
+    },
+    {
+      path: "/map",
+      label: "Peta",
+      icon: Map,
+      active: isActive("/map")
+    },
+    {
+      path: "/me/reports",
+      label: "Laporan Saya",
+      icon: BarChart3,
+      active: isActive("/me/reports")
+    },
+    ...(isAdmin ? [{
+      path: "/admin",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      active: isActive("/admin")
+    }] : [])
+  ];
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground backdrop-blur-md shadow-md">
       <div className="container flex h-16 items-center">
@@ -44,32 +72,32 @@ const Navbar = memo(() => {
         {/* Desktop Nav */}
         {user && (
           <div className="hidden md:flex items-center gap-1 flex-1">
-            <Link to="/">
-              <Button variant={isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
-                <Home className="h-4 w-4" />
-                Beranda
-              </Button>
-            </Link>
-            <Link to="/map">
-              <Button variant={isActive("/map") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/map") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
-                <Map className="h-4 w-4" />
-                Peta
-              </Button>
-            </Link>
-            <Link to="/me/reports">
-              <Button variant={isActive("/me/reports") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/me/reports") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
-                <BarChart3 className="h-4 w-4" />
-                Laporan Saya
-              </Button>
-            </Link>
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/admin") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              </Link>
-            )}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link key={link.path} to={link.path} className="relative">
+                  {link.active && (
+                    <motion.div
+                      layoutId="navbar-active-indicator"
+                      className="absolute inset-0 rounded-md bg-accent shadow-sm"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`relative z-10 gap-2 ${
+                      link.active
+                        ? "text-accent-foreground hover:bg-transparent hover:text-accent-foreground"
+                        : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
           </div>
         )}
 

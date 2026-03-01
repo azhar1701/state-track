@@ -174,7 +174,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         style={{ opacity }}
         className={cn(
-          'fixed z-[1401] bg-white/95 dark:bg-slate-900/95 shadow-2xl backdrop-blur-md flex flex-col',
+          'fixed z-[1401] glass-overlay flex flex-col',
           'lg:top-0 lg:right-0 lg:h-full lg:w-[420px]',
           'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:h-[90vh]'
         )}
@@ -198,7 +198,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-border/50 dark:border-border/50 px-5 py-4"
+            className="sticky top-0 z-10 glass-surface border-b-0 px-5 py-4"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1 min-w-0">
@@ -484,7 +484,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.36 }}
-          className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-border/50 dark:border-border/50 px-5 py-4 space-y-3"
+          className="absolute bottom-0 left-0 right-0 glass-surface border-t border-white/20 px-5 py-4 space-y-3"
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button

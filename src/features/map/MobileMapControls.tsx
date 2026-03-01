@@ -15,44 +15,30 @@ export const MobileMapControls = ({
   onFullscreen 
 }: MobileMapControlsProps) => {
   return (
-    <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-2">
-      <div className="flex flex-col gap-1 glass-panel rounded-xl p-1">
-        <Button
-          onClick={onZoomIn}
-          size="icon"
-          variant="ghost"
-          className="h-12 w-12 rounded-lg btn-haptic"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-        <div className="h-px bg-border mx-2" />
-        <Button
-          onClick={onZoomOut}
-          size="icon"
-          variant="ghost"
-          className="h-12 w-12 rounded-lg btn-haptic"
-        >
-          <Minus className="h-5 w-5" />
-        </Button>
-      </div>
+    <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-1 glass-floating rounded-2xl p-1 shadow-xl">
+      <Button onClick={onLocate} size="icon" variant="ghost" className="h-12 w-12 rounded-xl btn-haptic hover:bg-white/10 text-primary">
+        <Navigation className="h-5 w-5 fill-current" />
+      </Button>
 
-      <Button
-        onClick={onLocate}
-        size="icon"
-        className="h-12 w-12 rounded-xl shadow-float btn-haptic"
-      >
-        <Navigation className="h-5 w-5" />
+      <div className="h-px bg-white/10 dark:bg-white/5 mx-2 my-1" />
+
+      <Button onClick={onZoomIn} size="icon" variant="ghost" className="h-12 w-12 rounded-xl btn-haptic hover:bg-white/10">
+        <Plus className="h-5 w-5" />
+      </Button>
+      
+      <div className="h-px bg-white/10 dark:bg-white/5 mx-2 my-1" />
+      
+      <Button onClick={onZoomOut} size="icon" variant="ghost" className="h-12 w-12 rounded-xl btn-haptic hover:bg-white/10">
+        <Minus className="h-5 w-5" />
       </Button>
 
       {onFullscreen && (
-        <Button
-          onClick={onFullscreen}
-          size="icon"
-          variant="outline"
-          className="h-12 w-12 rounded-xl shadow-float btn-haptic"
-        >
-          <Maximize2 className="h-5 w-5" />
-        </Button>
+        <>
+          <div className="h-px bg-white/10 dark:bg-white/5 mx-2 my-1" />
+          <Button onClick={onFullscreen} size="icon" variant="ghost" className="h-12 w-12 rounded-xl btn-haptic hover:bg-white/10">
+            <Maximize2 className="h-5 w-5" />
+          </Button>
+        </>
       )}
     </div>
   );
