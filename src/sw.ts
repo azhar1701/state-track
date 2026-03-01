@@ -60,10 +60,11 @@ async function notifyClients(tag: string) {
   }
 }
 
-self.addEventListener('sync', (event: SyncEvent) => {
-  if (event.tag === 'submit-reports') {
-    event.waitUntil(notifyClients('submit-reports'));
+self.addEventListener('sync', (event: Event) => {
+  const syncEvent = event as SyncEvent;
+  if (syncEvent.tag === 'submit-reports') {
+    syncEvent.waitUntil(notifyClients('submit-reports'));
   }
 });
 
-export {};
+export { };

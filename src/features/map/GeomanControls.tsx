@@ -17,7 +17,6 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
   const pmRef = useRef<unknown>(null);
   const onPolygonDrawnRef = useRef(onPolygonDrawn);
   const onDrawModeChangeRef = useRef(onDrawModeChange);
-  const editTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     onPolygonDrawnRef.current = onPolygonDrawn;
@@ -27,7 +26,7 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
   useEffect(() => {
     if (!map) return;
 
-    const editTimeout = editTimeoutRef.current;
+    // editTimeout removed
 
     if (enabled) {
       pmRef.current = map.pm;
@@ -54,7 +53,7 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
 
       map.on('pm:create', (e) => {
         const layer = e.layer;
-        
+
         if (layer instanceof L.Polygon) {
           const latlngs = layer.getLatLngs()[0] as L.LatLng[];
           const coords = latlngs.map(ll => [ll.lng, ll.lat] as [number, number]);
@@ -76,7 +75,7 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
           const line = turf.lineString(coords);
           const distance = turf.length(line, { units: 'kilometers' });
 
-          const midpoint = latlngs[Math.floor(latlngs.length / 2)];
+
           layer.bindTooltip(
             `<div class="text-xs font-bold">Jarak: ${distance.toFixed(2)} km</div>`,
             { permanent: true, direction: 'center' }
@@ -128,8 +127,6 @@ export function GeomanControls({ enabled, onPolygonDrawn, onDrawModeChange }: Ge
     }
 
     return () => {
-      if (editTimeout) clearTimeout(editTimeout);
-      
       if (map && map.pm) {
         try {
           map.off('pm:create');

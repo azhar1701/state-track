@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import type { Database } from "@/services/types";
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/client';
 import { toast } from 'sonner';
@@ -20,10 +21,10 @@ export interface LayerData {
   created_at?: string;
 }
 
-const sanitizeFilename = (name: string): string => 
+const sanitizeFilename = (name: string): string =>
   name.replace(/[^\w\s.-]/g, '').replace(/\s+/g, '_').toLowerCase();
 
-const sanitizeText = (text: string): string => 
+const sanitizeText = (text: string): string =>
   text.replace(/[""]/g, '"').replace(/['']/g, "'");
 
 export const useLayerManager = () => {
@@ -42,7 +43,7 @@ export const useLayerManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       const rows = (data || []) as Array<{
         id: string;
         key: string;
@@ -51,9 +52,9 @@ export const useLayerManager = () => {
         created_at: string;
       }>;
       const uniqueLayers = Array.from(
-        new Map(rows.map((l) => [l.id, { ...l, data: null } as LayerData])).values()
+        new Map(rows.map((l) => [l.id, { ...l, data: null as unknown as LayerData['data'] } as LayerData])).values()
       );
-      
+
       setLayers(uniqueLayers as LayerData[]);
     } catch (error) {
       logger.error('[useLayerManager] Fetch failed:', error);
@@ -76,9 +77,9 @@ export const useLayerManager = () => {
     try {
       // Validate structure
       if (!params.data?.type || params.data.type !== 'FeatureCollection') {
-        toast.error('Format GeoJSON tidak valid', { 
+        toast.error('Format GeoJSON tidak valid', {
           id: toastId,
-          description: 'Data harus berupa FeatureCollection' 
+          description: 'Data harus berupa FeatureCollection'
         });
         return false;
       }
@@ -89,7 +90,7 @@ export const useLayerManager = () => {
       if (params.file) {
         const sanitizedFilename = sanitizeFilename(params.file.name);
         const filePath = `layers/${Date.now()}_${sanitizedFilename}`;
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('geo-layers')
           .upload(filePath, params.file, { upsert: false });
@@ -102,7 +103,7 @@ export const useLayerManager = () => {
         const { data: urlData } = supabase.storage
           .from('geo-layers')
           .getPublicUrl(uploadData.path);
-        
+
         storageUrl = urlData.publicUrl;
       }
 
@@ -120,7 +121,7 @@ export const useLayerManager = () => {
 
       const { error: dbError } = await supabase
         .from('geo_layers')
-        .upsert(payload, { onConflict: 'key' });
+        .upsert(payload as unknown as Database['public']['Tables']['geo_layers']['Insert'], { onConflict: 'key' });
 
       if (dbError) {
         toast.error('Gagal menyimpan layer', { id: toastId, description: dbError.message });
@@ -129,10 +130,10 @@ export const useLayerManager = () => {
 
       toast.success('Layer berhasil disimpan', { id: toastId });
       await fetchLayers();
-      
+
       // Broadcast event
       window.dispatchEvent(new CustomEvent('layer-updated', { detail: { key: sanitizedKey } }));
-      
+
       return true;
     } catch (error) {
       logger.error('[useLayerManager] Upload failed:', error);
@@ -172,24 +173,24 @@ export const useLayerManager = () => {
           .from('geo_layers')
           .delete()
           .eq('key', layer.key);
-        
+
         if (keyError) throw keyError;
       }
 
       toast.success('Layer berhasil dihapus', { id: toastId });
-      
+
       // Optimistic update
       setLayers(prev => prev.filter(l => l.id !== layer.id));
-      
+
       // Clear caches
       loadedLayersRef.current.delete(layer.key);
       errorLayersRef.current.delete(layer.key);
-      
+
       // Broadcast deletion
-      window.dispatchEvent(new CustomEvent('layer-deleted', { 
-        detail: { layerId: layer.id, layerKey: layer.key } 
+      window.dispatchEvent(new CustomEvent('layer-deleted', {
+        detail: { layerId: layer.id, layerKey: layer.key }
       }));
-      
+
       return true;
     } catch (error) {
       logger.error('[useLayerManager] Delete failed:', error);
@@ -199,7 +200,7 @@ export const useLayerManager = () => {
   }, []);
 
   const updateLayer = useCallback(async (
-    id: string, 
+    id: string,
     updates: Partial<Pick<LayerData, 'name' | 'geometry_type'>>
   ): Promise<boolean> => {
     const toastId = `update-${id}`;
@@ -219,9 +220,9 @@ export const useLayerManager = () => {
 
       toast.success('Layer berhasil diperbarui', { id: toastId });
       await fetchLayers();
-      
+
       window.dispatchEvent(new CustomEvent('layer-updated', { detail: { layerId: id } }));
-      
+
       return true;
     } catch (error) {
       logger.error('[useLayerManager] Update failed:', error);
@@ -251,19 +252,18 @@ export const useLayerManager = () => {
       abortControllersRef.current.set(key, controller);
 
       // Cache busting with timestamp
-      const timestamp = Date.now();
       const { data, error } = await supabase
         .from('geo_layers')
         .select('data')
         .eq('key', key)
         .limit(1)
-        .maybeSingle()
-        .abortSignal(controller.signal);
+        .abortSignal(controller.signal)
+        .maybeSingle();
 
       if (error) throw error;
       if (!data?.data) throw new Error('No data found');
 
-      const raw = data.data as LayerData['data'];
+      const raw = data.data as unknown as LayerData['data'];
       const fc = raw.featureCollection;
 
       if (!fc || fc.type !== 'FeatureCollection') {
@@ -282,13 +282,13 @@ export const useLayerManager = () => {
       }
 
       logger.error(`[useLayerManager] Fetch layer ${key} failed:`, error);
-      
+
       // Mark as errored
       errorLayersRef.current.add(key);
       abortControllersRef.current.delete(key);
 
       // Single toast with static ID
-      toast.error(`Gagal memuat layer: ${key}`, { 
+      toast.error(`Gagal memuat layer: ${key}`, {
         id: toastId,
         description: (error instanceof Error ? error.message : String(error)) || 'Layer tidak ditemukan atau format tidak valid'
       });

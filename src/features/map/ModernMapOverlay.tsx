@@ -77,7 +77,6 @@ export const ModernMapOverlay = ({
   const [legendCollapsed, setLegendCollapsed] = useState(false);
   const [drawingActive, setDrawingActive] = useState(false);
 
-  // Sync drawing state from parent
   const handleDrawClick = () => {
     const newState = !drawingActive;
     setDrawingActive(newState);
@@ -102,7 +101,7 @@ export const ModernMapOverlay = ({
       <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
         {/* Main Toolbar */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-3 py-2 pointer-events-auto">
+          <div className="flex items-center gap-2 glass-panel shadow-lifted rounded-2xl px-3 py-2 pointer-events-auto">
           {/* Search Button */}
           <Button
             onClick={onToggleSearch}
@@ -110,7 +109,7 @@ export const ModernMapOverlay = ({
             size="sm"
             className="h-9 px-3"
           >
-            <Search className="w-4 h-4 mr-2" />
+            <Search className="icon-sm mr-2" />
             <span className="hidden sm:inline">Cari</span>
           </Button>
 
@@ -119,18 +118,18 @@ export const ModernMapOverlay = ({
           {/* Location */}
           {canLocate && (
             <Button onClick={onLocate} size="sm" variant="ghost" className="h-9 w-9 p-0">
-              <Navigation className="w-4 h-4" />
+              <Navigation className="icon-sm" />
             </Button>
           )}
 
           {/* Filter */}
           <Button onClick={onToggleFilters} variant="ghost" size="sm" className="h-9 w-9 p-0">
-            <FilterIcon className="w-4 h-4" />
+            <FilterIcon className="icon-sm" />
           </Button>
 
           {/* Overlay */}
           <Button onClick={onToggleOverlays} variant="ghost" size="sm" className="h-9 w-9 p-0" title="Layers/Overlay">
-            <Layers className="w-4 h-4" />
+            <Layers className="icon-sm" />
           </Button>
 
           {/* Drawing */}
@@ -141,19 +140,19 @@ export const ModernMapOverlay = ({
             className="h-9 w-9 p-0" 
             title="Alat Gambar & Ukur"
           >
-            <Ruler className="w-4 h-4" />
+            <Ruler className="icon-sm" />
           </Button>
 
           <div className="w-px h-6 bg-border" />
 
           {/* Share */}
           <Button onClick={onShare} variant="ghost" size="sm" className="h-9 w-9 p-0">
-            <Share2 className="w-4 h-4" />
+            <Share2 className="icon-sm" />
           </Button>
 
           {/* Export */}
           <Button onClick={onExport} variant="ghost" size="sm" className="h-9 w-9 p-0">
-            <Download className="w-4 h-4" />
+            <Download className="icon-sm" />
           </Button>
         </div>
       </div>
@@ -161,7 +160,7 @@ export const ModernMapOverlay = ({
       {/* Draw Sub-Toolbar */}
       {drawingActive && drawToolbarContent && (
         <div className="flex justify-center">
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-3 py-2 pointer-events-auto border border-white/20">
+          <div className="glass-panel shadow-lifted rounded-2xl px-3 py-2 pointer-events-auto">
             {drawToolbarContent}
           </div>
         </div>
@@ -172,15 +171,15 @@ export const ModernMapOverlay = ({
       <div className="absolute bottom-4 left-4 right-4 flex justify-center pointer-events-none">
         {/* Tool Instructions */}
         {drawingActive && (
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium pointer-events-auto border-2 border-white/20">
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-white px-6 py-3 rounded-xl shadow-lifted text-sm font-medium pointer-events-auto border border-white/20 transition-all duration-300">
             <div className="font-bold mb-1">📏 Alat Gambar & Ukur</div>
-            <div className="text-xs opacity-90">
+            <div className="text-2xs opacity-90">
               Gunakan toolbar untuk menggambar polygon, garis, lingkaran, dan mengukur jarak
             </div>
           </div>
         )}
         
-        <div className="w-full max-w-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xl rounded-2xl px-4 py-3 pointer-events-auto">
+        <div className="w-full max-w-2xl glass-panel shadow-lifted rounded-2xl px-4 py-3 pointer-events-auto">
           <div className="flex items-center gap-3 mb-2">
             {/* Play Controls */}
             <div className="flex items-center gap-1">
@@ -190,7 +189,7 @@ export const ModernMapOverlay = ({
                 onClick={onStepPrev}
                 className="h-8 w-8 p-0"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="icon-sm" />
               </Button>
               <Button
                 variant="default"
@@ -198,7 +197,7 @@ export const ModernMapOverlay = ({
                 onClick={onPlayPause}
                 className="h-8 w-8 p-0 rounded-full"
               >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isPlaying ? <Pause className="icon-sm" /> : <Play className="icon-sm" />}
               </Button>
               <Button
                 variant="ghost"
@@ -206,7 +205,7 @@ export const ModernMapOverlay = ({
                 onClick={onStepNext}
                 className="h-8 w-8 p-0"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="icon-sm" />
               </Button>
               <Button
                 variant="ghost"
@@ -214,7 +213,7 @@ export const ModernMapOverlay = ({
                 onClick={onReset}
                 className="h-8 w-8 p-0"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="icon-sm" />
               </Button>
             </div>
 
@@ -224,7 +223,7 @@ export const ModernMapOverlay = ({
             </div>
 
             {/* Total Count Badge */}
-            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
+            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-2xs font-medium">
               {statusCounts.total} laporan
             </div>
           </div>
@@ -239,7 +238,7 @@ export const ModernMapOverlay = ({
           />
 
           {/* Date Range */}
-          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+          <div className="flex justify-between text-2xs text-muted-foreground mt-1">
             <span>{format(minDate, 'dd MMM yy')}</span>
             <span>{format(maxDate, 'dd MMM yy')}</span>
           </div>
@@ -248,13 +247,13 @@ export const ModernMapOverlay = ({
 
       {/* Bottom Left: Collapsible Legend */}
       <div className="absolute bottom-40 left-4 pointer-events-none">
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-2xl rounded-xl overflow-hidden pointer-events-auto max-w-xs border border-white/20">
+        <div className="glass shadow-lifted rounded-xl overflow-hidden pointer-events-auto max-w-xs">
           {/* Legend Header */}
           <button
             onClick={() => setLegendCollapsed(!legendCollapsed)}
             className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all"
           >
-            <span className="text-xs font-bold uppercase tracking-wide">Legend</span>
+            <span className="text-2xs font-bold uppercase tracking-wide">Legend</span>
             {legendCollapsed ? (
               <ChevronDown className="w-3.5 h-3.5" />
             ) : (
@@ -264,10 +263,10 @@ export const ModernMapOverlay = ({
 
           {/* Legend Content */}
           {!legendCollapsed && (
-            <div className="px-3 py-2 text-[10px] space-y-2.5">
+            <div className="px-3 py-2 text-2xs space-y-2.5">
               {/* Status */}
               <div>
-                <div className="font-bold text-foreground mb-1.5 text-[11px] uppercase tracking-wide opacity-70">Status</div>
+                <div className="font-bold text-foreground mb-1.5 text-3xs uppercase tracking-wide opacity-70">Status</div>
                 <div className="space-y-1">
                   {statusItems.map((i) => (
                     <div key={i.label} className="flex items-center justify-between gap-2 py-0.5">
@@ -278,7 +277,7 @@ export const ModernMapOverlay = ({
                         />
                         <span className="text-foreground/90">{i.label}</span>
                       </div>
-                      <span className="text-xs font-semibold text-primary">{i.count}</span>
+                      <span className="text-2xs font-semibold text-primary">{i.count}</span>
                     </div>
                   ))}
                 </div>
@@ -286,7 +285,7 @@ export const ModernMapOverlay = ({
 
               {/* Severity */}
               <div className="pt-1.5 border-t border-border/50">
-                <div className="font-bold text-foreground mb-1.5 text-[11px] uppercase tracking-wide opacity-70">Severity</div>
+                <div className="font-bold text-foreground mb-1.5 text-3xs uppercase tracking-wide opacity-70">Severity</div>
                 <div className="space-y-1">
                   {severityItems.map((i) => (
                     <div key={i.label} className="flex items-center gap-1.5 py-0.5">
@@ -303,7 +302,7 @@ export const ModernMapOverlay = ({
               {/* Overlays - Only show first 3 */}
               {legendOverlays.length > 0 && (
                 <div className="pt-1.5 border-t border-border/50">
-                  <div className="font-bold text-foreground mb-1.5 text-[11px] uppercase tracking-wide opacity-70">Layers</div>
+                  <div className="font-bold text-foreground mb-1.5 text-3xs uppercase tracking-wide opacity-70">Layers</div>
                   <div className="space-y-1">
                     {legendOverlays.slice(0, 3).map((item, idx) => {
                       if (item.type === 'line') {
@@ -356,7 +355,7 @@ export const ModernMapOverlay = ({
                       return null;
                     })}
                     {legendOverlays.length > 3 && (
-                      <div className="text-[9px] text-muted-foreground italic pt-0.5">
+                      <div className="text-3xs text-muted-foreground italic pt-0.5">
                         +{legendOverlays.length - 3} layer lainnya
                       </div>
                     )}

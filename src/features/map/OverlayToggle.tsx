@@ -33,8 +33,8 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLay
   const dyn = localOverlays.dynamic || {};
 
   return (
-    <div className="fixed inset-y-0 right-0 z-[1200] w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border-l pointer-events-auto overflow-y-auto">
-      <div className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between">
+    <div className="fixed inset-y-0 right-0 z-[1200] w-80 glass-sidebar shadow-lifted pointer-events-auto overflow-y-auto border-l">
+      <div className="sticky top-0 glass-panel backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5" />
           <h2 className="text-lg font-semibold">Layer Overlay</h2>

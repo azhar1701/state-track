@@ -26,7 +26,6 @@ const NotFound = lazy(() => import("@/views/NotFound"));
 const ReportSuccess = lazy(() => import("@/features/reports/ReportSuccess"));
 const MyReports = lazy(() => import("@/features/reports/MyReports"));
 const HelpCenter = lazy(() => import("@/views/HelpCenter"));
-const GeoDataManager = lazy(() => import("@/features/geodata/GeoDataManager"));
 
 // TanStack Query removed
 

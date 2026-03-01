@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FeatureCollection } from 'geojson';
 import { supabase } from '@/services/client';
 import { useAuth } from '@/features/auth/useAuth';
+import type { Database } from '@/services/types';
 import { useLayerManager, type LayerData } from '@/features/map/useLayerManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,12 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import UnifiedImporter from '@/features/geodata/UnifiedImporter';
 import LayerInspector from '@/features/geodata/LayerInspector';
 import LayerUploader from '@/features/geodata/LayerUploader';
-import { Loader2, Map as MapIcon, Eye, EyeOff, RefreshCw, Download, Upload } from 'lucide-react';
+import { Loader2, Map as MapIcon, Eye, RefreshCw, Download, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import * as turf from '@turf/turf';
+import { bbox } from '@turf/turf';
 
 function InlineEditableText({ value, onSave }: { value: string; onSave: (v: string) => void | Promise<void> }) {
   const [editing, setEditing] = useState(false);
@@ -35,12 +36,10 @@ export default function GeoDataManager() {
   const { user, isAdmin } = useAuth();
   const { layers, loading, fetchLayers, deleteLayer, updateLayer } = useLayerManager();
   const navigate = useNavigate();
-  const [keyVal, setKeyVal] = useState('admin_boundaries');
-  const [name, setName] = useState('Admin Boundaries');
   const [layerSearch, setLayerSearch] = useState('');
-  const [layerSort, setLayerSort] = useState<'created_at_desc'|'name_asc'|'feature_count'>('created_at_desc');
+  const [layerSort, setLayerSort] = useState<'created_at_desc' | 'name_asc' | 'feature_count'>('created_at_desc');
   const [geometryFilter, setGeometryFilter] = useState<string>('all');
-  const [validationFilter, setValidationFilter] = useState<'all'|'valid'|'invalid'>('all');
+  const [validationFilter, setValidationFilter] = useState<'all' | 'valid' | 'invalid'>('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [inspectKey, setInspectKey] = useState<string | null>(null);
   const [layerValidation, setLayerValidation] = useState(() => new Map<string, { valid: boolean; errorCount: number; featureCount: number }>());
@@ -54,16 +53,16 @@ export default function GeoDataManager() {
         .eq('id', layerId)
         .limit(1)
         .maybeSingle();
-      
+
       if (error || !data) return { valid: true, errorCount: 0, featureCount: 0 };
-      
-      const layerData = data as { data: { featureCollection?: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown } }> } } };
+
+      const layerData = data as { data: { featureCollection?: FeatureCollection } };
       const fc = layerData.data?.featureCollection;
       if (!fc || !Array.isArray(fc.features)) return { valid: true, errorCount: 0, featureCount: 0 };
-      
+
       let errors = 0;
       const featureCount = fc.features.length;
-      
+
       fc.features.forEach((f) => {
         if (!f.geometry || !f.geometry.type) errors++;
         else if (f.geometry.type === 'Polygon' && Array.isArray(f.geometry.coordinates)) {
@@ -76,12 +75,12 @@ export default function GeoDataManager() {
           });
         }
       });
-      
+
       try {
-        const bbox = turf.bbox(fc as GeoJSON.FeatureCollection);
+        const bounds = bbox(fc);
         setLayerStats(prev => {
           const next = new Map(prev);
-          next.set(layerKey, { featureCount, bounds: bbox });
+          next.set(layerKey, { featureCount, bounds });
           return next;
         });
       } catch {
@@ -91,7 +90,7 @@ export default function GeoDataManager() {
           return next;
         });
       }
-      
+
       return { valid: errors === 0, errorCount: errors, featureCount };
     } catch {
       return { valid: true, errorCount: 0, featureCount: 0 };
@@ -100,18 +99,18 @@ export default function GeoDataManager() {
 
   useEffect(() => {
     if (layers.length === 0) return;
-    
+
     const validateLayers = async () => {
       const validation = new Map<string, { valid: boolean; errorCount: number; featureCount: number }>();
-      
+
       for (const layer of layers.slice(0, 10)) {
         const result = await validateLayerById(layer.id || '', layer.key);
         validation.set(layer.key, result);
       }
-      
+
       setLayerValidation(validation);
     };
-    
+
     const timer = setTimeout(validateLayers, 300);
     return () => clearTimeout(timer);
   }, [layers, validateLayerById]);
@@ -130,23 +129,23 @@ export default function GeoDataManager() {
       const { data: currentData } = await supabase
         .from('geo_layers')
         .select('data')
-        .eq('id', row.id)
+        .eq('id', row.id || '')
         .single();
-      
+
       if (!currentData) return;
-      
+
       const raw = (currentData.data ?? {}) as { meta?: Record<string, unknown> };
       const meta = raw.meta || {};
       const currentVisibility = typeof meta.visibility_default === 'boolean' ? meta.visibility_default : true;
-      
+
       const nextMeta = { ...meta, visibility_default: !currentVisibility };
       const nextData = { ...raw, meta: nextMeta };
-      
+
       await supabase
         .from('geo_layers')
         .update({ data: nextData })
-        .eq('id', row.id);
-      
+        .eq('id', row.id || '');
+
       toast.success(`Layer ${!currentVisibility ? 'ditampilkan' : 'disembunyikan'} di peta`);
       window.dispatchEvent(new CustomEvent('layer-visibility-changed', { detail: { key: row.key, visible: !currentVisibility } }));
       await fetchLayers();
@@ -183,8 +182,8 @@ export default function GeoDataManager() {
   };
 
   const filteredLayers = useMemo(() => {
-    let result = layers.filter((r) => 
-      r.key.toLowerCase().includes(layerSearch.toLowerCase()) || 
+    let result = layers.filter((r) =>
+      r.key.toLowerCase().includes(layerSearch.toLowerCase()) ||
       r.name.toLowerCase().includes(layerSearch.toLowerCase())
     );
 
@@ -207,7 +206,7 @@ export default function GeoDataManager() {
         const bCount = layerStats.get(b.key)?.featureCount || 0;
         return bCount - aCount;
       }
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      return new Date((b.created_at as unknown as string) || 0).getTime() - new Date((a.created_at as unknown as string) || 0).getTime();
     });
   }, [layers, layerSearch, layerSort, geometryFilter, validationFilter, layerValidation, layerStats]);
 
@@ -256,7 +255,8 @@ export default function GeoDataManager() {
         <CardContent>
           <LayerUploader
             onSave={async ({ key, name, geometry_type, data }) => {
-              const { error } = await supabase.from('geo_layers').upsert({ key, name, geometry_type, data }, { onConflict: 'key' });
+              const payload = { key, name, geometry_type, data } as unknown as Database['public']['Tables']['geo_layers']['Insert'];
+              const { error } = await supabase.from('geo_layers').upsert(payload, { onConflict: 'key' });
               if (error) throw error;
               void fetchLayers();
             }}
@@ -281,11 +281,11 @@ export default function GeoDataManager() {
         <CardContent>
           <div className="flex flex-col gap-3 mb-4">
             <div className="flex flex-col sm:flex-row gap-3">
-              <Input 
-                className="w-full sm:w-80" 
-                placeholder="🔍 Cari layer..." 
-                value={layerSearch} 
-                onChange={(e) => setLayerSearch(e.target.value)} 
+              <Input
+                className="w-full sm:w-80"
+                placeholder="🔍 Cari layer..."
+                value={layerSearch}
+                onChange={(e) => setLayerSearch(e.target.value)}
               />
               <Select value={geometryFilter} onValueChange={setGeometryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px]">
@@ -318,7 +318,7 @@ export default function GeoDataManager() {
               </Select>
             </div>
           </div>
-          
+
           <div className="border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <Table>

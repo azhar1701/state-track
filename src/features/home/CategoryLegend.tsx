@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 
 const categories: Array<{ key: string; label: string; desc: string }> = [
   { key: 'irigasi', label: 'Irigasi', desc: 'Saluran, pintu air, dan kelengkapannya.' },

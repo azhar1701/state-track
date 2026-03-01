@@ -1,27 +1,19 @@
 import { logger } from "@/lib/logger";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/services/client";
-import type { Database } from "@/services/types";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/useAuth";
-import { useAppSettings } from "@/features/admin/useAppSettings";
 import { useSystemSettings } from "@/features/admin/useSystemSettings";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, RefreshCcw, DownloadCloud, UploadCloud, ShieldAlert, Users, Settings, Database as DatabaseIcon, Bell, Lock, UserCog, Activity, Mail, FileText, Tags, Wrench, Plug } from "lucide-react";
-import { EmailSettings } from "@/features/admin/settings/EmailSettings";
-import { ReportSettings } from "@/features/admin/settings/ReportSettings";
-import { SystemSettings } from "@/features/admin/settings/SystemSettings";
-import { APISettings } from "@/features/admin/settings/APISettings";
+import { Loader2, DownloadCloud, Settings, Bell, Lock, Activity, FileText, Tags, Users } from "lucide-react";
 import { CategorySettings } from "@/features/admin/settings/CategorySettings";
+import { ReportSettings } from "@/features/admin/settings/ReportSettings";
 import { GeoLayerSettings } from "@/features/admin/settings/GeoLayerSettings";
 import { NotificationSettings } from "@/features/admin/settings/NotificationSettings";
 import { SecuritySettings } from "@/features/admin/settings/SecuritySettings";
@@ -45,8 +37,6 @@ type MapPreferences = {
   defaultOpacity: number;
 };
 
-type ReportLogEntry = Database["public"]["Tables"]["report_logs"]["Row"];
-
 const MAP_PREFS_STORAGE_KEY = "admin:mapPreferences";
 
 const basemapOptions: Array<{ value: MapPreferences["basemap"]; label: string }> = [
@@ -56,20 +46,9 @@ const basemapOptions: Array<{ value: MapPreferences["basemap"]; label: string }>
   { value: "dark", label: "Dark Mode" },
 ];
 
-const formatDateTime = (iso?: string | null) => {
-  if (!iso) return "-";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString("id-ID");
-  } catch {
-    return "-";
-  }
-};
-
 const AdminSettings = () => {
   const { user, isAdmin } = useAuth();
-  const { fetchSetting, saveSetting } = useSystemSettings();
+  const { saveSetting } = useSystemSettings();
 
   const [mapPreferences, setMapPreferences] = useState<MapPreferences>({
     centerLat: "-7.325",
@@ -89,34 +68,7 @@ const AdminSettings = () => {
   });
   const [mapPrefSaving, setMapPrefSaving] = useState(false);
 
-  const [auditLogs, setAuditLogs] = useState<ReportLogEntry[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-
   const canUseBrowserStorage = typeof window !== "undefined" && !!window.localStorage;
-
-  const loadAuditLogs = useCallback(async () => {
-    if (!isAdmin) return;
-    setAuditLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("report_logs")
-        .select("id,report_id,action,before,after,actor_id,actor_email,created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      setAuditLogs((data as ReportLogEntry[]) ?? []);
-    } catch (error) {
-      logger.error("Failed to load audit logs", error);
-      toast.error("Gagal memuat catatan audit");
-    } finally {
-      setAuditLoading(false);
-    }
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (!user || !isAdmin) return;
-    void loadAuditLogs();
-  }, [isAdmin, user, loadAuditLogs]);
 
   useEffect(() => {
     if (!canUseBrowserStorage) return;
@@ -133,8 +85,6 @@ const AdminSettings = () => {
     };
     loadFromLocalStorage();
   }, [canUseBrowserStorage]);
-
-
 
   const saveMapPreferences = async () => {
     setMapPrefSaving(true);
@@ -164,20 +114,14 @@ const AdminSettings = () => {
       }
       await saveSetting('map', 'preferences', mapPreferences);
       if (canUseBrowserStorage) localStorage.setItem(MAP_PREFS_STORAGE_KEY, JSON.stringify(mapPreferences));
+      toast.success("Preferensi peta disimpan");
     } catch (error) {
       logger.error("Failed to save map preferences", error);
+      toast.error("Gagal menyimpan preferensi");
     } finally {
       setMapPrefSaving(false);
     }
   };
-
-  const sortedAuditLogs = useMemo(
-    () =>
-      auditLogs
-        .slice()
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [auditLogs],
-  );
 
   if (!user || !isAdmin) {
     return (
@@ -205,36 +149,36 @@ const AdminSettings = () => {
 
       <Tabs defaultValue="map" className="w-full">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <TabsList className="flex w-full gap-1 h-auto p-1 bg-muted/50">
-          <TabsTrigger value="map" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Peta & Layer</span>
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Laporan</span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <Tags className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Kategori</span>
-          </TabsTrigger>
-          <TabsTrigger value="notification" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Notifikasi</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Keamanan</span>
-          </TabsTrigger>
-          <TabsTrigger value="backup" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <DownloadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Backup</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Pengguna</span>
-          </TabsTrigger>
-        </TabsList>
+          <TabsList className="flex w-full gap-1 h-auto p-1 bg-muted/50">
+            <TabsTrigger value="map" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Peta & Layer</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Laporan</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <Tags className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Kategori</span>
+            </TabsTrigger>
+            <TabsTrigger value="notification" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Notifikasi</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Keamanan</span>
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <DownloadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Backup</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Pengguna</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
 
         <TabsContent value="map" className="mt-6 space-y-4">
@@ -245,233 +189,233 @@ const AdminSettings = () => {
             </TabsList>
 
             <TabsContent value="display" className="space-y-4">
-      <Card className="border-0 shadow-md">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Settings className="h-5 w-5 text-primary" />
-            Preferensi Peta
-          </CardTitle>
-          <CardDescription>Atur tampilan default peta dan layer geografis</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Latitude pusat</label>
-              <Input
-                className="h-9"
-                value={mapPreferences.centerLat}
-                onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLat: event.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Longitude pusat</label>
-              <Input
-                className="h-9"
-                value={mapPreferences.centerLng}
-                onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLng: event.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level Zoom awal</label>
-              <Input
-                className="h-9"
-                value={mapPreferences.zoom}
-                onChange={(event) => setMapPreferences((prev) => ({ ...prev, zoom: event.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Basemap</label>
-              <Select
-                value={mapPreferences.basemap}
-                onValueChange={(value) => setMapPreferences((prev) => ({ ...prev, basemap: value as MapPreferences["basemap"] }))}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Pilih basemap" />
-                </SelectTrigger>
-                <SelectContent>
-                  {basemapOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="bg-muted/30 rounded-lg p-3 border">
-            <label className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Tampilkan batas administrasi</div>
-                <p className="text-xs text-muted-foreground mt-0.5">Aktifkan layer batas wilayah saat peta dibuka.</p>
-              </div>
-              <Switch
-                checked={mapPreferences.showAdminBoundaries}
-                onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, showAdminBoundaries: checked }))}
-              />
-            </label>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-semibold">Pengaturan Marker & Layer</h4>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="bg-muted/30 rounded-lg p-3 border">
-                <label className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Clustering marker</div>
-                    <p className="text-xs text-muted-foreground mt-0.5">Kelompokkan marker yang berdekatan.</p>
+              <Card className="border-0 shadow-md">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Settings className="h-5 w-5 text-primary" />
+                    Preferensi Peta
+                  </CardTitle>
+                  <CardDescription>Atur tampilan default peta dan layer geografis</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-4 sm:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Latitude pusat</label>
+                      <Input
+                        className="h-9"
+                        value={mapPreferences.centerLat}
+                        onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLat: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Longitude pusat</label>
+                      <Input
+                        className="h-9"
+                        value={mapPreferences.centerLng}
+                        onChange={(event) => setMapPreferences((prev) => ({ ...prev, centerLng: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Level Zoom awal</label>
+                      <Input
+                        className="h-9"
+                        value={mapPreferences.zoom}
+                        onChange={(event) => setMapPreferences((prev) => ({ ...prev, zoom: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Basemap</label>
+                      <Select
+                        value={mapPreferences.basemap}
+                        onValueChange={(value) => setMapPreferences((prev) => ({ ...prev, basemap: value as MapPreferences["basemap"] }))}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Pilih basemap" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {basemapOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <Switch
-                    checked={mapPreferences.enableClustering}
-                    onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableClustering: checked }))}
-                  />
-                </label>
-              </div>
 
-              <div className="bg-muted/30 rounded-lg p-3 border">
-                <label className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Heatmap</div>
-                    <p className="text-xs text-muted-foreground mt-0.5">Tampilkan peta panas untuk densitas laporan.</p>
+                  <div className="bg-muted/30 rounded-lg p-3 border">
+                    <label className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Tampilkan batas administrasi</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Aktifkan layer batas wilayah saat peta dibuka.</p>
+                      </div>
+                      <Switch
+                        checked={mapPreferences.showAdminBoundaries}
+                        onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, showAdminBoundaries: checked }))}
+                      />
+                    </label>
                   </div>
-                  <Switch
-                    checked={mapPreferences.enableHeatmap}
-                    onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableHeatmap: checked }))}
-                  />
-                </label>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius cluster (px)</label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  min="20"
-                  max="200"
-                  value={mapPreferences.clusterRadius}
-                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, clusterRadius: Number(e.target.value) }))}
-                  disabled={!mapPreferences.enableClustering}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius heatmap (px)</label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  min="10"
-                  max="100"
-                  value={mapPreferences.heatmapRadius}
-                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, heatmapRadius: Number(e.target.value) }))}
-                  disabled={!mapPreferences.enableHeatmap}
-                />
-              </div>
-            </div>
-          </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      <h4 className="text-sm font-semibold">Pengaturan Marker & Layer</h4>
+                    </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-semibold">Batas Zoom & Tampilan</h4>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom minimal</label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  min="1"
-                  max="18"
-                  value={mapPreferences.minZoom}
-                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, minZoom: Number(e.target.value) }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom maksimal</label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  min="10"
-                  max="22"
-                  value={mapPreferences.maxZoom}
-                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, maxZoom: Number(e.target.value) }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Opacity layer (0-1)</label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={mapPreferences.defaultOpacity}
-                  onChange={(e) => setMapPreferences((prev) => ({ ...prev, defaultOpacity: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="bg-muted/30 rounded-lg p-3 border">
+                        <label className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">Clustering marker</div>
+                            <p className="text-xs text-muted-foreground mt-0.5">Kelompokkan marker yang berdekatan.</p>
+                          </div>
+                          <Switch
+                            checked={mapPreferences.enableClustering}
+                            onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableClustering: checked }))}
+                          />
+                        </label>
+                      </div>
 
-            <div className="bg-muted/30 rounded-lg p-3 border">
-              <label className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Geolocation otomatis</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Deteksi lokasi pengguna saat membuka peta.</p>
-                </div>
-                <Switch
-                  checked={mapPreferences.enableGeolocation}
-                  onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableGeolocation: checked }))}
-                />
-              </label>
-            </div>
-          </div>
+                      <div className="bg-muted/30 rounded-lg p-3 border">
+                        <label className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">Heatmap</div>
+                            <p className="text-xs text-muted-foreground mt-0.5">Tampilkan peta panas untuk densitas laporan.</p>
+                          </div>
+                          <Switch
+                            checked={mapPreferences.enableHeatmap}
+                            onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableHeatmap: checked }))}
+                          />
+                        </label>
+                      </div>
+                    </div>
 
-          <Separator />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Perubahan akan diterapkan pada sesi berikutnya</p>
-            <Button onClick={saveMapPreferences} disabled={mapPrefSaving} size="sm" className="w-full sm:w-auto">
-              {mapPrefSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Preferensi
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius cluster (px)</label>
+                        <Input
+                          className="h-9"
+                          type="number"
+                          min="20"
+                          max="200"
+                          value={mapPreferences.clusterRadius}
+                          onChange={(e) => setMapPreferences((prev) => ({ ...prev, clusterRadius: Number(e.target.value) }))}
+                          disabled={!mapPreferences.enableClustering}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Radius heatmap (px)</label>
+                        <Input
+                          className="h-9"
+                          type="number"
+                          min="10"
+                          max="100"
+                          value={mapPreferences.heatmapRadius}
+                          onChange={(e) => setMapPreferences((prev) => ({ ...prev, heatmapRadius: Number(e.target.value) }))}
+                          disabled={!mapPreferences.enableHeatmap}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      <h4 className="text-sm font-semibold">Batas Zoom & Tampilan</h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom minimal</label>
+                        <Input
+                          className="h-9"
+                          type="number"
+                          min="1"
+                          max="18"
+                          value={mapPreferences.minZoom}
+                          onChange={(e) => setMapPreferences((prev) => ({ ...prev, minZoom: Number(e.target.value) }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom maksimal</label>
+                        <Input
+                          className="h-9"
+                          type="number"
+                          min="10"
+                          max="22"
+                          value={mapPreferences.maxZoom}
+                          onChange={(e) => setMapPreferences((prev) => ({ ...prev, maxZoom: Number(e.target.value) }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Opacity layer (0-1)</label>
+                        <Input
+                          className="h-9"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="1"
+                          value={mapPreferences.defaultOpacity}
+                          onChange={(e) => setMapPreferences((prev) => ({ ...prev, defaultOpacity: Number(e.target.value) }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/30 rounded-lg p-3 border">
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium">Geolocation otomatis</div>
+                          <p className="text-xs text-muted-foreground mt-0.5">Deteksi lokasi pengguna saat membuka peta.</p>
+                        </div>
+                        <Switch
+                          checked={mapPreferences.enableGeolocation}
+                          onCheckedChange={(checked) => setMapPreferences((prev) => ({ ...prev, enableGeolocation: checked }))}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">Perubahan akan diterapkan pada sesi berikutnya</p>
+                    <Button onClick={saveMapPreferences} disabled={mapPrefSaving} size="sm" className="w-full sm:w-auto">
+                      {mapPrefSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Simpan Preferensi
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="layers" className="space-y-4">
               <GeoLayerSettings />
             </TabsContent>
           </Tabs>
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="reports" className="mt-6 space-y-4">
-        <ReportSettings />
-      </TabsContent>
+        <TabsContent value="reports" className="mt-6 space-y-4">
+          <ReportSettings />
+        </TabsContent>
 
-      <TabsContent value="categories" className="mt-6 space-y-4">
-        <CategorySettings />
-      </TabsContent>
+        <TabsContent value="categories" className="mt-6 space-y-4">
+          <CategorySettings />
+        </TabsContent>
 
-      <TabsContent value="notification" className="mt-6 space-y-4">
-        <NotificationSettings />
-      </TabsContent>
+        <TabsContent value="notification" className="mt-6 space-y-4">
+          <NotificationSettings />
+        </TabsContent>
 
-      <TabsContent value="security" className="mt-6 space-y-4">
-        <SecuritySettings />
-      </TabsContent>
+        <TabsContent value="security" className="mt-6 space-y-4">
+          <SecuritySettings />
+        </TabsContent>
 
-      <TabsContent value="backup" className="mt-6 space-y-4">
-        <BackupSettings />
-      </TabsContent>
+        <TabsContent value="backup" className="mt-6 space-y-4">
+          <BackupSettings />
+        </TabsContent>
 
-      <TabsContent value="users" className="mt-6 space-y-4">
-        <UserManagementSettings />
-      </TabsContent>
+        <TabsContent value="users" className="mt-6 space-y-4">
+          <UserManagementSettings />
+        </TabsContent>
       </Tabs>
     </div>
   );

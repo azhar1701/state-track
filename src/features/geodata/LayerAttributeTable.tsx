@@ -12,7 +12,7 @@ type LayerAttributeTableProps = {
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-export const LayerAttributeTable = ({ featureCollection, maxFeatures = 1000 }: LayerAttributeTableProps) => {
+const LayerAttributeTable = ({ featureCollection, maxFeatures = 1000 }: LayerAttributeTableProps) => {
   const features = useMemo(() => featureCollection?.features ?? [], [featureCollection]);
   const limitedFeatures = useMemo(() => features.slice(0, maxFeatures), [features, maxFeatures]);
   const truncated = features.length > limitedFeatures.length;

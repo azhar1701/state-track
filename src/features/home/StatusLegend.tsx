@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 
 const items: Array<{ name: string; color: string; desc: string }> = [
   { name: "Baru", color: "bg-amber-500", desc: "Laporan baru dibuat dan menunggu peninjauan." },

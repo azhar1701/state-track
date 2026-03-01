@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/useAuth";
 import { MapPin, FileText, Map as MapIcon, Users, CheckCircle, Clock } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
@@ -187,7 +186,7 @@ const Home = () => {
       {/* Stats Section */}
       <section className="container py-12 md:py-16 lg:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6 max-w-6xl mx-auto px-2 md:px-4">
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <div className="flex items-center justify-center mb-2 md:mb-4">
               <div className="p-2 md:p-3 bg-primary/20 rounded-lg md:rounded-xl">
                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary" />
@@ -198,7 +197,7 @@ const Home = () => {
               <div className="text-xs md:text-sm text-muted-foreground">Total Laporan</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-warning/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <div className="flex items-center justify-center mb-2 md:mb-4">
               <div className="p-2 md:p-3 bg-amber-500/20 rounded-lg md:rounded-xl">
                 <Clock className="w-6 h-6 md:w-8 md:h-8 text-amber-500" />
@@ -209,7 +208,7 @@ const Home = () => {
               <div className="text-xs md:text-sm text-muted-foreground">Laporan Baru</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-info/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <div className="flex items-center justify-center mb-2 md:mb-4">
               <div className="p-2 md:p-3 bg-cyan-500/20 rounded-lg md:rounded-xl">
                 <Users className="w-6 h-6 md:w-8 md:h-8 text-cyan-500" />
@@ -220,7 +219,7 @@ const Home = () => {
               <div className="text-xs md:text-sm text-muted-foreground">Diproses</div>
             </div>
           </div>
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-success/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <div className="flex items-center justify-center mb-2 md:mb-4">
               <div className="p-2 md:p-3 bg-green-500/20 rounded-lg md:rounded-xl">
                 <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-green-500" />
@@ -248,7 +247,7 @@ const Home = () => {
             </Select>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
+            <div className="glass-subtle p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
               <div className="mb-4">
                 <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Tren Laporan ({chartDays} hari)</h3>
               </div>
@@ -269,12 +268,12 @@ const Home = () => {
                       <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
                         <defs>
                           <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(215 70% 55%)" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(215 70% 55%)" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="hsl(215 70% 55%)" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="hsl(215 70% 55%)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length / 8) - 1)} height={52} tickMargin={6} />
                         <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <Line type="monotone" dataKey="count" stroke="hsl(215 70% 55%)" strokeWidth={3} dot={false} fill="url(#colorReports)" />
@@ -285,7 +284,7 @@ const Home = () => {
                 )}
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
+            <div className="glass-subtle p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
               <div className="mb-4">
                 <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
               </div>
@@ -325,7 +324,7 @@ const Home = () => {
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-16">Fitur Unggulan</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-primary/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-primary/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
                 <FileText className="w-10 h-10 text-primary" />
               </div>
@@ -335,7 +334,7 @@ const Home = () => {
               </p>
             </div>
 
-            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-teal-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-info/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="p-4 bg-gradient-to-br from-teal-500/20 to-teal-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
                 <MapIcon className="w-10 h-10 text-teal-500" />
               </div>
@@ -345,7 +344,7 @@ const Home = () => {
               </p>
             </div>
 
-            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-amber-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-warning/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
                 <Users className="w-10 h-10 text-amber-500" />
               </div>
@@ -365,7 +364,7 @@ const Home = () => {
           <div className="relative">
             {/* Connection Line */}
             <div className="hidden md:block absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 opacity-30" style={{ top: '2rem' }} />
-            
+
             <div className="grid md:grid-cols-3 gap-12 relative">
               <div className="text-center space-y-6 relative">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-2xl font-bold shadow-xl shadow-blue-500/50 relative z-10">

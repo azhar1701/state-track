@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Camera, X, RotateCw, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,7 +21,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
     const start = async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
+          video: {
             facingMode,
             width: { ideal: 1920 },
             height: { ideal: 1080 }
@@ -40,9 +39,9 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
         onClose();
       }
     };
-    
+
     start();
-    
+
     return () => {
       if (mediaStream) {
         mediaStream.getTracks().forEach((track) => track.stop());

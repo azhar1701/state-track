@@ -81,14 +81,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logger.info('Token refreshed successfully');
         return;
       }
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
         return;
       }
-      
+
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         return;
       }
-      
+
       setSession(session);
       setUser(session?.user ?? null);
 

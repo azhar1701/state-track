@@ -125,9 +125,7 @@ export default function RecentReports() {
 
       // Fallback: if 400 error occurs, try minimal select
       if (error) {
-        const is400 = error?.status === 400;
-        
-        if (is400) {
+        if ((error as unknown as { status: number }).status === 400) {
           console.warn("Got 400 error, trying minimal select", error);
           const minimal = await supabase
             .from("reports")

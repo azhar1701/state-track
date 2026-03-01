@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Database, Layers, Eye, Settings2, Info, CheckCircle } from 'lucide-react';
+import { Loader2, Database, Layers, Settings2, Info, CheckCircle } from 'lucide-react';
 import { useSystemSettings } from '@/features/admin/useSystemSettings';
 
 type GeoLayerSettings = {
@@ -74,7 +73,7 @@ export const GeoLayerSettings = () => {
       }
 
       await saveSetting('geo', 'layer_settings', settings);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       }
@@ -118,181 +117,181 @@ export const GeoLayerSettings = () => {
                 <h4 className="text-sm font-semibold">Validasi & Publikasi</h4>
               </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Wajibkan CRS EPSG:4326</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Pastikan koordinat sesuai standar WGS84
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.enforceCRS}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, enforceCRS: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Publikasi otomatis</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Layer baru langsung tampil di peta
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.autoPublishToMap}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, autoPublishToMap: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Wajibkan metadata</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Informasi deskriptif harus terisi
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.requireMetadata}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, requireMetadata: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  <div className="bg-muted/30 rounded-lg p-3 border">
-                    <label className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Visible by default</div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Layer baru otomatis terlihat
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.defaultVisible}
-                        onCheckedChange={(checked) =>
-                          setSettings((prev) => ({ ...prev, defaultVisible: checked }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-sm font-semibold">Konfigurasi Default</h4>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      CRS Default
-                    </label>
-                    <Input
-                      className="h-9"
-                      value={settings.defaultCRS}
-                      onChange={(e) =>
-                        setSettings((prev) => ({ ...prev, defaultCRS: e.target.value }))
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-muted/30 rounded-lg p-3 border">
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Wajibkan CRS EPSG:4326</div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pastikan koordinat sesuai standar WGS84
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.enforceCRS}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, enforceCRS: checked }))
                       }
                     />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Batas ukuran unggah (MB)
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={settings.maxUploadSizeMb}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          maxUploadSizeMb: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Tipe layer default
-                    </label>
-                    <Select
-                      value={settings.defaultLayerType}
-                      onValueChange={(value) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          defaultLayerType: value as GeoLayerSettings['defaultLayerType'],
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="geojson">GeoJSON</SelectItem>
-                        <SelectItem value="wms">WMS</SelectItem>
-                        <SelectItem value="tile">Tile</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Z-Index default
-                    </label>
-                    <Input
-                      className="h-9"
-                      type="number"
-                      min="0"
-                      max="1000"
-                      value={settings.defaultZIndex}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          defaultZIndex: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Opacity default: {settings.defaultOpacity.toFixed(2)}
                   </label>
-                  <Slider
-                    value={[settings.defaultOpacity]}
-                    onValueChange={([value]) =>
-                      setSettings((prev) => ({ ...prev, defaultOpacity: value }))
-                    }
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    className="w-full"
-                  />
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-3 border">
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Publikasi otomatis</div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Layer baru langsung tampil di peta
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.autoPublishToMap}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, autoPublishToMap: checked }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-3 border">
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Wajibkan metadata</div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Informasi deskriptif harus terisi
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.requireMetadata}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, requireMetadata: checked }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-3 border">
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Visible by default</div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Layer baru otomatis terlihat
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.defaultVisible}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, defaultVisible: checked }))
+                      }
+                    />
+                  </label>
                 </div>
               </div>
             </div>
 
-            <Separator className="my-6" />
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold">Konfigurasi Default</h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    CRS Default
+                  </label>
+                  <Input
+                    className="h-9"
+                    value={settings.defaultCRS}
+                    onChange={(e) =>
+                      setSettings((prev) => ({ ...prev, defaultCRS: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Batas ukuran unggah (MB)
+                  </label>
+                  <Input
+                    className="h-9"
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={settings.maxUploadSizeMb}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        maxUploadSizeMb: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Tipe layer default
+                  </label>
+                  <Select
+                    value={settings.defaultLayerType}
+                    onValueChange={(value) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        defaultLayerType: value as GeoLayerSettings['defaultLayerType'],
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geojson">GeoJSON</SelectItem>
+                      <SelectItem value="wms">WMS</SelectItem>
+                      <SelectItem value="tile">Tile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Z-Index default
+                  </label>
+                  <Input
+                    className="h-9"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    value={settings.defaultZIndex}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        defaultZIndex: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Opacity default: {settings.defaultOpacity.toFixed(2)}
+                </label>
+                <Slider
+                  value={[settings.defaultOpacity]}
+                  onValueChange={([value]) =>
+                    setSettings((prev) => ({ ...prev, defaultOpacity: value }))
+                  }
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator className="my-6" />
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">

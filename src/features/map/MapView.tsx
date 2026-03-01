@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
 import { supabase } from '@/services/client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
@@ -18,7 +17,7 @@ declare module 'leaflet' {
 }
 import { BasemapSwitcher } from '@/features/map/BasemapSwitcher';
 import type { BasemapType } from '@/features/map/basemap-config';
-import { Legend, type LegendOverlayItem } from '@/features/map/Legend';
+import { type LegendOverlayItem } from '@/features/map/Legend';
 import { reverseGeocode } from '@/features/map/geocoding';
 import type { MapFilters } from '@/features/map/FilterPanel';
 import { MapSearch } from '@/features/map/MapSearch';
@@ -31,13 +30,11 @@ import { useLayerHighlight } from '@/features/map/useLayerHighlight';
 import { exportMapToPNG, generateShareableURL, parseURLParams } from '@/features/map/mapExport';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
-import { format, isAfter, isBefore, startOfDay, subDays, addDays, differenceInCalendarDays } from 'date-fns';
+import { format, isAfter, isBefore, startOfDay, addDays, differenceInCalendarDays } from 'date-fns';
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import proj4 from 'proj4';
 import { sanitizeText, sanitizeForLog } from '@/lib/security';
 import { MobileMapControls } from '@/features/map/MobileMapControls';
-import { ReportCardSkeleton } from '@/components/common/Skeleton';
-import { AdvancedMapToolbar } from '@/features/map/AdvancedMapToolbar';
 import { SpatialAnalysisPanel } from '@/features/map/SpatialAnalysisPanel';
 import { RouteOptimizationPanel } from '@/features/map/RouteOptimizationPanel';
 import { MapInteractionLayer } from '@/features/map/MapInteractionLayer';
@@ -46,7 +43,6 @@ import { DrawToolbar } from '@/features/map/DrawToolbar';
 import '@/styles/geoman-custom.css';
 import { MultiLayerHeatmap } from '@/features/map/MultiLayerHeatmap';
 import type { DensityCell } from '@/features/map/spatialAnalysis';
-import type { OptimizedRoute } from '@/features/map/routeOptimization';
 
 interface Report {
   id: string;
@@ -539,7 +535,6 @@ const MapView = () => {
   const [dynamicLoading, setDynamicLoading] = useState<Record<string, boolean>>({});
   const processedLayersRef = useRef<Set<string>>(new Set());
   const layerErrorsRef = useRef<Set<string>>(new Set());
-  const toastIdsRef = useRef<Map<string, string | number>>(new Map());
 
   const [drawnPolygon, setDrawnPolygon] = useState<L.Polygon | null>(null);
   const [timeFilterDate, setTimeFilterDate] = useState<Date>(new Date());
@@ -552,10 +547,8 @@ const MapView = () => {
   const [geomanDrawMode, setGeomanDrawMode] = useState<string | null>(null);
   const [showSpatialAnalysis, setShowSpatialAnalysis] = useState(false);
   const [showRouteOptimization, setShowRouteOptimization] = useState(false);
-  const [multiLayerHeatmap, setMultiLayerHeatmap] = useState(false);
+  const [multiLayerHeatmap] = useState(false);
   const [densityCells, setDensityCells] = useState<DensityCell[]>([]);
-  const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
-  const [bufferZones, setBufferZones] = useState<L.Layer[]>([]);
 
   // Calculate maxDate from reports (must be before useEffect hooks that use it)
   const maxDate = useMemo(() => {
@@ -600,8 +593,6 @@ const MapView = () => {
   const [clusterLayer, setClusterLayer] = useState<L.MarkerClusterGroup | null>(null);
   const [heatLayer, setHeatLayer] = useState<L.Layer | null>(null);
   const [cursorLatLng, setCursorLatLng] = useState<[number, number] | null>(null);
-  const [coordBottomOffset, setCoordBottomOffset] = useState<number>(72);
-  const [timelineRightOffset, setTimelineRightOffset] = useState<number>(96);
   const [ctxOpen, setCtxOpen] = useState(false);
   const [ctxPoint, setCtxPoint] = useState<{ x: number; y: number } | null>(null);
   const [ctxLatLng, setCtxLatLng] = useState<[number, number] | null>(null);
@@ -790,7 +781,7 @@ const MapView = () => {
   // Listen for layer deletion/update events from GeoDataManager
   useEffect(() => {
     const handleLayerDeleted = (e: Event) => {
-      const { layerId, layerKey } = (e as CustomEvent).detail;
+      const { layerKey } = (e as CustomEvent).detail;
       logger.info('[MapView] Layer deleted:', layerKey);
 
       setDynamicData(prev => {
@@ -918,7 +909,7 @@ const MapView = () => {
             }
             return null;
           };
-          return peek((g as Record<string, unknown>).coordinates);
+          return peek((g as { coordinates: unknown }).coordinates);
         })();
         const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
 
@@ -947,12 +938,15 @@ const MapView = () => {
           };
           result = {
             type: 'FeatureCollection',
-            features: data.features.map((f) => ({
-              type: 'Feature',
-              properties: f.properties || {},
-              geometry: reprojectGeometry(f.geometry),
-            })),
-          } as FeatureCollection<Geometry>;
+            features: (data.features as unknown[]).map((f) => {
+              const feat = f as unknown as { properties: Record<string, unknown>; geometry: Record<string, unknown> };
+              return {
+                type: 'Feature',
+                properties: feat.properties || {},
+                geometry: reprojectGeometry(feat.geometry),
+              };
+            }),
+          } as unknown as FeatureCollection;
         }
 
         // Build kecamatan boundary lines
@@ -1431,30 +1425,6 @@ const MapView = () => {
     };
   }, [mapInstance]);
 
-  // Dynamically reserve space for legend so TimeSlider won't overlap it
-  useEffect(() => {
-    const updateTimelineOffset = () => {
-      const el = document.querySelector('.legend-container') as HTMLElement | null;
-      if (el) {
-        const gap = 12; // spacing between timeline and legend
-        setTimelineRightOffset(el.offsetWidth + gap + 16); // include right-4 padding
-      }
-    };
-    updateTimelineOffset();
-    const t = setTimeout(updateTimelineOffset, 300);
-    window.addEventListener('resize', updateTimelineOffset);
-    let ro: ResizeObserver | null = null;
-    const el = document.querySelector('.legend-container') as HTMLElement | null;
-    if (el && 'ResizeObserver' in window) {
-      ro = new ResizeObserver(() => updateTimelineOffset());
-      ro.observe(el);
-    }
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', updateTimelineOffset);
-      if (ro) ro.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     if (urlParams.selectedReportId) {
@@ -2015,7 +1985,7 @@ const MapView = () => {
           <LayerDetailDrawer
             isOpen={!!selectedLayer}
             onClose={() => setSelectedLayer(null)}
-            feature={selectedLayer?.feature || null}
+            feature={(selectedLayer?.feature as GeoJSON.Feature<Geometry, Record<string, unknown>>) || null}
             onZoomToFeature={handleZoomToLayer}
           />
 
@@ -2030,10 +2000,9 @@ const MapView = () => {
               }))}
               onBufferCreated={(buffer) => {
                 if (!mapInstance) return;
-                const layer = L.geoJSON(buffer, {
+                L.geoJSON(buffer, {
                   style: { color: '#3b82f6', weight: 2, fillOpacity: 0.1 }
                 }).addTo(mapInstance);
-                setBufferZones(prev => [...prev, layer]);
                 toast.success('Buffer zone berhasil dibuat');
               }}
               onDensityCalculated={(cells) => {
@@ -2058,10 +2027,9 @@ const MapView = () => {
                 coords: [r.latitude, r.longitude],
                 category: r.category,
                 status: r.status,
-                severity: r.severity,
+                severity: r.severity || undefined,
               }))}
               onRouteGenerated={(route) => {
-                setOptimizedRoute(route);
                 if (mapInstance) {
                   const coords = route.points.map(p => [p.coords[0], p.coords[1]] as [number, number]);
                   L.polyline(coords, {
@@ -2093,7 +2061,7 @@ const MapView = () => {
               points={filteredReports.map(r => ({
                 coords: [r.latitude, r.longitude],
                 category: r.category,
-                severity: r.severity,
+                severity: r.severity || undefined,
               }))}
               enabled={multiLayerHeatmap}
               categories={Array.from(new Set(reports.map(r => r.category)))}

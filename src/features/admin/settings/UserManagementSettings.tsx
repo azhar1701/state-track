@@ -1,3 +1,4 @@
+import { handleApiError } from "@/lib/api-errors";
 import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Users, UserCog, Activity, Shield, Loader2, RefreshCcw, Search, Mail, Phone, Calendar, Ban, CheckCircle } from "lucide-react";
+import { Users, UserCog, Activity, Shield, Loader2, RefreshCcw, Search, Mail, Phone, Ban, CheckCircle } from "lucide-react";
 import { supabase } from "@/services/client";
 import { useAuth } from "@/features/auth/useAuth";
 
@@ -21,8 +20,8 @@ type UserRow = {
   nik_nip: string | null;
   created_at: string;
   role: "admin" | "user";
-  email?: string;
-  report_count?: number;
+  email: string | null;
+  report_count: number;
 };
 
 type ActivityLog = {

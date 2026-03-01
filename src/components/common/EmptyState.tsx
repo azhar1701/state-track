@@ -17,7 +17,7 @@ interface EmptyStateProps {
   illustration?: 'search' | 'reports' | 'offline' | 'error';
 }
 
-export const EmptyState = ({
+const EmptyState = ({
   icon: Icon,
   title,
   description,

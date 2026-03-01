@@ -8,7 +8,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, Bell, CheckCircle, Mail, MessageSquare, Settings2, Zap, FileText } from 'lucide-react';
 import { useSystemSettings } from '@/features/admin/useSystemSettings';
@@ -112,7 +111,7 @@ export const NotificationSettings = () => {
       }
 
       await saveSetting('notification', 'config', config);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
       }

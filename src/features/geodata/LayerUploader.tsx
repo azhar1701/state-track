@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileUp, CheckCircle2, AlertCircle, Wrench, Info } from 'lucide-react';
+import { Upload, FileUp, CheckCircle2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import shp from 'shpjs';
 import type { FeatureCollection, Geometry } from 'geojson';
@@ -46,7 +46,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
         throw new Error('Format tidak didukung');
       }
 
-      const collection = (raw as { type?: string })?.type === 'FeatureCollection' 
+      const collection = (raw as { type?: string })?.type === 'FeatureCollection'
         ? raw as FeatureCollection<Geometry>
         : null;
 
@@ -56,7 +56,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
 
       setFc(collection);
       setFile(file);
-      
+
       // Auto-fill name from filename
       if (!name) {
         setName(file.name.replace(/\.(geojson|json|zip)$/i, ''));
@@ -85,7 +85,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
     try {
       setProgress(30);
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       setProgress(70);
       await onSave({
         key,
@@ -96,7 +96,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
 
       setProgress(100);
       toast.success('Layer berhasil disimpan');
-      
+
       // Reset
       setKey('');
       setName('');
@@ -134,7 +134,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
             <div className="rounded-full bg-primary/10 p-6">
               <FileUp className="h-12 w-12 text-primary" />
             </div>
-            
+
             <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold">
                 {file ? 'File Terpilih' : 'Upload Layer Geospasial'}

@@ -41,8 +41,8 @@ export function SpatialAnalysisPanel({
 }: SpatialAnalysisPanelProps) {
   const [bufferRadius, setBufferRadius] = useState(1);
   const [bufferUnits, setBufferUnits] = useState<'kilometers' | 'meters'>('kilometers');
-  const [selectedPoint, setSelectedPoint] = useState<[number, number] | null>(null);
-  
+  const [selectedPoint] = useState<[number, number] | null>(null);
+
   const [densityGridSize, setDensityGridSize] = useState(1);
   const [densityType, setDensityType] = useState<'hex' | 'kde'>('hex');
   const [kdeBandwidth, setKdeBandwidth] = useState(2);
@@ -97,14 +97,14 @@ export function SpatialAnalysisPanel({
 
     const points = reports.map(r => r.coords);
     const bbox = calculateBBox(points);
-    
+
     // Calculate study area in km²
     const width = (bbox[2] - bbox[0]) * 111; // rough conversion
     const height = (bbox[3] - bbox[1]) * 111;
     const areaKm2 = width * height;
 
     const stats = calculateNearestNeighborIndex(points, areaKm2);
-    
+
     onStatsCalculated?.({
       nni: stats.nearestNeighborIndex,
       mean: stats.meanDistance,

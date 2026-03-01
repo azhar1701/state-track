@@ -1,5 +1,3 @@
-import { handleApiError } from "@/lib/api-errors";
-import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/services/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,16 +44,6 @@ const iconOptions = [
   { value: '🔧', label: 'Perbaikan' },
 ];
 
-const colorOptions = [
-  { value: '#3b82f6', label: 'Biru' },
-  { value: '#ef4444', label: 'Merah' },
-  { value: '#22c55e', label: 'Hijau' },
-  { value: '#eab308', label: 'Kuning' },
-  { value: '#a855f7', label: 'Ungu' },
-  { value: '#f97316', label: 'Oranye' },
-  { value: '#64748b', label: 'Abu-abu' },
-  { value: '#06b6d4', label: 'Cyan' },
-];
 
 export const CategorySettings = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -86,9 +74,9 @@ export const CategorySettings = () => {
         return acc;
       }, {} as Record<string, number>);
 
-      const updatedCategories = (cats || []).map(cat => ({
+      const updatedCategories = ((cats as unknown as Category[]) || []).map((cat) => ({
         ...cat,
-        count: categoryCounts[cat.value] || 0
+        count: (categoryCounts as Record<string, number>)[cat.value] || 0
       }));
 
       setCategories(updatedCategories);

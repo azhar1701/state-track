@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, Tag, AlertCircle, CheckCircle2, User, Phone, MapPinned } from 'lucide-react';
+import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -40,17 +40,17 @@ interface ReportDetailViewProps {
 }
 
 const statusConfig = {
-  baru: { 
+  baru: {
     badge: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-200/50 dark:border-amber-500/30',
     label: 'Baru',
     icon: '◆',
   },
-  diproses: { 
+  diproses: {
     badge: 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 border border-primary/30 dark:border-primary/30',
     label: 'Diproses',
     icon: '⟳',
   },
-  selesai: { 
+  selesai: {
     badge: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-500/30',
     label: 'Selesai',
     icon: '✓',
@@ -58,17 +58,17 @@ const statusConfig = {
 } as const;
 
 const severityConfig = {
-  ringan: { 
+  ringan: {
     badge: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-500/30',
     icon: '◆',
     label: 'Ringan',
   },
-  sedang: { 
+  sedang: {
     badge: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-200/50 dark:border-amber-500/30',
     icon: '⬟',
     label: 'Sedang',
   },
-  berat: { 
+  berat: {
     badge: 'bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-300 border border-red-200/50 dark:border-red-500/30',
     icon: '⚠',
     label: 'Berat',
@@ -84,10 +84,10 @@ const categoryLabels: Record<string, string> = {
   lainnya: 'Lainnya',
 };
 
-const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: React.ReactNode; 
+const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
   color?: 'blue' | 'purple' | 'amber' | 'emerald' | 'red';
 }) => {
   const colorMap = {
@@ -180,7 +180,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
         )}
       >
         {/* Mobile Drag Handle */}
-        <motion.div 
+        <motion.div
           drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={{ top: 0, bottom: 0.5 }}
@@ -194,7 +194,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto overscroll-y-contain pb-32 lg:pb-28">
           {/* Header */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -208,20 +208,20 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleShare} 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleShare}
                     className="h-8 w-8 hover:bg-primary/20 dark:hover:bg-primary/10"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onClose} 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
                     className="h-8 w-8 hover:bg-muted/50 dark:hover:bg-muted/50"
                   >
                     <X className="h-4 w-4" />
@@ -229,9 +229,9 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                 </motion.div>
               </div>
             </div>
-            
+
             {/* Badges */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -255,7 +255,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
 
           {/* Image Carousel with Embla */}
           {photos.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
@@ -288,7 +288,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   ))}
                 </div>
               </div>
-              
+
               {photos.length > 1 && (
                 <>
                   <motion.button
@@ -307,7 +307,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   >
                     <ChevronRight className="h-5 w-5" />
                   </motion.button>
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
@@ -319,8 +319,8 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                         onClick={() => emblaApi?.scrollTo(i)}
                         className={cn(
                           'h-2 rounded-full transition-all backdrop-blur-sm',
-                          i === selectedIndex 
-                            ? 'w-6 bg-white shadow-lg' 
+                          i === selectedIndex
+                            ? 'w-6 bg-white shadow-lg'
                             : 'w-2 bg-white/50 hover:bg-white/70'
                         )}
                         whileHover={{ scale: 1.1 }}
@@ -335,7 +335,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
           {/* Content */}
           <div className="px-5 py-6 space-y-5">
             {/* Info Grid */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -349,7 +349,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   color="blue"
                 />
               )}
-              
+
               <InfoCard
                 icon={<Calendar className="w-4 h-4" />}
                 label="Tanggal Dibuat"
@@ -379,7 +379,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   <div className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-500 to-emerald-600" />
                   Informasi Pelapor
                 </div>
-                
+
                 <div className="space-y-2">
                   {report.reporter_name && (
                     <InfoCard
@@ -389,13 +389,13 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                       color="emerald"
                     />
                   )}
-                  
+
                   {report.phone && (
                     <InfoCard
                       icon={<Phone className="w-4 h-4" />}
                       label="Kontak"
                       value={
-                        <a 
+                        <a
                           href={`tel:${report.phone}`}
                           className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
                         >
@@ -421,11 +421,11 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-blue-600" />
                   Identifikasi Lokasi
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2.5">
                   {report.kecamatan && (
                     <InfoCard
-                      icon={<MapPinned className="w-4 h-4" />}
+                      icon={<MapPin className="w-4 h-4" />}
                       label="Kecamatan"
                       value={report.kecamatan}
                       color="blue"
@@ -444,7 +444,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
             )}
 
             {/* Description */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.29 }}
@@ -461,7 +461,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
 
             {/* Resolution/Response */}
             {report.resolution && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.33 }}
@@ -480,15 +480,15 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
         </div>
 
         {/* Sticky Footer Actions */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.36 }}
           className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-border/50 dark:border-border/50 px-5 py-4 space-y-3"
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button 
-              onClick={onNavigate} 
+            <Button
+              onClick={onNavigate}
               className="w-full h-10 text-base font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
             >
               <Navigation className="mr-2 h-4 w-4" />
@@ -497,8 +497,8 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
           </motion.div>
           {isAdmin && (
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-10 text-base font-medium hover:bg-muted/50 dark:hover:bg-muted/50"
               >
                 Update Status

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 type Props = { children: ReactNode };
 type State = { hasError: boolean };
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
   static getDerivedStateFromError() {

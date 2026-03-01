@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { toast } from 'sonner';
 import { supabase } from '@/services/client';
 import type { FeatureCollection, Geometry } from 'geojson';
-import { LayerAttributeTable } from './LayerAttributeTable';
+import LayerAttributeTable from './LayerAttributeTable';
 import { Loader2 } from 'lucide-react';
 import { sanitizeForLog, sanitizeHTML } from '@/lib/security';
 
@@ -31,7 +31,7 @@ type LayerRow = {
   data: unknown;
 };
 
-export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) => {
+const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [row, setRow] = useState<LayerRow | null>(null);

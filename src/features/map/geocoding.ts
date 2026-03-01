@@ -1,5 +1,4 @@
 import { logger } from "@/lib/logger";
-import { LatLng } from 'leaflet';
 
 // Use multiple free geocoding providers for better accuracy
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
@@ -137,13 +136,13 @@ export const geocodeAddress = async (query: string): Promise<GeocodingResult[]> 
 
   // Merge and deduplicate results (prefer Photon for POI, Nominatim for addresses)
   const merged = new Map<string, GeocodingResult>();
-  
+
   // Add Photon results first (better for landmarks/POI)
   photonResults.forEach((r) => {
     const key = `${r.lat.toFixed(4)},${r.lon.toFixed(4)}`;
     if (!merged.has(key)) merged.set(key, r);
   });
-  
+
   // Add Nominatim results (better for detailed addresses)
   nominatimResults.forEach((r) => {
     const key = `${r.lat.toFixed(4)},${r.lon.toFixed(4)}`;

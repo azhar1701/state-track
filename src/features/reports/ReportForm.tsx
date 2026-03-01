@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { supabase, isSupabaseConfigured } from '@/services/client';
 import { useAuth } from '@/features/auth/useAuth';
+import type { Database } from '@/services/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,8 +22,8 @@ import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } f
 import { enqueueReportForSync } from '@/features/reports/useOutboxSync';
 import { sanitizeForLog } from '@/lib/security';
 import { LiveCamera } from '@/components/common/LiveCamera';
-import { useEffect as useEffectCategories, useState as useStateCategories } from 'react';
 
+type ReportStatus = Database['public']['Enums']['report_status'];
 type Severity = 'ringan' | 'sedang' | 'berat';
 type Category = string;
 
@@ -120,7 +121,7 @@ const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: numbe
 const ReportForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [categories, setCategories] = useStateCategories<Array<{ value: string; label: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
 
   const [loading, setLoading] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -157,7 +158,7 @@ const ReportForm = () => {
   );
   // Autosave draft
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  
+
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
@@ -225,7 +226,7 @@ const ReportForm = () => {
   }, [user, navigate, getUserLocation]);
 
   // Load categories from database
-  useEffectCategories(() => {
+  useEffect(() => {
     const loadCategories = async () => {
       try {
         const { data, error } = await supabase
@@ -233,7 +234,7 @@ const ReportForm = () => {
           .select('value, label')
           .eq('is_active', true)
           .order('label');
-        
+
         if (!error && data) {
           setCategories(data as Array<{ value: string; label: string }>);
         } else {
@@ -366,7 +367,7 @@ const ReportForm = () => {
       const opts = { maxSizeMB: 1.5, maxWidthOrHeight: 1600, useWebWorker: true, initialQuality: 0.7 } as const;
       const compressed = await imageCompression(file, opts);
       const preview = await imageCompression.getDataUrlFromFile(compressed);
-      
+
       setPhotoFiles((prev) => [...prev, new File([compressed], file.name, { type: 'image/jpeg' })]);
       setPhotoPreviews((prev) => [...prev, preview]);
       toast.success('Foto berhasil ditambahkan');
@@ -425,8 +426,8 @@ const ReportForm = () => {
       return;
     }
 
-  setLoading(true);
-  setUploadPercent(5);
+    setLoading(true);
+    setUploadPercent(5);
 
     try {
       const validation = reportSchema.safeParse(formData);
@@ -442,22 +443,22 @@ const ReportForm = () => {
         return;
       }
 
-  // Prevent duplicates (simple client-side): block similar submissions for 2 minutes based on title+rounded coords
-  try {
-    const k = `dup_${formData.title}_${Math.round(location.latitude*1000)}_${Math.round(location.longitude*1000)}`;
-    const last = sessionStorage.getItem(k);
-    if (last && Date.now() - Number(last) < 2 * 60 * 1000) {
-      toast.error('Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.');
-      setLoading(false);
-      return;
-    }
-    sessionStorage.setItem(k, String(Date.now()));
-  } catch {
-    // ignore sessionStorage failures
-  }
+      // Prevent duplicates (simple client-side): block similar submissions for 2 minutes based on title+rounded coords
+      try {
+        const k = `dup_${formData.title}_${Math.round(location.latitude * 1000)}_${Math.round(location.longitude * 1000)}`;
+        const last = sessionStorage.getItem(k);
+        if (last && Date.now() - Number(last) < 2 * 60 * 1000) {
+          toast.error('Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.');
+          setLoading(false);
+          return;
+        }
+        sessionStorage.setItem(k, String(Date.now()));
+      } catch {
+        // ignore sessionStorage failures
+      }
 
-  let photoUrl: string | null = null;
-  const photoUrls: string[] = [];
+      let photoUrl: string | null = null;
+      const photoUrls: string[] = [];
 
       // If offline, queue to outbox and exit early
       if (!navigator.onLine) {
@@ -476,7 +477,7 @@ const ReportForm = () => {
         toast.message('Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.', {
           description: 'Anda dapat melihat status di halaman Laporan Saya',
         });
-  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
         navigate('/report/success');
         return;
       }
@@ -494,8 +495,8 @@ const ReportForm = () => {
             const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
             if (msg.includes('bucket') && msg.includes('not')) {
               toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".', {
-              description: 'Laporan tetap akan tersimpan',
-            });
+                description: 'Laporan tetap akan tersimpan',
+              });
               break;
             } else {
               throw uploadError;
@@ -515,8 +516,8 @@ const ReportForm = () => {
         user_id: user!.id,
         title: formData.title,
         description: formData.description,
-        category: formData.category,
-        status: 'baru' as const,
+        category: formData.category as Database['public']['Enums']['report_category'],
+        status: 'baru' as ReportStatus,
         latitude: location.latitude,
         longitude: location.longitude,
         photo_url: photoUrl,
@@ -543,10 +544,10 @@ const ReportForm = () => {
         // Retry without optional columns that may not exist in some environments
         const minimal = { ...basePayload };
         const retry = await supabase.from('reports').insert(minimal).select('id').single();
-        inserted = retry.data as typeof inserted;
-        insertError = retry.error as typeof insertError;
+        inserted = retry.data;
+        insertError = (retry.error as unknown) as typeof insertError;
       }
-      
+
 
       if (insertError) throw insertError;
 
@@ -563,8 +564,8 @@ const ReportForm = () => {
       logger.error('Error submitting report:', sanitizeForLog(error));
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
       let message = 'Gagal mengirim laporan. Silakan coba lagi.';
-  const errAny = error as unknown as { message?: string };
-  const text = typeof errAny?.message === 'string' ? errAny.message : '';
+      const errAny = error as unknown as { message?: string };
+      const text = typeof errAny?.message === 'string' ? errAny.message : '';
       const isNetwork = text.toLowerCase().includes('failed to fetch') || text.toLowerCase().includes('network');
       if (isNetwork) {
         try {
@@ -624,376 +625,376 @@ const ReportForm = () => {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 md:py-8 fade-in">
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
           <Card className="glass-card shadow-2xl rounded-xl md:rounded-2xl border-none transition-all duration-300 scale-in">
-          <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 fade-in pt-4 md:pt-6">
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 md:gap-4">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-xl md:text-2xl font-bold">Buat Laporan Baru</CardTitle>
-                <CardDescription className="text-sm md:text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+            <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 fade-in pt-4 md:pt-6">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3 md:gap-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-xl md:text-2xl font-bold">Buat Laporan Baru</CardTitle>
+                  <CardDescription className="text-sm md:text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+                </div>
+                <div className="flex flex-col items-end gap-1 text-[10px] md:text-xs whitespace-nowrap">
+                  {saveStatus === 'saving' && (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                      <span className="text-muted-foreground">Menyimpan...</span>
+                    </>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-green-600" />
+                      <span className="text-green-600 font-medium">✓ Tersimpan</span>
+                    </>
+                  )}
+                  {saveStatus === 'unsaved' && (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="text-red-500">Gagal simpan</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-1 text-[10px] md:text-xs whitespace-nowrap">
-                {saveStatus === 'saving' && (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                    <span className="text-muted-foreground">Menyimpan...</span>
-                  </>
-                )}
-                {saveStatus === 'saved' && (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-green-600" />
-                    <span className="text-green-600 font-medium">✓ Tersimpan</span>
-                  </>
-                )}
-                {saveStatus === 'unsaved' && (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-red-500">Gagal simpan</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3 md:px-6">
-            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 fade-in">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-xs md:text-sm">Judul Laporan *</Label>
-                <Input
-                  id="title"
-                  placeholder="Contoh: Sungai Cileueur meluap"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm"
-                  autoComplete="off"
-                />
-                {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
-              </div>
-
-              <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+            </CardHeader>
+            <CardContent className="px-3 md:px-6">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 fade-in">
                 <div className="space-y-2">
-                  <Label htmlFor="category" className="text-xs md:text-sm">Kategori *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
+                  <Label htmlFor="title" className="text-xs md:text-sm">Judul Laporan *</Label>
+                  <Input
+                    id="title"
+                    placeholder="Contoh: Sungai Cileueur meluap"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
-                  >
-                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40 text-sm h-9 md:h-10">
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm"
+                    autoComplete="off"
+                  />
+                  {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="severity" className="text-xs md:text-sm">Tingkat Keparahan *</Label>
-                  <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                    <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
-                      <SelectValue placeholder="Pilih tingkat" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ringan">Ringan</SelectItem>
-                      <SelectItem value="sedang">Sedang</SelectItem>
-                      <SelectItem value="berat">Berat</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
+                <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-xs md:text-sm">Kategori *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
+                      required
+                    >
+                      <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40 text-sm h-9 md:h-10">
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="severity" className="text-xs md:text-sm">Tingkat Keparahan *</Label>
+                    <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
+                      <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
+                        <SelectValue placeholder="Pilih tingkat" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ringan">Ringan</SelectItem>
+                        <SelectItem value="sedang">Sedang</SelectItem>
+                        <SelectItem value="berat">Berat</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Deskripsi *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Jelaskan masalah secara detail..."
-                  rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
-                  autoComplete="off"
-                />
-                {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
-              </div>
-
-              {/* Tanggal Kejadian */}
-              <div className="space-y-2">
-                <Label htmlFor="incidentDate">Tanggal Kejadian *</Label>
-                <Input
-                  id="incidentDate"
-                  type="date"
-                  value={formData.incidentDate}
-                  onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
-                  required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
-                />
-                {errors.incidentDate && <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>}
-                <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
+                {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="kecamatan">Kecamatan *</Label>
-                  <Select
-                    value={selectedKecamatanId ?? ''}
-                    onValueChange={(value) => {
-                      setSelectedKecamatanId(value);
-                      const kec = kecamatanList.find(k => k.id === value);
-                      if (kec) {
-                        setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
-                        const currentDesa = selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined;
-                        if (!currentDesa || currentDesa.kecamatan_id !== value) {
-                          setSelectedDesaId(null);
-                          setFormData((prev) => ({ ...prev, desa: '' }));
+                  <Label htmlFor="description">Deskripsi *</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Jelaskan masalah secara detail..."
+                    rows={4}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
+                    autoComplete="off"
+                  />
+                  {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
+                </div>
+
+                {/* Tanggal Kejadian */}
+                <div className="space-y-2">
+                  <Label htmlFor="incidentDate">Tanggal Kejadian *</Label>
+                  <Input
+                    id="incidentDate"
+                    type="date"
+                    value={formData.incidentDate}
+                    onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
+                    required
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
+                  {errors.incidentDate && <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>}
+                  <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="kecamatan">Kecamatan *</Label>
+                    <Select
+                      value={selectedKecamatanId ?? ''}
+                      onValueChange={(value) => {
+                        setSelectedKecamatanId(value);
+                        const kec = kecamatanList.find(k => k.id === value);
+                        if (kec) {
+                          setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
+                          const currentDesa = selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined;
+                          if (!currentDesa || currentDesa.kecamatan_id !== value) {
+                            setSelectedDesaId(null);
+                            setFormData((prev) => ({ ...prev, desa: '' }));
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
-                      <SelectValue placeholder="Pilih kecamatan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kecamatanList.map(k => (
-                        <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="desa">Desa/Kelurahan *</Label>
-                  <Select
-                    value={selectedDesaId ?? ''}
-                    onValueChange={(value) => {
-                      const desa = desaList.find(d => d.id === value);
-                      setSelectedDesaId(value);
-                      if (desa) {
-                        setFormData((prev) => ({ ...prev, desa: desa.name }));
-                      }
-                    }}
-                    disabled={!selectedKecamatanId}
-                  >
-                    <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
-                      <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {desaList.map(d => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="reporterName">Nama Pelapor *</Label>
-                  <Input
-                    id="reporterName"
-                    value={formData.reporterName}
-                    onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
-                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
-                    autoComplete="name"
-                  />
-                  {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Kontak Pelapor *</Label>
-                  <Input
-                    id="phone"
-                    inputMode="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
-                    autoComplete="tel"
-                  />
-                  {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
-                </div>
-              </div>
-
-              
-
-              <div className="space-y-2">
-                <Label htmlFor="photo">Foto (Opsional)</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCamera(true)}
-                    className="btn-haptic"
-                  >
-                    <Camera className="icon-sm mr-2" />
-                    Ambil Foto
-                  </Button>
-                  <Input id="photo" type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('photo')?.click()}
-                    className="btn-haptic"
-                  >
-                    <Upload className="icon-sm mr-2" />
-                    {photoFiles.length > 0 ? `Ganti (${photoFiles.length})` : 'Upload'}
-                  </Button>
-                  {photoFiles.length > 0 && <span className="text-sm text-muted-foreground">{photoFiles.slice(0,3).map(f=>f.name).join(', ')}{photoFiles.length>3 ? ` +${photoFiles.length-3} lagi` : ''}</span>}
-                </div>
-                {photoPreviews.length > 0 && (
-                  <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {photoPreviews.map((src, idx) => (
-                      <img key={idx} src={src} alt={`Preview ${idx+1}`} className="w-full h-28 object-cover rounded border scale-in" />
-                    ))}
+                      }}
+                    >
+                      <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
+                        <SelectValue placeholder="Pilih kecamatan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kecamatanList.map(k => (
+                          <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
                   </div>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label>Lokasi *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="desa">Desa/Kelurahan *</Label>
+                    <Select
+                      value={selectedDesaId ?? ''}
+                      onValueChange={(value) => {
+                        const desa = desaList.find(d => d.id === value);
+                        setSelectedDesaId(value);
+                        if (desa) {
+                          setFormData((prev) => ({ ...prev, desa: desa.name }));
+                        }
+                      }}
+                      disabled={!selectedKecamatanId}
+                    >
+                      <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
+                        <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {desaList.map(d => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="reporterName">Nama Pelapor *</Label>
+                    <Input
+                      id="reporterName"
+                      value={formData.reporterName}
+                      onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
+                      className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
+                      autoComplete="name"
+                    />
+                    {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Kontak Pelapor *</Label>
+                    <Input
+                      id="phone"
+                      inputMode="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
+                      autoComplete="tel"
+                    />
+                    {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                  </div>
+                </div>
+
+
+
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <div className="relative w-full">
-                      <Input
-                        id="location-search"
-                        placeholder="Cari alamat (min 3 huruf)..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          const q = e.target.value;
-                          setSearchQuery(q);
-                          if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
-                          if (q.trim().length < 3) { setSearchResults([]); return; }
-                          searchTimerRef.current = window.setTimeout(async () => {
-                            try {
-                              const results = await geocodeAddress(q);
-                              setSearchResults(results);
-                            } catch {
-                              setSearchResults([]);
-                            }
-                          }, 400);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); }
-                        }}
-                        autoComplete="off"
-                        aria-label="Cari alamat lokasi laporan"
-                      />
-                      {searchQuery && searchResults.length > 0 && (
-                        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-                          {searchResults.map((r) => (
-                            <button
-                              type="button"
-                              key={`${r.lat}-${r.lon}-${r.display_name}`}
-                              className="block w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground whitespace-normal"
-                              onClick={() => {
-                                const lat = Number(r.lat); const lon = Number(r.lon);
-                                setLocation({ latitude: lat, longitude: lon, name: formatAddress(r) });
-                                setSearchResults([]);
-                                toast.success('Lokasi dipilih');
-                              }}
-                            >
-                              {formatAddress(r)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <Button type="button" onClick={handleSearch} disabled={searchLoading} variant="outline">
-                      {searchLoading ? (
-                        <Loader2 className="icon-sm animate-spin" />
-                      ) : (
-                        <Search className="icon-sm" />
-                      )}
+                  <Label htmlFor="photo">Foto (Opsional)</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCamera(true)}
+                      className="btn-haptic"
+                    >
+                      <Camera className="icon-sm mr-2" />
+                      Ambil Foto
                     </Button>
+                    <Input id="photo" type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('photo')?.click()}
+                      className="btn-haptic"
+                    >
+                      <Upload className="icon-sm mr-2" />
+                      {photoFiles.length > 0 ? `Ganti (${photoFiles.length})` : 'Upload'}
+                    </Button>
+                    {photoFiles.length > 0 && <span className="text-sm text-muted-foreground">{photoFiles.slice(0, 3).map(f => f.name).join(', ')}{photoFiles.length > 3 ? ` +${photoFiles.length - 3} lagi` : ''}</span>}
                   </div>
+                  {photoPreviews.length > 0 && (
+                    <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {photoPreviews.map((src, idx) => (
+                        <img key={idx} src={src} alt={`Preview ${idx + 1}`} className="w-full h-28 object-cover rounded border scale-in" />
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                  {location && (
-                    <div className="relative h-80 rounded-lg overflow-hidden border scale-in">
-                      <MapContainer
-                        center={[location.latitude, location.longitude]}
-                        zoom={15}
-                        className="h-full w-full"
-                        zoomControl={true}
-                      >
-                        <BasemapSwitcher />
-                        <FlyToLocation center={[location.latitude, location.longitude]} zoom={15} />
-                        <MapClickHandler onMapClick={handleMapClick} />
-                        <DraggableMarker
-                          position={[location.latitude, location.longitude]}
-                          onPositionChange={handleMarkerDrag}
+                <div className="space-y-2">
+                  <Label>Lokasi *</Label>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="relative w-full">
+                        <Input
+                          id="location-search"
+                          placeholder="Cari alamat (min 3 huruf)..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            const q = e.target.value;
+                            setSearchQuery(q);
+                            if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
+                            if (q.trim().length < 3) { setSearchResults([]); return; }
+                            searchTimerRef.current = window.setTimeout(async () => {
+                              try {
+                                const results = await geocodeAddress(q);
+                                setSearchResults(results);
+                              } catch {
+                                setSearchResults([]);
+                              }
+                            }, 400);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); }
+                          }}
+                          autoComplete="off"
+                          aria-label="Cari alamat lokasi laporan"
                         />
-                      </MapContainer>
-
-                      {/* Move 'Lokasi Saya' away from zoom controls (bottom-left) */}
-                      <Button
-                        type="button"
-                        onClick={getUserLocation}
-                        className="absolute bottom-2 left-2 z-[1000] fade-in"
-                        size="sm"
-                      >
-                        <Navigation className="icon-sm mr-2" />
-                        Lokasi Saya
+                        {searchQuery && searchResults.length > 0 && (
+                          <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                            {searchResults.map((r) => (
+                              <button
+                                type="button"
+                                key={`${r.lat}-${r.lon}-${r.display_name}`}
+                                className="block w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground whitespace-normal"
+                                onClick={() => {
+                                  const lat = Number(r.lat); const lon = Number(r.lon);
+                                  setLocation({ latitude: lat, longitude: lon, name: formatAddress(r) });
+                                  setSearchResults([]);
+                                  toast.success('Lokasi dipilih');
+                                }}
+                              >
+                                {formatAddress(r)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button type="button" onClick={handleSearch} disabled={searchLoading} variant="outline">
+                        {searchLoading ? (
+                          <Loader2 className="icon-sm animate-spin" />
+                        ) : (
+                          <Search className="icon-sm" />
+                        )}
                       </Button>
                     </div>
-                  )}
 
-                  {errors.location && (
-                    <p className="text-sm text-red-600">{errors.location}</p>
-                  )}
-                  {location?.name && (
-                    <div className="flex items-start gap-2 text-sm p-3 bg-muted rounded-lg">
-                      <MapPin className="w-4 h-4 text-primary mt-0.5" />
-                      <span>{location.name}</span>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Klik pada peta atau geser pin untuk menyesuaikan lokasi
-                  </p>
-                </div>
-              </div>
+                    {location && (
+                      <div className="relative h-80 rounded-lg overflow-hidden border scale-in">
+                        <MapContainer
+                          center={[location.latitude, location.longitude]}
+                          zoom={15}
+                          className="h-full w-full"
+                          zoomControl={true}
+                        >
+                          <BasemapSwitcher />
+                          <FlyToLocation center={[location.latitude, location.longitude]} zoom={15} />
+                          <MapClickHandler onMapClick={handleMapClick} />
+                          <DraggableMarker
+                            position={[location.latitude, location.longitude]}
+                            onPositionChange={handleMarkerDrag}
+                          />
+                        </MapContainer>
 
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/map')}
-                  className="flex-1"
-                  disabled={loading}
-                >
-                  Batal
-                </Button>
-                <Button type="submit" className="flex-1" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {uploadPercent !== null ? `Mengirim ${uploadPercent}%` : 'Mengirim...'}
-                    </>
-                  ) : (
-                    'Kirim Laporan'
-                  )}
-                </Button>
-              </div>
-              {uploadPercent !== null && (
-                <div className="w-full h-2 bg-muted rounded">
-                  <div className="h-2 bg-primary rounded" style={{ width: `${uploadPercent}%` }} />
+                        {/* Move 'Lokasi Saya' away from zoom controls (bottom-left) */}
+                        <Button
+                          type="button"
+                          onClick={getUserLocation}
+                          className="absolute bottom-2 left-2 z-[1000] fade-in"
+                          size="sm"
+                        >
+                          <Navigation className="icon-sm mr-2" />
+                          Lokasi Saya
+                        </Button>
+                      </div>
+                    )}
+
+                    {errors.location && (
+                      <p className="text-sm text-red-600">{errors.location}</p>
+                    )}
+                    {location?.name && (
+                      <div className="flex items-start gap-2 text-sm p-3 bg-muted rounded-lg">
+                        <MapPin className="w-4 h-4 text-primary mt-0.5" />
+                        <span>{location.name}</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Klik pada peta atau geser pin untuk menyesuaikan lokasi
+                    </p>
+                  </div>
                 </div>
-              )}
-            </form>
-          </CardContent>
-        </Card>
+
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate('/map')}
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    Batal
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {uploadPercent !== null ? `Mengirim ${uploadPercent}%` : 'Mengirim...'}
+                      </>
+                    ) : (
+                      'Kirim Laporan'
+                    )}
+                  </Button>
+                </div>
+                {uploadPercent !== null && (
+                  <div className="w-full h-2 bg-muted rounded">
+                    <div className="h-2 bg-primary rounded" style={{ width: `${uploadPercent}%` }} />
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
 
-    {showCamera && (
-      <LiveCamera
-        onCapture={handleCameraCapture}
-        onClose={() => setShowCamera(false)}
-      />
-    )}
+      {showCamera && (
+        <LiveCamera
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
     </>
   );
 };

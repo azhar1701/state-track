@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/services/client";
 import type { Database } from "@/services/types";
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { useAuth } from "@/features/auth/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -112,7 +111,6 @@ const AdminDashboard = () => {
   const initialTab: AdminTab = isAdminTab(normalizedInitialTab) ? normalizedInitialTab : 'reports';
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('semua');
@@ -156,11 +154,12 @@ const AdminDashboard = () => {
   };
 
   const renderStatusBadge = (status: ReportStatus) => {
-    const cls =
-      status === 'selesai' ? 'bg-green-600 text-white' :
-      status === 'diproses' ? 'bg-primary text-white' :
-      'bg-amber-500 text-black';
-    return <span className={`px-2 py-1 rounded text-xs ${cls}`}>{status}</span>;
+    const variants = {
+      selesai: 'success',
+      diproses: 'info',
+      baru: 'warning'
+    } as const;
+    return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
   // Fallback location display helper: prefer location_name, else use "desa, kecamatan"
@@ -190,20 +189,16 @@ const AdminDashboard = () => {
   };
 
   const formatDateTime = (iso?: string | null) => {
-      try {
-        if (!iso) return '-';
-        const d = new Date(iso);
-        return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID');
-      } catch {
-        return '-';
-      }
-    };
-  
-    // Helper to truncate long category names for chart XAxis labels
-    const truncateLabel = (label: string, max = 12) =>
-      label.length > max ? label.slice(0, max - 1) + '…' : label;
-  
-    const fetchReports = useCallback(async () => {
+    try {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID');
+    } catch {
+      return '-';
+    }
+  };
+
+  const fetchReports = useCallback(async () => {
     const normalizeReport = (raw: Partial<ReportListItem>): ReportListItem => ({
       id: raw.id ?? '',
       title: raw.title ?? '',
@@ -290,7 +285,6 @@ const AdminDashboard = () => {
       }
     };
 
-    setLoading(true);
     try {
       const primaryQuery = buildQuery(REPORT_LIST_COLUMNS, { includeSeverity: true, withCount: true });
       const { items, total } = await runPagedQuery(primaryQuery, true);
@@ -309,16 +303,15 @@ const AdminDashboard = () => {
           applyResult(items, items.length);
           toast.warning('Beberapa kolom laporan tidak tersedia. Tampilkan data dasar saja.');
         } catch (minimalError) {
-          const message = minimalError instanceof Error ? minimalError.message : String(minimalError);
           logger.error('[AdminDashboard] Minimal reports query failed:', minimalError);
-          toast.error(handleApiError(minimalError, 'Gagal memuat laporan'));
+          toast.error(handleApiError(minimalError as Error, 'Gagal memuat laporan'));
           setReports([]);
           setTotalFiltered(0);
           setSelectedIds(new Set());
         }
       }
     } finally {
-      setLoading(false);
+      // End of paged query
     }
   }, [
     statusFilter,
@@ -405,7 +398,8 @@ const AdminDashboard = () => {
             photo_urls: null,
           };
         } else {
-          throw err;
+          // If fallback also fails, re-throw the original primary error
+          throw primaryError;
         }
       }
       if (detail) {
@@ -753,9 +747,9 @@ const AdminDashboard = () => {
   const fetchChartData = useCallback(async () => {
     // Minimum spinner time for smoothness
     const MIN_LOADING_MS = 400;
-  const loadingStart = Date.now();
-  setChartInitialized(false);
-  if (!chartLoading) setChartLoading(true);
+    const loadingStart = Date.now();
+    setChartInitialized(false);
+    if (!chartLoading) setChartLoading(true);
     try {
       const fromISO = new Date(Date.now() - chartDays * 24 * 60 * 60 * 1000).toISOString();
       let query = supabase
@@ -811,8 +805,8 @@ const AdminDashboard = () => {
       const catArr = Array.from(catCount.entries())
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
-  setChartByCategory(catArr);
-  if (!chartInitialized) setChartInitialized(true);
+      setChartByCategory(catArr);
+      if (!chartInitialized) setChartInitialized(true);
     } catch (err) {
       logger.error('Error', err);
     } finally {
@@ -853,7 +847,7 @@ const AdminDashboard = () => {
   // Realtime updates for reports - only when tab is visible
   useEffect(() => {
     if (!user || !isAdmin || activeTab !== 'reports') return;
-    
+
     let isVisible = !document.hidden;
     const handleVisibilityChange = () => {
       const wasHidden = !isVisible;
@@ -864,9 +858,9 @@ const AdminDashboard = () => {
         void fetchStats();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     const channel = supabase
       .channel('reports-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
@@ -877,7 +871,7 @@ const AdminDashboard = () => {
         }
       })
       .subscribe();
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       channel.unsubscribe();
@@ -925,7 +919,7 @@ const AdminDashboard = () => {
       setDeleting(true);
       const { error } = await supabase.from('reports').delete().eq('id', reportId);
       if (error) throw error;
-      
+
       toast.success('Laporan berhasil dihapus');
       setDeleteDialogOpen(false);
       setReportToDelete(null);
@@ -942,14 +936,14 @@ const AdminDashboard = () => {
   const updateStatus = async (id: string, newStatus: ReportStatus) => {
     setUpdatingId(id);
     const prevStatus = reports.find((r) => r.id === id)?.status;
-    
+
     // Optimistic update
     setReports(prev =>
       prev.map(r =>
         r.id === id ? { ...r, status: newStatus } : r
       )
     );
-    
+
     const { error } = await supabase
       .from("reports")
       .update({ status: newStatus })
@@ -994,7 +988,7 @@ const AdminDashboard = () => {
     );
   }
 
-  
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-4 md:py-6">
@@ -1021,599 +1015,601 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="reports" className="mt-0">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
-          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary">
-            <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Laporan</CardTitle>
-                <FileText className="w-3 h-3 md:w-4 md:h-4 text-primary/60 flex-shrink-0" />
-              </div>
-              <div className="text-xl md:text-2xl font-bold mt-1">{stats.total}</div>
-            </CardHeader>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
-            <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">Baru</CardTitle>
-                <Clock className="w-4 h-4 text-amber-500/60" />
-              </div>
-              <div className="text-2xl font-bold mt-1">{stats.baru}</div>
-            </CardHeader>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Diproses</CardTitle>
-                <Loader2 className="w-4 h-4 text-primary/60" />
-              </div>
-              <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
-            </CardHeader>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
-            <CardHeader className="pb-2 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selesai</CardTitle>
-                <CheckCircle className="w-4 h-4 text-green-500/60" />
-              </div>
-              <div className="text-2xl font-bold mt-1">{stats.selesai}</div>
-            </CardHeader>
-          </Card>
-        </div>
-       
-        {/* Filters */}
-        <Card className="mb-4">
-          <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
-            <div className="space-y-3 md:space-y-4">
-              {/* Status Filter Tabs */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Status</label>
-                <Tabs
-                  value={statusFilter}
-                  onValueChange={(value) => {
-                    if (isStatusFilter(value)) {
-                      setStatusFilter(value);
-                    }
-                  }}
-                >
-                  <TabsList className="grid grid-cols-4 w-full bg-muted/50 p-1">
-                    <TabsTrigger value="semua" className="text-[10px] md:text-xs">Semua</TabsTrigger>
-                    <TabsTrigger value="baru" className="text-[10px] md:text-xs">Baru</TabsTrigger>
-                    <TabsTrigger value="diproses" className="text-[10px] md:text-xs">Diproses</TabsTrigger>
-                    <TabsTrigger value="selesai" className="text-[10px] md:text-xs">Selesai</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-              
-              {/* Other Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Severity</label>
-                  <Select
-                    value={severityFilter}
-                    onValueChange={(value) => {
-                      if (isSeverityFilter(value)) {
-                        setSeverityFilter(value);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
-                      <SelectValue placeholder="Semua Severity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="semua">Semua Severity</SelectItem>
-                      <SelectItem value="berat">Berat</SelectItem>
-                      <SelectItem value="sedang">Sedang</SelectItem>
-                      <SelectItem value="ringan">Ringan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Kategori</label>
-                  <Select
-                    value={categoryFilter}
-                    onValueChange={(value) => {
-                      if (value === 'semua') {
-                        setCategoryFilter('semua');
-                      } else if (categories.includes(value as ReportCategory)) {
-                        setCategoryFilter(value as ReportCategory);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
-                      <SelectValue placeholder="Semua Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="semua">Semua Kategori</SelectItem>
-                      {categories.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Urutkan</label>
-                  <Select
-                    value={sortBy}
-                    onValueChange={(value) => {
-                      if (isSortOption(value)) {
-                        setSortBy(value);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Urutkan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="created_at_desc">Terbaru</SelectItem>
-                      <SelectItem value="severity_desc">Severity Tinggi</SelectItem>
-                      <SelectItem value="category_asc">Kategori A-Z</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pencarian</label>
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Cari judul..."
-                    className="h-9"
-                  />
-                </div>
-              </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
+              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary">
+                <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Total Laporan</CardTitle>
+                    <FileText className="w-3 h-3 md:w-4 md:h-4 text-primary/60 flex-shrink-0" />
+                  </div>
+                  <div className="text-xl md:text-2xl font-bold mt-1">{stats.total}</div>
+                </CardHeader>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
+                <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Baru</CardTitle>
+                    <Clock className="w-4 h-4 text-amber-500/60" />
+                  </div>
+                  <div className="text-2xl font-bold mt-1">{stats.baru}</div>
+                </CardHeader>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500">
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Diproses</CardTitle>
+                    <Loader2 className="w-4 h-4 text-primary/60" />
+                  </div>
+                  <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
+                </CardHeader>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Selesai</CardTitle>
+                    <CheckCircle className="w-4 h-4 text-green-500/60" />
+                  </div>
+                  <div className="text-2xl font-bold mt-1">{stats.selesai}</div>
+                </CardHeader>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Active Filters Display */}
-        {(statusFilter !== 'semua' || severityFilter !== 'semua' || categoryFilter !== 'semua' || search.length > 0) && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-muted-foreground">Filter aktif:</span>
-              {statusFilter !== 'semua' && (
-                <Badge variant="secondary" className="gap-1.5 text-xs">
-                  {statusFilter}
-                  <button
-                    onClick={() => setStatusFilter('semua')}
-                    className="hover:opacity-70 transition-opacity"
-                    aria-label="Hapus filter status"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              {severityFilter !== 'semua' && (
-                <Badge variant="secondary" className="gap-1.5 text-xs">
-                  {severityFilter}
-                  <button
-                    onClick={() => setSeverityFilter('semua')}
-                    className="hover:opacity-70 transition-opacity"
-                    aria-label="Hapus filter severity"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              {categoryFilter !== 'semua' && (
-                <Badge variant="secondary" className="gap-1.5 text-xs">
-                  {categoryFilter}
-                  <button
-                    onClick={() => setCategoryFilter('semua')}
-                    className="hover:opacity-70 transition-opacity"
-                    aria-label="Hapus filter kategori"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              {search.length > 0 && (
-                <Badge variant="secondary" className="gap-1.5 text-xs">
-                  "{search}"
-                  <button
-                    onClick={() => setSearch('')}
-                    className="hover:opacity-70 transition-opacity"
-                    aria-label="Hapus filter pencarian"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setStatusFilter('semua');
-                  setSeverityFilter('semua');
-                  setCategoryFilter('semua');
-                  setSearch('');
-                }}
-                className="h-7 text-xs ml-auto"
-              >
-                Reset Filter
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Reports Table */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg">Daftar Laporan</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {totalFiltered} laporan ditemukan
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
-                  Export CSV
-                </Button>
-                <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 text-xs">
-                  Export PDF
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* Bulk actions toolbar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 pb-3 border-b">
-              <div className="text-xs text-muted-foreground">
-                {selectedIds.size > 0 ? (
-                  <span className="font-medium text-foreground">{selectedIds.size} item dipilih</span>
-                ) : (
-                  'Pilih item untuk aksi bulk'
-                )}
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select
-                  value={bulkStatus}
-                  onValueChange={(value) => {
-                    if (value === '' || isReportStatus(value)) {
-                      setBulkStatus(value as ReportStatus | '');
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[160px] h-8 text-xs">
-                    <SelectValue placeholder="Ubah status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="baru">Baru</SelectItem>
-                    <SelectItem value="diproses">Diproses</SelectItem>
-                    <SelectItem value="selesai">Selesai</SelectItem>
-                  </SelectContent>
-                </Select>
-                <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      size="sm" 
-                      onClick={applyBulk} 
-                      disabled={!bulkStatus || selectedIds.size === 0 || bulkLoading}
-                      className="h-8 text-xs"
+            {/* Filters */}
+            <Card className="mb-4">
+              <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
+                <div className="space-y-3 md:space-y-4">
+                  {/* Status Filter Tabs */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Status</label>
+                    <Tabs
+                      value={statusFilter}
+                      onValueChange={(value) => {
+                        if (isStatusFilter(value)) {
+                          setStatusFilter(value);
+                        }
+                      }}
                     >
-                      Terapkan
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Konfirmasi Selesai</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Anda akan menandai {selectedIds.size} laporan sebagai selesai. Tindakan ini tidak dapat dibatalkan. Lanjutkan?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => performBulkUpdate('selesai')} disabled={bulkLoading}>
-                        Ya, tandai selesai
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-            {reports.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">Tidak ada laporan ditemukan</p>
-                <p className="text-xs text-muted-foreground mt-1">Coba ubah filter atau pencarian Anda</p>
-              </div>
-            ) : (
-              <div className="w-full overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-10">
-                        <Checkbox 
-                          checked={allVisibleSelected} 
-                          onCheckedChange={() => toggleSelectAll()} 
-                          aria-label="Pilih semua" 
-                        />
-                      </TableHead>
-                      <TableHead className="font-semibold">Judul</TableHead>
-                      <TableHead className="font-semibold">Kategori</TableHead>
-                      <TableHead className="font-semibold">Severity</TableHead>
-                      <TableHead className="font-semibold">Lokasi</TableHead>
-                      <TableHead className="font-semibold">Respon</TableHead>
-                      <TableHead className="font-semibold">Tanggal</TableHead>
-                      <TableHead className="text-right font-semibold">Status</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reports.map((report) => (
-                      <TableRow key={report.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(report.id)}
-                            onCheckedChange={(c) => toggleSelect(report.id, Boolean(c))}
-                            aria-label={`Pilih laporan ${report.title || ''}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium max-w-[200px]">
-                          <button 
-                            type="button" 
-                            className="text-left hover:text-primary hover:underline transition-colors truncate block w-full" 
-                            onClick={() => openDetail(report)}
-                            title={report.title || '(tanpa judul)'}
-                          >
-                            {report.title || '(tanpa judul)'}
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">{report.category}</Badge>
-                        </TableCell>
-                        <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={shortLocation(report)}>
-                          {shortLocation(report)
-                            ? shortLocation(report)
-                            : <span className="text-muted-foreground text-xs">-</span>}
-                        </TableCell>
-                        <TableCell className="max-w-[180px]">
-                          {report.resolution && report.resolution.trim().length > 0
-                            ? <span className="text-xs truncate block" title={report.resolution}>{previewText(report.resolution, 80)}</span>
-                            : <span className="text-muted-foreground text-xs">-</span>}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(report.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <Select
-                            value={report.status}
-                            onValueChange={(value) => {
-                              if (isReportStatus(value)) {
-                                updateStatus(report.id, value);
-                              }
-                            }}
-                            disabled={updatingId === report.id}
-                          >
-                            <SelectTrigger className="w-[120px] h-8 ml-auto text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="baru">Baru</SelectItem>
-                              <SelectItem value="diproses">Diproses</SelectItem>
-                              <SelectItem value="selesai">Selesai</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            onClick={() => {
-                              setReportToDelete(report.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>
-                      Menampilkan <span className="font-medium text-foreground">{Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)}</span> dari <span className="font-medium text-foreground">{totalFiltered}</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="hidden sm:inline">Per halaman:</span>
-                      <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-                        <SelectTrigger className="w-[70px] h-7 text-xs">
-                          <SelectValue />
+                      <TabsList className="grid grid-cols-4 w-full bg-muted/50 p-1">
+                        <TabsTrigger value="semua" className="text-2xs md:text-xs">Semua</TabsTrigger>
+                        <TabsTrigger value="baru" className="text-2xs md:text-xs">Baru</TabsTrigger>
+                        <TabsTrigger value="diproses" className="text-2xs md:text-xs">Diproses</TabsTrigger>
+                        <TabsTrigger value="selesai" className="text-2xs md:text-xs">Selesai</TabsTrigger>
+                        <TabsTrigger value="diproses" className="text-[10px] md:text-xs">Diproses</TabsTrigger>
+                        <TabsTrigger value="selesai" className="text-[10px] md:text-xs">Selesai</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+
+                  {/* Other Filters */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Severity</label>
+                      <Select
+                        value={severityFilter}
+                        onValueChange={(value) => {
+                          if (isSeverityFilter(value)) {
+                            setSeverityFilter(value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
+                          <SelectValue placeholder="Semua Severity" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="25">25</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="semua">Semua Severity</SelectItem>
+                          <SelectItem value="berat">Berat</SelectItem>
+                          <SelectItem value="sedang">Sedang</SelectItem>
+                          <SelectItem value="ringan">Ringan</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Kategori</label>
+                      <Select
+                        value={categoryFilter}
+                        onValueChange={(value) => {
+                          if (value === 'semua') {
+                            setCategoryFilter('semua');
+                          } else if (categories.includes(value as ReportCategory)) {
+                            setCategoryFilter(value as ReportCategory);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm">
+                          <SelectValue placeholder="Semua Kategori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="semua">Semua Kategori</SelectItem>
+                          {categories.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Urutkan</label>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(value) => {
+                          if (isSortOption(value)) {
+                            setSortBy(value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Urutkan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="created_at_desc">Terbaru</SelectItem>
+                          <SelectItem value="severity_desc">Severity Tinggi</SelectItem>
+                          <SelectItem value="category_asc">Kategori A-Z</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pencarian</label>
+                      <Input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Cari judul..."
+                        className="h-9"
+                      />
+                    </div>
                   </div>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setPage((p) => Math.max(1, p - 1))} 
-                          aria-disabled={page === 1}
-                          className="h-8 text-xs"
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: Math.max(1, Math.ceil(totalFiltered / pageSize)) }).slice(0, 5).map((_, i) => {
-                        const pageNum = i + 1;
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink 
-                              isActive={page === pageNum} 
-                              onClick={() => setPage(pageNum)}
-                              className="h-8 w-8 text-xs"
-                            >
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      })}
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setPage((p) => (p * pageSize < totalFiltered ? p + 1 : p))} 
-                          aria-disabled={page * pageSize >= totalFiltered}
-                          className="h-8 text-xs"
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Active Filters Display */}
+            {(statusFilter !== 'semua' || severityFilter !== 'semua' || categoryFilter !== 'semua' || search.length > 0) && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-muted-foreground">Filter aktif:</span>
+                  {statusFilter !== 'semua' && (
+                    <Badge variant="secondary" className="gap-1.5 text-xs">
+                      {statusFilter}
+                      <button
+                        onClick={() => setStatusFilter('semua')}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label="Hapus filter status"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {severityFilter !== 'semua' && (
+                    <Badge variant="secondary" className="gap-1.5 text-xs">
+                      {severityFilter}
+                      <button
+                        onClick={() => setSeverityFilter('semua')}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label="Hapus filter severity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {categoryFilter !== 'semua' && (
+                    <Badge variant="secondary" className="gap-1.5 text-xs">
+                      {categoryFilter}
+                      <button
+                        onClick={() => setCategoryFilter('semua')}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label="Hapus filter kategori"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {search.length > 0 && (
+                    <Badge variant="secondary" className="gap-1.5 text-xs">
+                      "{search}"
+                      <button
+                        onClick={() => setSearch('')}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label="Hapus filter pencarian"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setStatusFilter('semua');
+                      setSeverityFilter('semua');
+                      setCategoryFilter('semua');
+                      setSearch('');
+                    }}
+                    className="h-7 text-xs ml-auto"
+                  >
+                    Reset Filter
+                  </Button>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Laporan</AlertDialogTitle>
-              <AlertDialogDescription>
-                Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => reportToDelete && deleteReport(reportToDelete)}
-                disabled={deleting}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                {deleting ? 'Menghapus...' : 'Hapus'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Detail Drawer */}
-        <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-          <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden">
-            <DrawerErrorBoundary>
-            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
-              <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex flex-col flex-1 overflow-hidden">
-                <AdminDetail
-                  selectedReport={selectedReport}
-                  fullReport={fullReport}
-                  detailLoading={detailLoading}
-                  editTitle={editTitle}
-                  setEditTitle={setEditTitle}
-                  editSeverity={editSeverity}
-                  setEditSeverity={setEditSeverity}
-                  renderStatusBadge={renderStatusBadge}
-                  formatDateTime={formatDateTime}
-                  editResolution={editResolution}
-                  setEditResolution={setEditResolution}
-                  logsLoading={logsLoading}
-                  logs={logs}
-                  summarizeLog={summarizeLog}
-                  saveEdits={saveEdits}
-                  saving={saving}
-                />
-              </div>
-            </Suspense>
-            </DrawerErrorBoundary>
-          </DrawerContent>
-        </Drawer>
-        </TabsContent>
-        <TabsContent value="insights" className="mt-0">
-          <div className="mb-4 flex items-center gap-3">
-            <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 hari</SelectItem>
-                <SelectItem value="30">30 hari</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {chartLoading || !chartInitialized || !statsInitialized ? (
-            <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data insight...</div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
-              {/* Chart Tren Laporan */}
-              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
-                <CardHeader className="pb-2 fade-in">
-                  <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
-                </CardHeader>
-                <CardContent className="fade-in">
-                  <div className="relative">
-                    <ChartContainer
-                      config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
-                      className="h-56 sm:h-64 md:h-72"
-                      withAspect={false}
-                    >
-                      <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length/8)-1)} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ChartContainer>
-                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
-                    {chartDaily.length === 0 && !chartLoading && (
-                      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
+            {/* Reports Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg">Daftar Laporan</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {totalFiltered} laporan ditemukan
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
+                      Export CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 text-xs">
+                      Export PDF
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {/* Bulk actions toolbar */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 pb-3 border-b">
+                  <div className="text-xs text-muted-foreground">
+                    {selectedIds.size > 0 ? (
+                      <span className="font-medium text-foreground">{selectedIds.size} item dipilih</span>
+                    ) : (
+                      'Pilih item untuk aksi bulk'
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              {/* Chart Kategori Terbanyak */}
-              <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
-                <CardHeader className="pb-2 fade-in">
-                  <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
-                </CardHeader>
-                <CardContent className="fade-in">
-                  <div className="relative">
-                    <ChartContainer
-                      config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
-                      className="h-56 sm:h-64 md:h-72"
-                      withAspect={false}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Select
+                      value={bulkStatus}
+                      onValueChange={(value) => {
+                        if (value === '' || isReportStatus(value)) {
+                          setBulkStatus(value as ReportStatus | '');
+                        }
+                      }}
                     >
-                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                        <XAxis
-                          dataKey="name"
-                          tickLine={false}
-                          axisLine={false}
-                          angle={-30}
-                          textAnchor="end"
-                          interval={0}
-                          height={52}
-                          tickMargin={6}
-                          tick={({ x, y, payload }) => (
-                            <text
-                              x={x}
-                              y={y}
-                              fontSize={12}
-                              textAnchor="end"
-                              transform={`rotate(-30,${x},${y})`}
-                              fill="#64748b"
-                            >
-                              {payload.value.length > 12 ? payload.value.slice(0, 11) + '…' : payload.value}
-                            </text>
-                          )}
-                        />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                      </BarChart>
-                    </ChartContainer>
-                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
-                    {chartByCategory.length === 0 && !chartLoading && (
-                      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
-                    )}
+                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                        <SelectValue placeholder="Ubah status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baru">Baru</SelectItem>
+                        <SelectItem value="diproses">Diproses</SelectItem>
+                        <SelectItem value="selesai">Selesai</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          onClick={applyBulk}
+                          disabled={!bulkStatus || selectedIds.size === 0 || bulkLoading}
+                          className="h-8 text-xs"
+                        >
+                          Terapkan
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Konfirmasi Selesai</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Anda akan menandai {selectedIds.size} laporan sebagai selesai. Tindakan ini tidak dapat dibatalkan. Lanjutkan?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => performBulkUpdate('selesai')} disabled={bulkLoading}>
+                            Ya, tandai selesai
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                {reports.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="text-sm text-muted-foreground">Tidak ada laporan ditemukan</p>
+                    <p className="text-xs text-muted-foreground mt-1">Coba ubah filter atau pencarian Anda</p>
+                  </div>
+                ) : (
+                  <div className="w-full overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-10">
+                            <Checkbox
+                              checked={allVisibleSelected}
+                              onCheckedChange={() => toggleSelectAll()}
+                              aria-label="Pilih semua"
+                            />
+                          </TableHead>
+                          <TableHead className="font-semibold">Judul</TableHead>
+                          <TableHead className="font-semibold">Kategori</TableHead>
+                          <TableHead className="font-semibold">Severity</TableHead>
+                          <TableHead className="font-semibold">Lokasi</TableHead>
+                          <TableHead className="font-semibold">Respon</TableHead>
+                          <TableHead className="font-semibold">Tanggal</TableHead>
+                          <TableHead className="text-right font-semibold">Status</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reports.map((report) => (
+                          <TableRow key={report.id} className="hover:bg-muted/50 transition-colors">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(report.id)}
+                                onCheckedChange={(c) => toggleSelect(report.id, Boolean(c))}
+                                aria-label={`Pilih laporan ${report.title || ''}`}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium max-w-[200px]">
+                              <button
+                                type="button"
+                                className="text-left hover:text-primary hover:underline transition-colors truncate block w-full"
+                                onClick={() => openDetail(report)}
+                                title={report.title || '(tanpa judul)'}
+                              >
+                                {report.title || '(tanpa judul)'}
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">{report.category}</Badge>
+                            </TableCell>
+                            <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
+                            <TableCell className="max-w-[150px] truncate" title={shortLocation(report)}>
+                              {shortLocation(report)
+                                ? shortLocation(report)
+                                : <span className="text-muted-foreground text-xs">-</span>}
+                            </TableCell>
+                            <TableCell className="max-w-[180px]">
+                              {report.resolution && report.resolution.trim().length > 0
+                                ? <span className="text-xs truncate block" title={report.resolution}>{previewText(report.resolution, 80)}</span>
+                                : <span className="text-muted-foreground text-xs">-</span>}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{formatDate(report.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <Select
+                                value={report.status}
+                                onValueChange={(value) => {
+                                  if (isReportStatus(value)) {
+                                    updateStatus(report.id, value);
+                                  }
+                                }}
+                                disabled={updatingId === report.id}
+                              >
+                                <SelectTrigger className="w-[120px] h-8 ml-auto text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="baru">Baru</SelectItem>
+                                  <SelectItem value="diproses">Diproses</SelectItem>
+                                  <SelectItem value="selesai">Selesai</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                onClick={() => {
+                                  setReportToDelete(report.id);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>
+                          Menampilkan <span className="font-medium text-foreground">{Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)}</span> dari <span className="font-medium text-foreground">{totalFiltered}</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="hidden sm:inline">Per halaman:</span>
+                          <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                            <SelectTrigger className="w-[70px] h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="25">25</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setPage((p) => Math.max(1, p - 1))}
+                              aria-disabled={page === 1}
+                              className="h-8 text-xs"
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: Math.max(1, Math.ceil(totalFiltered / pageSize)) }).slice(0, 5).map((_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  isActive={page === pageNum}
+                                  onClick={() => setPage(pageNum)}
+                                  className="h-8 w-8 text-xs"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setPage((p) => (p * pageSize < totalFiltered ? p + 1 : p))}
+                              aria-disabled={page * pageSize >= totalFiltered}
+                              className="h-8 text-xs"
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus Laporan</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => reportToDelete && deleteReport(reportToDelete)}
+                    disabled={deleting}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    {deleting ? 'Menghapus...' : 'Hapus'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Detail Drawer */}
+            <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
+              <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden">
+                <DrawerErrorBoundary>
+                  <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
+                    <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex flex-col flex-1 overflow-hidden">
+                      <AdminDetail
+                        selectedReport={selectedReport}
+                        fullReport={fullReport}
+                        detailLoading={detailLoading}
+                        editTitle={editTitle}
+                        setEditTitle={setEditTitle}
+                        editSeverity={editSeverity}
+                        setEditSeverity={setEditSeverity}
+                        renderStatusBadge={renderStatusBadge}
+                        formatDateTime={formatDateTime}
+                        editResolution={editResolution}
+                        setEditResolution={setEditResolution}
+                        logsLoading={logsLoading}
+                        logs={logs}
+                        summarizeLog={summarizeLog}
+                        saveEdits={saveEdits}
+                        saving={saving}
+                      />
+                    </div>
+                  </Suspense>
+                </DrawerErrorBoundary>
+              </DrawerContent>
+            </Drawer>
+          </TabsContent>
+          <TabsContent value="insights" className="mt-0">
+            <div className="mb-4 flex items-center gap-3">
+              <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 hari</SelectItem>
+                  <SelectItem value="30">30 hari</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </TabsContent>
+            {chartLoading || !chartInitialized || !statsInitialized ? (
+              <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat data insight...</div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
+                {/* Chart Tren Laporan */}
+                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                  <CardHeader className="pb-2 fade-in">
+                    <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="fade-in">
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ reports: { label: 'Laporan', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length / 8) - 1)} height={52} tickMargin={6} />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Line type="monotone" dataKey="count" stroke="var(--color-reports)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                      <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      {chartDaily.length === 0 && !chartLoading && (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                {/* Chart Kategori Terbanyak */}
+                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                  <CardHeader className="pb-2 fade-in">
+                    <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="fade-in">
+                    <div className="relative">
+                      <ChartContainer
+                        config={{ count: { label: 'Jumlah', color: 'hsl(var(--primary))' } }}
+                        className="h-56 sm:h-64 md:h-72"
+                        withAspect={false}
+                      >
+                        <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
+                          <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            axisLine={false}
+                            angle={-30}
+                            textAnchor="end"
+                            interval={0}
+                            height={52}
+                            tickMargin={6}
+                            tick={({ x, y, payload }) => (
+                              <text
+                                x={x}
+                                y={y}
+                                fontSize={12}
+                                textAnchor="end"
+                                transform={`rotate(-30,${x},${y})`}
+                                fill="#64748b"
+                              >
+                                {payload.value.length > 12 ? payload.value.slice(0, 11) + '…' : payload.value}
+                              </text>
+                            )}
+                          />
+                          <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
+                          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                          <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                        </BarChart>
+                      </ChartContainer>
+                      <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      {chartByCategory.length === 0 && !chartLoading && (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground text-sm absolute inset-0">Tidak ada data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="geo" className="mt-0">
             <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Geo Data Manager...</div>}>
@@ -1703,27 +1699,27 @@ const AdminDetail = lazy(async () => {
       saveEdits: () => Promise<void> | void;
       saving: boolean;
     }) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+      const [lightboxOpen, setLightboxOpen] = useState(false);
+      const [activePhotoIndex, setActivePhotoIndex] = useState(0);
       return (
-          <div className="flex flex-col h-full overflow-hidden">
-            <DrawerHeader className="text-left pb-3 border-b flex-shrink-0">
-              <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
-              <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
-            </DrawerHeader>
-            {/* Scrollable detail area for Windows compatibility */}
-            <div
-              className="flex-1 overflow-y-auto px-6 py-4"
-              style={{
-                overscrollBehavior: 'contain',
-                scrollbarColor: '#cbd5e1 #f1f5f9',
-                scrollbarWidth: 'thin',
-              }}
-            >
-              {!selectedReport ? (
-                <div className="text-sm text-muted-foreground py-8 text-center">Data laporan tidak tersedia.</div>
-              ) : (
-                <div className="space-y-5">
+        <div className="flex flex-col h-full overflow-hidden">
+          <DrawerHeader className="text-left pb-3 border-b flex-shrink-0">
+            <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
+            <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
+          </DrawerHeader>
+          {/* Scrollable detail area for Windows compatibility */}
+          <div
+            className="flex-1 overflow-y-auto px-6 py-4"
+            style={{
+              overscrollBehavior: 'contain',
+              scrollbarColor: '#cbd5e1 #f1f5f9',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {!selectedReport ? (
+              <div className="text-sm text-muted-foreground py-8 text-center">Data laporan tidak tersedia.</div>
+            ) : (
+              <div className="space-y-5">
                 {/* Judul Section */}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Judul Laporan</label>
@@ -1957,8 +1953,8 @@ const AdminDetail = lazy(async () => {
               </div>
             </div>
           </DrawerFooter>
-          </div>
-        );
+        </div>
+      );
     }
   };
 });

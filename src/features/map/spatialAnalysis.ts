@@ -3,8 +3,8 @@
  * Provides buffer, proximity, density, and statistical analysis
  */
 
-import * as turf from '@turf/turf';
-import type { Feature, Point, Polygon, FeatureCollection } from 'geojson';
+import { point, buffer, featureCollection, distance, bearing, hexGrid, booleanPointInPolygon, centroid, polygon } from '@turf/turf';
+import type { Feature, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 
 export interface BufferOptions {
   radius: number; // in kilometers
@@ -36,25 +36,27 @@ export interface SpatialStats {
  * Create buffer zone around point(s)
  */
 export function createBuffer(
-  point: [number, number] | [number, number][],
+  coords: [number, number] | [number, number][],
   options: BufferOptions
 ): FeatureCollection {
   const { radius, units = 'kilometers', steps = 64 } = options;
-  
-  if (Array.isArray(point[0])) {
+
+  if (Array.isArray(coords[0])) {
     // Multiple points
-    const features = (point as [number, number][]).map((pt, idx) => {
-      const p = turf.point(pt);
-      const buffered = turf.buffer(p, radius, { units, steps });
-      return { ...buffered, id: `buffer-${idx}` };
-    });
-    return turf.featureCollection(features);
+    const features = (coords as [number, number][]).map((pt, idx) => {
+      const p = point(pt);
+      const buffered = buffer(p, radius, { units, steps });
+      if (!buffered) return null;
+      return { ...buffered, id: `buffer-${idx}` } as Feature<Polygon | MultiPolygon>;
+    }).filter((f): f is Feature<Polygon | MultiPolygon> => f !== null);
+    return featureCollection(features);
   }
-  
+
   // Single point
-  const p = turf.point(point as [number, number]);
-  const buffered = turf.buffer(p, radius, { units, steps });
-  return turf.featureCollection([buffered]);
+  const p = point(coords as [number, number]);
+  const buffered = buffer(p, radius, { units, steps });
+  if (!buffered) return featureCollection([]);
+  return featureCollection([buffered as Feature<Polygon | MultiPolygon>]);
 }
 
 /**
@@ -66,14 +68,14 @@ export function findWithinRadius(
   radius: number,
   units: 'kilometers' | 'meters' = 'kilometers'
 ): ProximityResult[] {
-  const from = turf.point(target);
-  
+  const from = point(target);
+
   return points
     .map(({ id, coords }) => {
-      const to = turf.point(coords);
-      const distance = turf.distance(from, to, { units });
-      const bearing = turf.bearing(from, to);
-      return { id, distance, bearing };
+      const to = point(coords);
+      const dist = distance(from, to, { units });
+      const brng = bearing(from, to);
+      return { id, distance: dist, bearing: brng };
     })
     .filter(r => r.distance <= radius)
     .sort((a, b) => a.distance - b.distance);
@@ -86,20 +88,20 @@ export function calculateNearestNeighbors(
   points: Array<{ id: string; coords: [number, number] }>
 ): Array<{ id: string; nearestId: string; distance: number }> {
   return points.map(({ id, coords }) => {
-    const from = turf.point(coords);
+    const from = point(coords);
     let minDist = Infinity;
     let nearestId = '';
-    
+
     points.forEach(other => {
       if (other.id === id) return;
-      const to = turf.point(other.coords);
-      const dist = turf.distance(from, to, { units: 'kilometers' });
+      const to = point(other.coords);
+      const dist = distance(from, to, { units: 'kilometers' });
       if (dist < minDist) {
         minDist = dist;
         nearestId = other.id;
       }
     });
-    
+
     return { id, nearestId, distance: minDist };
   });
 }
@@ -112,7 +114,7 @@ export function createHexGrid(
   cellSize: number,
   units: 'kilometers' | 'meters' = 'kilometers'
 ): FeatureCollection {
-  return turf.hexGrid(bbox, cellSize, { units });
+  return hexGrid(bbox, cellSize, { units });
 }
 
 /**
@@ -123,17 +125,17 @@ export function calculateDensity(
   grid: FeatureCollection
 ): DensityCell[] {
   const cells: DensityCell[] = [];
-  
+
   grid.features.forEach((cell, idx) => {
     let count = 0;
     points.forEach(pt => {
-      const point = turf.point(pt);
-      if (turf.booleanPointInPolygon(point, cell as Feature<Polygon>)) {
+      const p = point(pt);
+      if (booleanPointInPolygon(p, cell as Feature<Polygon>)) {
         count++;
       }
     });
-    
-    const center = turf.centroid(cell);
+
+    const center = centroid(cell);
     cells.push({
       id: `cell-${idx}`,
       count,
@@ -141,7 +143,7 @@ export function calculateDensity(
       center: center.geometry.coordinates as [number, number],
     });
   });
-  
+
   return cells.filter(c => c.count > 0);
 }
 
@@ -161,26 +163,26 @@ export function calculateNearestNeighborIndex(
       clustered: false,
     };
   }
-  
+
   // Calculate observed mean nearest neighbor distance
   const neighbors = calculateNearestNeighbors(
     points.map((coords, i) => ({ id: `${i}`, coords }))
   );
-  
+
   const distances = neighbors.map(n => n.distance);
   const observedMean = distances.reduce((a, b) => a + b, 0) / distances.length;
-  
+
   // Calculate expected mean distance for random distribution
   const density = points.length / studyAreaKm2;
   const expectedMean = 0.5 / Math.sqrt(density);
-  
+
   // Calculate NNI
   const nni = observedMean / expectedMean;
-  
+
   // Standard deviation
   const variance = distances.reduce((sum, d) => sum + Math.pow(d - observedMean, 2), 0) / distances.length;
   const stdDev = Math.sqrt(variance);
-  
+
   return {
     nearestNeighborIndex: nni,
     meanDistance: observedMean,
@@ -194,17 +196,17 @@ export function calculateNearestNeighborIndex(
  */
 export function calculateBBox(points: [number, number][]): [number, number, number, number] {
   if (points.length === 0) return [0, 0, 0, 0];
-  
+
   let minLng = Infinity, minLat = Infinity;
   let maxLng = -Infinity, maxLat = -Infinity;
-  
+
   points.forEach(([lng, lat]) => {
     if (lng < minLng) minLng = lng;
     if (lng > maxLng) maxLng = lng;
     if (lat < minLat) minLat = lat;
     if (lat > maxLat) maxLat = lat;
   });
-  
+
   return [minLng, minLat, maxLng, maxLat];
 }
 
@@ -217,47 +219,47 @@ export function kernelDensity(
   gridSize: number = 50
 ): DensityCell[] {
   if (points.length === 0) return [];
-  
+
   const bbox = calculateBBox(points);
   const [minLng, minLat, maxLng, maxLat] = bbox;
-  
+
   const lngStep = (maxLng - minLng) / gridSize;
   const latStep = (maxLat - minLat) / gridSize;
-  
+
   const cells: DensityCell[] = [];
-  
+
   for (let i = 0; i < gridSize; i++) {
     for (let j = 0; j < gridSize; j++) {
       const lng = minLng + i * lngStep;
       const lat = minLat + j * latStep;
       const center: [number, number] = [lng + lngStep / 2, lat + latStep / 2];
-      
+
       // Calculate density at this cell
       let density = 0;
       points.forEach(pt => {
-        const dist = turf.distance(turf.point(center), turf.point(pt), { units: 'kilometers' });
+        const dist = distance(point(center), point(pt), { units: 'kilometers' });
         // Gaussian kernel
         density += Math.exp(-0.5 * Math.pow(dist / bandwidth, 2));
       });
-      
+
       if (density > 0.01) {
-        const polygon = turf.polygon([[
+        const poly = polygon([[
           [lng, lat],
           [lng + lngStep, lat],
           [lng + lngStep, lat + latStep],
           [lng, lat + latStep],
           [lng, lat],
         ]]);
-        
+
         cells.push({
           id: `kde-${i}-${j}`,
           count: Math.round(density * 100),
-          geometry: polygon.geometry,
+          geometry: poly.geometry as Polygon,
           center,
         });
       }
     }
   }
-  
+
   return cells;
 }

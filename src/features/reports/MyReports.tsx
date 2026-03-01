@@ -14,16 +14,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
 import { ReportDetailDrawer } from '@/features/map/ReportDetailDrawer';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import EmptyState from '@/components/common/EmptyState';
 // Sync button removed per request
 
 type ReportRow = {
   id: string;
-  title: string | null;
-  description: string | null;
-  category: string | null;
-  status: string | null;
+  title: string;
+  description: string;
+  category: 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya';
+  status: 'baru' | 'diproses' | 'selesai';
   incident_date: string | null;
   created_at: string;
   user_id: string;
@@ -32,12 +31,12 @@ type ReportRow = {
   location_name: string | null;
   photo_url: string | null;
   photo_urls: string[] | null;
-  severity?: 'ringan' | 'sedang' | 'berat' | null;
-  resolution?: string | null;
-  reporter_name?: string | null;
-  phone?: string | null;
-  kecamatan?: string | null;
-  desa?: string | null;
+  severity: 'ringan' | 'sedang' | 'berat' | null;
+  resolution: string | null;
+  reporter_name: string | null;
+  phone: string | null;
+  kecamatan: string | null;
+  desa: string | null;
 };
 
 const categoryLabels: Record<string, string> = {
@@ -91,10 +90,9 @@ export default function MyReports() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (where.status !== 'all') query = query.eq('status', where.status);
-      if (where.category !== 'all') query = query.eq('category', where.category);
-      if (where.q) query = query.ilike('title', `%${where.q}%`);
-
+      if (where.status !== 'all') query = query.eq('status', where.status as unknown as 'baru' | 'diproses' | 'selesai');
+      if (where.category !== 'all') query = query.eq('category', where.category as unknown as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya');
+      if (where.q) query = query.ilike('title', `% ${where.q}% `);
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       query = query.range(from, to);
@@ -116,9 +114,9 @@ export default function MyReports() {
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .range(from, to);
-            if (where.status !== 'all') q = q.eq('status', where.status);
-            if (where.category !== 'all') q = q.eq('category', where.category);
-            if (where.q) q = q.ilike('title', `%${where.q}%`);
+            if (where.status !== 'all') q = q.eq('status', where.status as unknown as 'baru' | 'diproses' | 'selesai');
+            if (where.category !== 'all') q = q.eq('category', where.category as unknown as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya');
+            if (where.q) q = q.ilike('title', `% ${where.q}% `);
             return await q;
           };
 
@@ -128,8 +126,8 @@ export default function MyReports() {
             // Fallback B: minimal
             attempt = await trySelect('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url');
           }
-          data = attempt.data as unknown[] | null;
-          error = attempt.error as unknown as Error | null;
+          data = attempt.data as unknown as ReportRow[];
+          error = attempt.error;
           count = attempt.count ?? 0;
           if (error) throw error;
         } else {
@@ -149,10 +147,10 @@ export default function MyReports() {
         const rr = r as PartialRow;
         const row: ReportRow = {
           id: rr.id,
-          title: (rr.title as string) ?? null,
-          description: (rr.description as string) ?? null,
-          category: (rr.category as string) ?? null,
-          status: (rr.status as string) ?? null,
+          title: (rr.title as string) ?? 'Tanpa Judul',
+          description: (rr.description as string) ?? 'Tidak ada deskripsi',
+          category: (rr.category as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya') ?? 'lainnya',
+          status: (rr.status as 'baru' | 'diproses' | 'selesai') ?? 'baru',
           incident_date: (rr.incident_date as string) ?? null,
           created_at: rr.created_at,
           user_id: rr.user_id,
@@ -161,7 +159,7 @@ export default function MyReports() {
           location_name: (rr.location_name as string) ?? null,
           photo_url: (rr.photo_url as string) ?? null,
           photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
-          severity: (rr.severity as ReportRow['severity']) ?? null,
+          severity: rr.severity as 'ringan' | 'sedang' | 'berat' | null,
           resolution: (rr.resolution as string | null | undefined) ?? null,
           reporter_name: (rr.reporter_name as string | null | undefined) ?? null,
           phone: (rr.phone as string | null | undefined) ?? null,
@@ -192,7 +190,7 @@ export default function MyReports() {
       .channel('myreports-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'reports', filter: `user_id = eq.${user.id} ` },
         () => { void loadData(); }
       )
       .subscribe();
@@ -299,7 +297,7 @@ export default function MyReports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((r) => (
+                  {rows.map((r: ReportRow) => (
                     <TableRow key={r.id}>
                       <TableCell className="max-w-[12rem] md:max-w-[20rem] px-2 md:px-4">
                         <div className="font-medium line-clamp-2 text-xs md:text-sm">{r.title ?? 'Tanpa judul'}</div>
@@ -357,11 +355,11 @@ export default function MyReports() {
       {/* Floating detail card, sama seperti MapView */}
       {selectedReport && (
         <div
-          className={`fixed z-[1300] flex justify-center items-end md:items-start inset-0 pointer-events-none`}
+          className={`fixed z - [1300] flex justify - center items - end md: items - start inset - 0 pointer - events - none`}
         >
           <div
             className={
-              `pointer-events-auto w-full max-w-[42rem] bg-background/95 rounded-xl shadow-lg border border-border/70 ` +
+              `pointer - events - auto w - full max - w - [42rem] bg - background / 95 rounded - xl shadow - lg border border - border / 70 ` +
               (window.innerWidth < 768
                 ? 'mx-2 mb-20' // mobile: margin horizontal dan bawah
                 : 'mt-28 ml-4') // desktop: margin atas dan kiri
@@ -375,7 +373,7 @@ export default function MyReports() {
             }}
           >
             <ReportDetailDrawer
-              report={selectedReport}
+              report={selectedReport as ReportRow}
               onClose={() => setSelectedReport(null)}
             />
           </div>
