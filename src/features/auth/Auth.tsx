@@ -168,7 +168,7 @@ const Auth = () => {
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-center">
-          <div className="mb-8 p-6 bg-blue-500/10 backdrop-blur-sm rounded-3xl border border-blue-500/20 shadow-2xl">
+          <div className="mb-8 p-6 bg-primary/10 backdrop-blur-sm rounded-3xl border border-primary/20 shadow-2xl">
             <Waves className="w-24 h-24 text-blue-400" />
           </div>
           <h1 className="text-6xl font-bold text-white mb-6 tracking-tight">SIPASDA</h1>
@@ -187,7 +187,7 @@ const Auth = () => {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex flex-col items-center mb-8">
-            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 mb-4">
+            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 mb-4">
               <Waves className="w-12 h-12 text-blue-400" />
             </div>
             <h1 className="text-2xl font-bold text-white">SIPASDA</h1>
@@ -323,7 +323,7 @@ const Auth = () => {
                       id="remember"
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                      className="border-slate-600 data-[state=checked]:bg-blue-600"
+                      className="border-slate-600 data-[state=checked]:bg-primary"
                     />
                     <label htmlFor="remember" className="text-sm text-slate-400 cursor-pointer">
                       Ingat saya

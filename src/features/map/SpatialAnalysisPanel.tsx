@@ -194,9 +194,9 @@ export function SpatialAnalysisPanel({
             </div>
 
             {selectedPoint && (
-              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded p-2 text-xs">
-                <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Titik Terpilih:</div>
-                <div className="text-blue-700 dark:text-blue-300 font-mono">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded p-2 text-xs">
+                <div className="font-semibold text-primary dark:text-blue-100 mb-1">Titik Terpilih:</div>
+                <div className="text-primary dark:text-blue-300 font-mono">
                   {selectedPoint[0].toFixed(6)}, {selectedPoint[1].toFixed(6)}
                 </div>
               </div>
@@ -298,9 +298,9 @@ export function SpatialAnalysisPanel({
             </div>
 
             {selectedPoint && (
-              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded p-2 text-xs">
-                <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Titik Referensi:</div>
-                <div className="text-blue-700 dark:text-blue-300 font-mono">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded p-2 text-xs">
+                <div className="font-semibold text-primary dark:text-blue-100 mb-1">Titik Referensi:</div>
+                <div className="text-primary dark:text-blue-300 font-mono">
                   {selectedPoint[0].toFixed(6)}, {selectedPoint[1].toFixed(6)}
                 </div>
               </div>

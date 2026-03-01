@@ -39,7 +39,7 @@ export const SystemSettings = () => {
     <Card className="shadow-sm hover:shadow-md transition-shadow">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-gray-500" />
+          <Wrench className="h-5 w-5 text-muted-foreground" />
           Sistem & Performa
         </CardTitle>
         <CardDescription>Monitor kesehatan dan optimasi sistem</CardDescription>
@@ -50,9 +50,9 @@ export const SystemSettings = () => {
             <div className="text-2xl font-bold text-green-700 dark:text-green-300">{metrics.uptime}</div>
             <div className="text-xs text-green-600 dark:text-green-400 mt-1">Uptime</div>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{metrics.responseTime}</div>
-            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Response Time</div>
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-primary">
+            <div className="text-2xl font-bold text-primary dark:text-blue-300">{metrics.responseTime}</div>
+            <div className="text-xs text-primary dark:text-blue-400 mt-1">Response Time</div>
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
             <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{metrics.storage}</div>

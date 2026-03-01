@@ -412,8 +412,8 @@ export const NotificationSettings = () => {
                 <h4 className="text-sm font-semibold">Template Notifikasi</h4>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <p className="text-xs text-blue-900 dark:text-blue-100">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
+                <p className="text-xs text-primary dark:text-blue-100">
                   💡 Gunakan placeholder: {'{title}'}, {'{reporter}'}, {'{status}'}, {'{category}'}
                 </p>
               </div>

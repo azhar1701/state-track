@@ -17,12 +17,12 @@ export default function BottomCTA() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center mt-6 md:mt-8">
             <Link to="/report">
-              <Button size="lg" className="gap-2 w-full sm:w-auto bg-white text-blue-600 hover:bg-white/90 shadow-xl rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
+              <Button size="lg" className="gap-2 w-full sm:w-auto bg-white text-primary hover:bg-white/90 shadow-xl rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
                 <FileText className="w-5 h-5" /> Buat Laporan
               </Button>
             </Link>
             <Link to="/map">
-              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto border-2 border-white bg-white text-blue-600 hover:bg-white/90 rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
+              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto border-2 border-white bg-white text-primary hover:bg-white/90 rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
                 <MapIcon className="w-5 h-5" /> Lihat Peta
               </Button>
             </Link>

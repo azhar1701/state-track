@@ -466,10 +466,10 @@ export const SecuritySettings = () => {
                 </p>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="text-xs text-blue-900 dark:text-blue-100">
+                  <Clock className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
+                  <div className="text-xs text-primary dark:text-blue-100">
                     <strong>Info:</strong> Audit log dapat diakses di tab Activity Log pada dashboard admin.
                     Log mencakup timestamp, user, action, dan detail perubahan.
                   </div>

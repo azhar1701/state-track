@@ -134,7 +134,7 @@ const Home = () => {
       {/* Animated Background Mesh */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-background to-teal-500/5" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
@@ -142,7 +142,7 @@ const Home = () => {
       <section className="container py-12 md:py-20 lg:py-28 px-4">
         <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-8">
           <div className="inline-flex p-3 md:p-4 bg-gradient-to-br from-blue-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl mb-2 shadow-lg border border-white/10 animate-[page-enter_0.6s_ease-out]">
-            <MapPin className="w-10 h-10 md:w-12 md:h-12 text-blue-500" />
+            <MapPin className="w-10 h-10 md:w-12 md:h-12 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out] leading-tight">
             Sistem Informasi Pelaporan SDA
@@ -187,14 +187,14 @@ const Home = () => {
       {/* Stats Section */}
       <section className="container py-12 md:py-16 lg:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6 max-w-6xl mx-auto px-2 md:px-4">
-          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-blue-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+          <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <div className="flex items-center justify-center mb-2 md:mb-4">
-              <div className="p-2 md:p-3 bg-blue-500/20 rounded-lg md:rounded-xl">
-                <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500" />
+              <div className="p-2 md:p-3 bg-primary/20 rounded-lg md:rounded-xl">
+                <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-3xl md:text-4xl font-bold text-blue-500">{stats.total}</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary">{stats.total}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Total Laporan</div>
             </div>
           </div>
@@ -325,9 +325,9 @@ const Home = () => {
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-16">Fitur Unggulan</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-blue-500/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+            <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-primary/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
-                <FileText className="w-10 h-10 text-blue-500" />
+                <FileText className="w-10 h-10 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">Laporan Mudah</h3>
               <p className="text-muted-foreground leading-relaxed">

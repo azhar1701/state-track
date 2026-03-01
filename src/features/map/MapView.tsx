@@ -1683,13 +1683,13 @@ const MapView = () => {
 
             <div className="flex items-center gap-3">
               {categoryCounts.length > 0 && (
-                <div className="px-4 py-2 bg-blue-50/80 dark:bg-blue-950/30 backdrop-blur-sm rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Kategori Teratas</p>
+                <div className="px-4 py-2 bg-blue-50/80 dark:bg-primary/20 backdrop-blur-sm rounded-lg border border-blue-200 dark:border-primary">
+                  <p className="text-xs text-primary dark:text-blue-400 font-medium mb-1">Kategori Teratas</p>
                   <div className="flex gap-3">
                     {categoryCounts.map(([cat, count]) => (
                       <div key={cat} className="text-xs">
-                        <span className="font-semibold text-blue-900 dark:text-blue-100">{count}</span>
-                        <span className="text-blue-600 dark:text-blue-400 ml-1">{cat}</span>
+                        <span className="font-semibold text-primary dark:text-blue-100">{count}</span>
+                        <span className="text-primary dark:text-blue-400 ml-1">{cat}</span>
                       </div>
                     ))}
                   </div>

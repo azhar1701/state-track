@@ -9,16 +9,17 @@ All colors MUST be HSL.
 */
 
 @layer utilities {
+
   /* Fluid Padding */
   .p-fluid {
     padding: clamp(1rem, 2vw, 2rem);
   }
-  
+
   .px-fluid {
     padding-left: clamp(1rem, 2vw, 2rem);
     padding-right: clamp(1rem, 2vw, 2rem);
   }
-  
+
   .py-fluid {
     padding-top: clamp(1rem, 2vw, 2rem);
     padding-bottom: clamp(1rem, 2vw, 2rem);
@@ -33,11 +34,11 @@ All colors MUST be HSL.
   .pt-safe {
     padding-top: max(1rem, env(safe-area-inset-top));
   }
-  
+
   .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
-  
+
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -54,123 +55,146 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 215 25% 15%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 215 70% 50%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 215 70% 45%;
+    /* SDA Deep Blue */
+    --primary: 216 100% 35%;
+    --primary-foreground: 210 40% 98%;
+    --primary-hover: 216 100% 30%;
 
-    --secondary: 142 65% 45%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-hover: 142 65% 40%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --secondary-hover: 210 40% 90%;
 
-    --accent: 35 90% 55%;
-    --accent-foreground: 0 0% 100%;
-    --accent-hover: 35 90% 50%;
+    /* SDA Gold/Yellow */
+    --accent: 45 100% 50%;
+    --accent-foreground: 222 47% 11%;
+    --accent-hover: 45 100% 45%;
 
-    --muted: 210 30% 95%;
-    --muted-foreground: 215 20% 40%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 215 20% 88%;
-    --input: 215 20% 88%;
-    --ring: 215 70% 50%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 45 100% 50%;
+    /* Gold ring for focus */
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
+    /* Strict institutional radius */
 
-    --gradient-hero: linear-gradient(135deg, hsl(215 70% 50%), hsl(215 70% 60%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 30% 98%));
-    
-    --shadow-sm: 0 1px 2px 0 hsl(215 20% 20% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 20% 20% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(215 20% 20% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(215 20% 20% / 0.1);
-    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.06);
-    --shadow-float: 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 8px 32px -4px rgba(0, 0, 0, 0.08);
-    --shadow-lifted: 0 8px 24px -4px rgba(0, 0, 0, 0.12), 0 16px 48px -8px rgba(0, 0, 0, 0.1);
+    --gradient-hero: linear-gradient(135deg, hsl(216 100% 35%), hsl(216 100% 45%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 4px 16px -4px rgba(0, 0, 0, 0.03);
+    --shadow-float: 0 4px 16px -2px rgba(0, 0, 0, 0.08), 0 8px 32px -4px rgba(0, 0, 0, 0.06);
+    --shadow-lifted: 0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 16px 48px -8px rgba(0, 0, 0, 0.08);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Typography scale */
     --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    --text-xs: 0.75rem;   /* 12px */
-    --text-sm: 0.875rem;  /* 14px */
-    --text-base: 1rem;    /* 16px */
-    --text-md: 1.125rem;  /* 18px */
-    --text-lg: 1.25rem;   /* 20px */
-    --text-xl: 1.5rem;    /* 24px */
-    --text-2xl: 1.875rem; /* 30px */
+    --text-xs: 0.75rem;
+    /* 12px */
+    --text-sm: 0.875rem;
+    /* 14px */
+    --text-base: 1rem;
+    /* 16px */
+    --text-md: 1.125rem;
+    /* 18px */
+    --text-lg: 1.25rem;
+    /* 20px */
+    --text-xl: 1.5rem;
+    /* 24px */
+    --text-2xl: 1.875rem;
+    /* 30px */
     --leading-tight: 1.25;
     --leading-normal: 1.5;
 
     /* Spacing scale */
     --space-0: 0;
-    --space-1: 0.25rem; /* 4 */
-    --space-2: 0.5rem;  /* 8 */
-    --space-3: 0.75rem; /* 12 */
-    --space-4: 1rem;    /* 16 */
-    --space-5: 1.25rem; /* 20 */
-    --space-6: 1.5rem;  /* 24 */
-    --space-8: 2rem;    /* 32 */
-    --space-10: 2.5rem; /* 40 */
-    --space-12: 3rem;   /* 48 */
+    --space-1: 0.25rem;
+    /* 4 */
+    --space-2: 0.5rem;
+    /* 8 */
+    --space-3: 0.75rem;
+    /* 12 */
+    --space-4: 1rem;
+    /* 16 */
+    --space-5: 1.25rem;
+    /* 20 */
+    --space-6: 1.5rem;
+    /* 24 */
+    --space-8: 2rem;
+    /* 32 */
+    --space-10: 2.5rem;
+    /* 40 */
+    --space-12: 3rem;
+    /* 48 */
 
     /* Glassmorphism Mesh Gradient Background */
     --glass-bg: radial-gradient(at 0% 0%, hsl(215 70% 95%) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, hsl(142 65% 92%) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, hsl(35 90% 92%) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsl(215 70% 90%) 0px, transparent 50%);
+      radial-gradient(at 100% 0%, hsl(142 65% 92%) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(35 90% 92%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(215 70% 90%) 0px, transparent 50%);
   }
 
   .dark {
-    --background: 215 30% 8%;
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 215 25% 12%;
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 215 25% 12%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 215 70% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 215 70% 60%;
+    --primary: 216 100% 45%;
+    /* Slightly lighter deep blue for dark mode contrast */
+    --primary-foreground: 210 40% 98%;
+    --primary-hover: 216 100% 50%;
 
-    --secondary: 142 65% 50%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-hover: 142 65% 55%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --secondary-hover: 217.2 32.6% 22.5%;
 
-    --accent: 35 90% 60%;
-    --accent-foreground: 0 0% 100%;
-    --accent-hover: 35 90% 65%;
+    --accent: 45 100% 50%;
+    /* Gold */
+    --accent-foreground: 222 47% 11%;
+    --accent-hover: 45 100% 45%;
 
-    --muted: 215 20% 18%;
-    --muted-foreground: 215 15% 70%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 215 20% 20%;
-    --input: 215 20% 20%;
-    --ring: 215 70% 55%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 45 100% 50%;
+    /* Gold ring */
 
-    --gradient-hero: linear-gradient(135deg, hsl(215 70% 55%), hsl(215 70% 65%));
-    --gradient-card: linear-gradient(180deg, hsl(215 25% 12%), hsl(215 25% 15%));
+    --gradient-hero: linear-gradient(135deg, hsl(216 100% 45%), hsl(216 100% 55%));
+    --gradient-card: linear-gradient(180deg, hsl(222 47% 11%), hsl(222 47% 13%));
 
     /* Dark Mode Mesh Gradient */
     --glass-bg: radial-gradient(at 0% 0%, hsl(215 70% 15%) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, hsl(142 65% 12%) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, hsl(35 90% 12%) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsl(215 70% 10%) 0px, transparent 50%);
+      radial-gradient(at 100% 0%, hsl(142 65% 12%) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(35 90% 12%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(215 70% 10%) 0px, transparent 50%);
   }
 }
 
@@ -188,40 +212,102 @@ All colors MUST be HSL.
     background-attachment: fixed;
   }
 
-  h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); font-weight: 700; }
-  h2 { font-size: var(--text-xl); line-height: var(--leading-tight); font-weight: 600; }
-  h3 { font-size: var(--text-lg); line-height: var(--leading-tight); font-weight: 600; }
-  h4 { font-size: var(--text-md); line-height: var(--leading-tight); font-weight: 600; }
-  small { font-size: var(--text-xs); }
+  h1 {
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    line-height: var(--leading-tight);
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    line-height: var(--leading-tight);
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: var(--text-md);
+    line-height: var(--leading-tight);
+    font-weight: 600;
+  }
+
+  small {
+    font-size: var(--text-xs);
+  }
 }
 
 @layer components {
+
   /* Icon size utilities ensure consistent icon dimensions */
-  .icon-xs { width: 0.75rem; height: 0.75rem; }
-  .icon-sm { width: 1rem; height: 1rem; }
-  .icon-md { width: 1.25rem; height: 1.25rem; }
-  .icon-lg { width: 1.5rem; height: 1.5rem; }
+  .icon-xs {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .icon-sm {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .icon-md {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .icon-lg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
 
   /* Layout gap utilities for consistent spacing rhythm */
-  .gap-tight { gap: var(--space-2); }
-  .gap-regular { gap: var(--space-4); }
-  .gap-comfy { gap: var(--space-6); }
+  .gap-tight {
+    gap: var(--space-2);
+  }
+
+  .gap-regular {
+    gap: var(--space-4);
+  }
+
+  .gap-comfy {
+    gap: var(--space-6);
+  }
 
   /* Container padding utilities */
-  .container-x { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .container-x {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
   @media (min-width: 768px) {
-    .container-x { padding-left: var(--space-6); padding-right: var(--space-6); }
+    .container-x {
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
   }
 
   /* Modern shadow utilities */
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-float { box-shadow: var(--shadow-float); }
-  .shadow-lifted { box-shadow: var(--shadow-lifted); }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-float {
+    box-shadow: var(--shadow-float);
+  }
+
+  .shadow-lifted {
+    box-shadow: var(--shadow-lifted);
+  }
 
   /* Glassmorphism Foundation */
   .glass {
     @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-lifted;
   }
+
   .dark .glass {
     @apply bg-slate-900/30 border-white/10;
   }
@@ -229,6 +315,7 @@ All colors MUST be HSL.
   .glass-strong {
     @apply bg-white/20 backdrop-blur-xl border border-white/30 shadow-lifted;
   }
+
   .dark .glass-strong {
     @apply bg-slate-900/50 border-white/15;
   }
@@ -236,13 +323,14 @@ All colors MUST be HSL.
   .glass-subtle {
     @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-float;
   }
+
   .dark .glass-subtle {
     @apply bg-slate-900/20 border-white/5;
   }
 
   /* Glass Card - Primary Container */
   .glass-card {
-    @apply glass rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)];
+    @apply glass rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl;
   }
 
   /* Glass Modal/Overlay */
@@ -254,6 +342,7 @@ All colors MUST be HSL.
   .glass-input {
     @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2.5 text-foreground placeholder:text-white/50 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all;
   }
+
   .dark .glass-input {
     @apply bg-slate-900/30 border-white/10 focus:border-white/20;
   }
@@ -262,6 +351,7 @@ All colors MUST be HSL.
   .glass-btn {
     @apply bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-6 py-2.5 font-medium text-foreground hover:bg-white/25 hover:border-white/35 active:scale-95 transition-all shadow-float;
   }
+
   .dark .glass-btn {
     @apply bg-slate-900/40 border-white/15 hover:bg-slate-900/60 hover:border-white/25;
   }
@@ -279,6 +369,7 @@ All colors MUST be HSL.
   .glass-panel {
     @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-lifted;
   }
+
   .dark .glass-panel {
     @apply bg-slate-900/80 border-white/20;
   }
@@ -298,6 +389,7 @@ All colors MUST be HSL.
       opacity: 0;
       transform: translateY(8px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -325,7 +417,7 @@ All colors MUST be HSL.
   background: rgba(255, 255, 255, 0.15) !important;
   backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: #1e293b !important;
+  color: hsl(var(--primary)) !important;
   font-weight: 600 !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   width: 36px !important;
@@ -363,11 +455,12 @@ All colors MUST be HSL.
   /* Remove any default spacing to let line padding control the look */
   padding: 2px !important;
 }
+
 .leaflet-control-scale-line {
   background: rgba(255, 255, 255, 0.15) !important;
   backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: #1e293b !important;
+  color: hsl(var(--primary)) !important;
   font-size: 10px !important;
   line-height: 1.2 !important;
   font-weight: 600 !important;
@@ -380,8 +473,10 @@ All colors MUST be HSL.
   border-color: rgba(255, 255, 255, 0.15) !important;
   color: #f1f5f9 !important;
 }
+
 .leaflet-control-scale-line:not(:first-child) {
-  margin-top: 3px !important; /* tighter separation for minimal look */
+  margin-top: 3px !important;
+  /* tighter separation for minimal look */
 }
 
 
@@ -435,10 +530,12 @@ All colors MUST be HSL.
   width: 8px;
   background: #f1f5f9;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
@@ -446,9 +543,11 @@ All colors MUST be HSL.
 .dark::-webkit-scrollbar {
   background: #1e293b;
 }
+
 .dark::-webkit-scrollbar-thumb {
   background: #475569;
 }
+
 .dark::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }

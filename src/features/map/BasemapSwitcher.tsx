@@ -57,19 +57,19 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 hover:bg-white transition-all text-gray-800"
+          className="flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-border hover:bg-white transition-all text-foreground"
           aria-label="Basemap Switcher"
         >
           {basemapIcons[currentBasemap]}
-          <span className="text-sm font-medium text-gray-800">{basemaps[currentBasemap].name}</span>
+          <span className="text-sm font-medium text-foreground">{basemaps[currentBasemap].name}</span>
           <ChevronDown className={cn(
-            "w-4 h-4 transition-transform text-gray-600",
+            "w-4 h-4 transition-transform text-muted-foreground",
             isOpen && "rotate-180"
           )} />
         </button>
 
         {isOpen && (
-          <div className="absolute top-full right-0 mt-2 w-40 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+          <div className="absolute top-full right-0 mt-2 w-40 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-border overflow-hidden">
             {(Object.keys(basemaps) as BasemapType[]).map((key) => (
               <button
                 key={key}
@@ -77,8 +77,8 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors text-left",
                   currentBasemap === key
-                    ? "bg-blue-50 text-blue-600 font-medium"
-                    : "hover:bg-gray-50 text-gray-700"
+                    ? "bg-blue-50 text-primary font-medium"
+                    : "hover:bg-muted text-foreground"
                 )}
               >
                 {basemapIcons[key]}

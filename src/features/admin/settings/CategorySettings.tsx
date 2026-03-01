@@ -402,9 +402,9 @@ export const CategorySettings = () => {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{categories.length}</div>
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Total Kategori</div>
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-primary">
+                    <div className="text-2xl font-bold text-primary dark:text-blue-300">{categories.length}</div>
+                    <div className="text-xs text-primary dark:text-blue-400 mt-1">Total Kategori</div>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-4 border border-green-200 dark:border-green-800">
                     <div className="text-2xl font-bold text-green-700 dark:text-green-300">{activeCategories.length}</div>

@@ -374,7 +374,7 @@ export const BackupSettings = () => {
                   {backupInProgress ? (
                     <Loader2 className="mr-3 h-5 w-5 animate-spin" />
                   ) : (
-                    <Database className="mr-3 h-5 w-5 text-blue-500" />
+                    <Database className="mr-3 h-5 w-5 text-primary" />
                   )}
                   <div className="text-left">
                     <div className="font-semibold">Full Database</div>
@@ -423,10 +423,10 @@ export const BackupSettings = () => {
                 </Button>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="text-xs text-blue-900 dark:text-blue-100">
+                  <CheckCircle2 className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
+                  <div className="text-xs text-primary dark:text-blue-100">
                     <strong>Info:</strong> Backup akan diunduh sebagai file JSON. Simpan di lokasi aman dan
                     terpisah dari server.
                   </div>
@@ -648,10 +648,10 @@ export const BackupSettings = () => {
                 </p>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="text-xs text-blue-900 dark:text-blue-100">
+                  <CheckCircle2 className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
+                  <div className="text-xs text-primary dark:text-blue-100">
                     <strong>Catatan:</strong> Backup otomatis memerlukan cron job atau scheduled task di
                     server. Hubungi administrator sistem untuk setup.
                   </div>

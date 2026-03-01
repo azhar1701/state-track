@@ -46,7 +46,7 @@ const statusConfig = {
     icon: '◆',
   },
   diproses: { 
-    badge: 'bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-200/50 dark:border-blue-500/30',
+    badge: 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 border border-primary/30 dark:border-primary/30',
     label: 'Diproses',
     icon: '⟳',
   },
@@ -91,7 +91,7 @@ const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: {
   color?: 'blue' | 'purple' | 'amber' | 'emerald' | 'red';
 }) => {
   const colorMap = {
-    blue: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200/50 dark:border-blue-500/30',
+    blue: 'bg-blue-50 dark:bg-primary/10 border-primary/30 dark:border-primary/30',
     purple: 'bg-purple-50 dark:bg-purple-500/10 border-purple-200/50 dark:border-purple-500/30',
     amber: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200/50 dark:border-amber-500/30',
     emerald: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/30',
@@ -107,10 +107,10 @@ const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: {
     >
       <div className="flex-shrink-0 mt-0.5 text-lg opacity-70">{Icon}</div>
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
           {label}
         </div>
-        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-0.5 break-words leading-snug">
+        <div className="text-sm font-medium text-foreground dark:text-gray-100 mt-0.5 break-words leading-snug">
           {value}
         </div>
       </div>
@@ -198,11 +198,11 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-5 py-4"
+            className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-border/50 dark:border-border/50 px-5 py-4"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold leading-tight text-gray-900 dark:text-white line-clamp-2">
+                <h2 className="text-xl font-bold leading-tight text-foreground dark:text-white line-clamp-2">
                   {report.title || 'Tanpa Judul'}
                 </h2>
               </div>
@@ -212,7 +212,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                     variant="ghost" 
                     size="icon" 
                     onClick={handleShare} 
-                    className="h-8 w-8 hover:bg-blue-100/50 dark:hover:bg-blue-500/10"
+                    className="h-8 w-8 hover:bg-primary/20 dark:hover:bg-primary/10"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -222,7 +222,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                     variant="ghost" 
                     size="icon" 
                     onClick={onClose} 
-                    className="h-8 w-8 hover:bg-gray-100/50 dark:hover:bg-gray-700/50"
+                    className="h-8 w-8 hover:bg-muted/50 dark:hover:bg-muted/50"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -247,7 +247,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   {severityConf.icon} {severityConf.label}
                 </Badge>
               )}
-              <Badge variant="secondary" className="text-xs px-3 py-1 border border-gray-200/50 dark:border-gray-700/50">
+              <Badge variant="secondary" className="text-xs px-3 py-1 border border-border/50 dark:border-border/50">
                 {categoryLabels[report.category] || report.category}
               </Badge>
             </motion.div>
@@ -265,7 +265,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                 <div className="flex">
                   {photos.map((photo, i) => (
                     <div key={i} className="flex-[0_0_100%] min-w-0">
-                      <div className="aspect-video relative group bg-gray-200 dark:bg-gray-700">
+                      <div className="aspect-video relative group bg-muted dark:bg-gray-700">
                         <img
                           src={photo}
                           alt={`${report.title} ${i + 1}`}
@@ -373,9 +373,9 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.23 }}
-                className="space-y-2.5 pt-2 border-t border-gray-200/50 dark:border-gray-700/50"
+                className="space-y-2.5 pt-2 border-t border-border/50 dark:border-border/50"
               >
-                <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                <div className="text-sm font-semibold text-muted-foreground dark:text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-500 to-emerald-600" />
                   Informasi Pelapor
                 </div>
@@ -417,7 +417,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                 transition={{ delay: 0.26 }}
                 className="space-y-2.5"
               >
-                <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                <div className="text-sm font-semibold text-muted-foreground dark:text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-blue-600" />
                   Identifikasi Lokasi
                 </div>
@@ -450,12 +450,12 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
               transition={{ delay: 0.29 }}
               className="space-y-2"
             >
-              <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-2">
+              <div className="text-sm font-semibold text-muted-foreground dark:text-gray-300 flex items-center gap-2">
                 <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-blue-600" />
                 Deskripsi Laporan
               </div>
-              <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-200/50 dark:border-gray-700/30">
-                {report.description || <span className="italic text-gray-400">Tidak ada deskripsi.</span>}
+              <div className="text-sm text-foreground dark:text-gray-300 leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-muted/50 dark:bg-muted/30 border border-border/50 dark:border-border/30">
+                {report.description || <span className="italic text-muted-foreground">Tidak ada deskripsi.</span>}
               </div>
             </motion.div>
 
@@ -471,7 +471,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
                   <CheckCircle2 className="w-4 h-4" />
                   Respon Admin
                 </div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/30">
+                <div className="text-sm text-foreground dark:text-gray-300 leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/30">
                   {report.resolution}
                 </div>
               </motion.div>
@@ -484,7 +484,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.36 }}
-          className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-700/50 px-5 py-4 space-y-3"
+          className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-border/50 dark:border-border/50 px-5 py-4 space-y-3"
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button 
@@ -499,7 +499,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button 
                 variant="outline" 
-                className="w-full h-10 text-base font-medium hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                className="w-full h-10 text-base font-medium hover:bg-muted/50 dark:hover:bg-muted/50"
               >
                 Update Status
               </Button>

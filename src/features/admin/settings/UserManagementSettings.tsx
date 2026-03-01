@@ -275,7 +275,7 @@ export const UserManagementSettings = () => {
                 <div className="text-xs text-muted-foreground">Total Pengguna</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3 border">
-                <div className="text-2xl font-bold text-blue-600">{stats.admins}</div>
+                <div className="text-2xl font-bold text-primary">{stats.admins}</div>
                 <div className="text-xs text-muted-foreground">Administrator</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3 border">
@@ -464,10 +464,10 @@ export const UserManagementSettings = () => {
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="text-xs text-blue-900 dark:text-blue-100">
+                  <Shield className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
+                  <div className="text-xs text-primary dark:text-blue-100">
                     <strong>Catatan:</strong> Perubahan role akan berlaku segera. User yang di-promote
                     menjadi admin akan mendapat akses penuh ke admin panel.
                   </div>

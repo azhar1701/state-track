@@ -97,7 +97,7 @@ export const GeoLayerSettings = () => {
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Database className="h-5 w-5 text-blue-500" />
+                <Database className="h-5 w-5 text-primary" />
                 Pengaturan GeoLayer
               </CardTitle>
               <CardDescription className="mt-1.5">

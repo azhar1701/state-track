@@ -158,7 +158,7 @@ const AdminDashboard = () => {
   const renderStatusBadge = (status: ReportStatus) => {
     const cls =
       status === 'selesai' ? 'bg-green-600 text-white' :
-      status === 'diproses' ? 'bg-blue-600 text-white' :
+      status === 'diproses' ? 'bg-primary text-white' :
       'bg-amber-500 text-black';
     return <span className={`px-2 py-1 rounded text-xs ${cls}`}>{status}</span>;
   };
@@ -1045,7 +1045,7 @@ const AdminDashboard = () => {
             <CardHeader className="pb-2 pt-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Diproses</CardTitle>
-                <Loader2 className="w-4 h-4 text-blue-500/60" />
+                <Loader2 className="w-4 h-4 text-primary/60" />
               </div>
               <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
             </CardHeader>

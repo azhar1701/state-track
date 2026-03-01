@@ -151,8 +151,8 @@ export function RouteOptimizationPanel({
                     key={report.id}
                     className={`border rounded p-2 cursor-pointer transition-colors ${
                       selectedReports.has(report.id)
-                        ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-blue-50 dark:bg-primary/20 border-blue-300 dark:border-primary'
+                        : 'hover:bg-muted dark:hover:bg-muted'
                     }`}
                     onClick={() => toggleReport(report.id)}
                   >
@@ -166,8 +166,8 @@ export function RouteOptimizationPanel({
                       </div>
                       <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                         selectedReports.has(report.id)
-                          ? 'bg-blue-500 border-blue-500'
-                          : 'border-gray-300'
+                          ? 'bg-primary border-primary'
+                          : 'border-border'
                       }`}>
                         {selectedReports.has(report.id) && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -240,7 +240,7 @@ export function RouteOptimizationPanel({
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Petunjuk Arah:</Label>
                 {directions.map((dir, idx) => (
-                  <div key={idx} className="text-xs bg-gray-50 dark:bg-gray-800 rounded p-2">
+                  <div key={idx} className="text-xs bg-muted dark:bg-muted rounded p-2">
                     {dir}
                   </div>
                 ))}

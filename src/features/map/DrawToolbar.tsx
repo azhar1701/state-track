@@ -36,7 +36,7 @@ export function DrawToolbar({ visible, activeMode, map }: DrawToolbarProps) {
       id: 'Polygon', 
       icon: Hexagon, 
       label: 'Polygon',
-      color: 'text-blue-600',
+      color: 'text-primary',
       action: () => {
         map.pm.enableDraw('Polygon', { snappable: true, snapDistance: 20 });
       }

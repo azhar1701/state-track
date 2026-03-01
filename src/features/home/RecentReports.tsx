@@ -42,7 +42,7 @@ function StatusPill({ s }: { s: RecentItem["status"] }) {
     "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-700 border border-amber-500/40";
   if (s === "diproses") {
     cls =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-700 border border-blue-500/40";
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/20 text-primary border border-primary/40";
   } else if (s === "selesai") {
     cls =
       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/20 text-emerald-700 border border-emerald-500/40";
@@ -170,7 +170,7 @@ export default function RecentReports() {
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold">Laporan Terbaru</h3>
-        <Link to="/map" className="text-sm text-blue-500 hover:text-blue-400 font-medium transition-colors">
+        <Link to="/map" className="text-sm text-primary hover:text-blue-400 font-medium transition-colors">
           Lihat semua →
         </Link>
       </div>
@@ -195,15 +195,15 @@ export default function RecentReports() {
               const createdLabel = formatDateTime(it.created_at);
 
               return (
-                <div key={it.id} className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/30 rounded-xl p-4 transition-all duration-300 cursor-pointer hover:scale-[1.02]">
+                <div key={it.id} className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 rounded-xl p-4 transition-all duration-300 cursor-pointer hover:scale-[1.02]">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-blue-500" />
+                      <FileText className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1 flex-1">
-                          <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-blue-500 transition-colors">
+                          <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-primary transition-colors">
                             {it.title || "(Tanpa judul)"}
                           </h4>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">

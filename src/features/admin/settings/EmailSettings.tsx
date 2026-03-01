@@ -59,7 +59,7 @@ export const EmailSettings = () => {
     <Card className="shadow-sm hover:shadow-md transition-shadow">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5 text-blue-500" />
+          <Mail className="h-5 w-5 text-primary" />
           Email & Komunikasi
         </CardTitle>
         <CardDescription>Konfigurasi SMTP untuk notifikasi email</CardDescription>

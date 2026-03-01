@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 
 const items: Array<{ name: string; color: string; desc: string }> = [
   { name: "Baru", color: "bg-amber-500", desc: "Laporan baru dibuat dan menunggu peninjauan." },
-  { name: "Diproses", color: "bg-blue-600", desc: "Sedang ditindaklanjuti oleh petugas." },
+  { name: "Diproses", color: "bg-primary", desc: "Sedang ditindaklanjuti oleh petugas." },
   { name: "Selesai", color: "bg-green-600", desc: "Sudah ditangani atau dinyatakan tuntas." },
 ];
 

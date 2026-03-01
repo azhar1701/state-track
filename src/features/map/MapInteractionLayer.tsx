@@ -147,7 +147,7 @@ export function MapInteractionLayer({ activeMapTool, onPolygonDrawn, onMeasureme
         const label = L.tooltip({ 
           permanent: true, 
           direction: 'center', 
-          className: 'bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold border-2 border-white',
+          className: 'bg-primary text-white px-3 py-2 rounded-lg text-sm font-bold border-2 border-white',
           opacity: 1
         })
           .setLatLng(center)

@@ -31,40 +31,40 @@ const Navbar = memo(() => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md shadow-sm dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-900/20">
+    <nav className="sticky top-0 z-50 w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground backdrop-blur-md shadow-md">
       <div className="container flex h-16 items-center">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 mr-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
             <Map className="h-5 w-5 text-white" />
           </div>
-          <span className="hidden font-bold text-lg text-slate-800 dark:text-white sm:inline-block">SIPASDA</span>
+          <span className="hidden font-bold text-lg text-primary-foreground sm:inline-block tracking-wide">SIPASDA</span>
         </Link>
 
         {/* Desktop Nav */}
         {user && (
           <div className="hidden md:flex items-center gap-1 flex-1">
             <Link to="/">
-              <Button variant={isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "secondary" : "ghost"} size="sm" className="gap-2">
+              <Button variant={isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/") && !isActive("/map") && !isActive("/me") && !isActive("/admin") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
                 <Home className="h-4 w-4" />
                 Beranda
               </Button>
             </Link>
             <Link to="/map">
-              <Button variant={isActive("/map") ? "secondary" : "ghost"} size="sm" className="gap-2">
+              <Button variant={isActive("/map") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/map") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
                 <Map className="h-4 w-4" />
                 Peta
               </Button>
             </Link>
             <Link to="/me/reports">
-              <Button variant={isActive("/me/reports") ? "secondary" : "ghost"} size="sm" className="gap-2">
+              <Button variant={isActive("/me/reports") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/me/reports") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
                 <BarChart3 className="h-4 w-4" />
                 Laporan Saya
               </Button>
             </Link>
             {isAdmin && (
               <Link to="/admin">
-                <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" className="gap-2">
+                <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" className={`gap-2 ${isActive("/admin") ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}>
                   <LayoutDashboard className="h-4 w-4" />
                   Dashboard
                 </Button>
@@ -81,7 +81,7 @@ const Navbar = memo(() => {
           {user ? (
             <>
               <Link to="/report">
-                <Button size="sm" className="gap-2 hidden md:flex">
+                <Button size="sm" className="gap-2 hidden md:flex bg-accent text-accent-foreground hover:bg-accent/90 shadow-md">
                   <PlusCircle className="h-4 w-4" />
                   <span className="hidden sm:inline">Lapor</span>
                 </Button>
@@ -90,10 +90,10 @@ const Navbar = memo(() => {
               {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi">
+                  <Button variant="ghost" size="icon" className="relative text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Notifikasi">
                     <Bell className="h-4 w-4" />
                     {unreadCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-accent text-accent-foreground border-none">
                         {unreadCount}
                       </Badge>
                     )}
@@ -135,7 +135,7 @@ const Navbar = memo(() => {
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Menu Pengguna">
+                  <Button variant="ghost" size="icon" aria-label="Menu Pengguna" className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
                     <User className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
