@@ -4,6 +4,56 @@
 **Context:** React 18, Vite, TypeScript, Tailwind CSS, Supabase, Leaflet, Framer Motion
 
 ## OVERVIEW
+SIPASDA is a geospatial reporting application for public infrastructure conditions. It uses a "Liquid Glass" design system and supports real-time synchronization between Admin, Map, and User modules via Supabase.
+
+## STRUCTURE
+```text
+src/
+├── components/   # Reusable UI (shadcn/ui + glass components)
+├── features/     # Domain-driven modules
+│   ├── admin/    # Dashboard, stats, system settings
+│   ├── map/      # Core map engine (Leaflet), spatial analysis
+│   └── reports/  # Report forms, outbox sync (offline-first)
+├── hooks/        # Shared React hooks
+├── lib/          # Utilities (formatting, security, logger)
+└── services/     # Supabase client and generated types
+```
+
+## WHERE TO LOOK
+| Task | Location | Notes |
+|------|----------|-------|
+| UI Components | `src/components/ui/` | shadcn/ui base |
+| Global CSS | `src/index.css` | Liquid Glass design system |
+| Shared Formatters | `src/lib/formatters.ts` | Centralized date/location logic |
+| Map Core | `src/features/map/MapView.tsx` | Entry point for map (Large: 2.1k LOC) |
+| Admin Logic | `src/features/admin/AdminDashboard.tsx` | Admin entry point (Large: 1.9k LOC) |
+| Real-time Sync | `src/features/map/MapView.tsx` | Supabase channel 'reports-changes' |
+
+## CONVENTIONS
+- **Liquid Glass System**: Use `glass-surface`, `glass-floating`, `glass-overlay` classes from `src/index.css`.
+- **Framer Motion**: Always use for layout transitions and state changes (entrance animations).
+- **Indonesian Language**: All user-facing text must be in Bahasa Indonesia.
+- **Zero Errors**: Strictly no `any` types; must pass `typecheck` and `lint` before commit.
+
+## ANTI-PATTERNS (FORBIDDEN)
+- **Cumulative Layout Shift (CLS)**: Use `Skeleton` instead of raw spinners.
+- **Shotgun Debugging**: Fix root causes in `lib/` or `hooks/` rather than patching views.
+- **Large Views**: Logic should be moved to hooks (Current technical debt in `MapView.tsx`).
+
+## COMMANDS
+```bash
+npm run dev           # Start development server
+npm run typecheck      # Run TypeScript compiler
+npm run lint           # Run ESLint
+npm run build          # Production build
+npm run knip           # Find dead code
+```
+
+
+**Generated:** 2026-03-02
+**Context:** React 18, Vite, TypeScript, Tailwind CSS, Supabase, Leaflet, Framer Motion
+
+## OVERVIEW
 This is SIPASDA, a professional geospatial dashboard and reporting application. It relies on a "Liquid Glass" design system, high-density map rendering, and robust offline-first capabilities (PWA).
 
 ## COMMANDS

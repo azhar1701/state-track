@@ -1,4 +1,5 @@
 import { handleApiError } from "@/lib/api-errors";
+import { formatDateTime, formatReportLocation } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
@@ -163,13 +164,8 @@ const AdminDashboard = () => {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  // Fallback location display helper: prefer location_name, else use "desa, kecamatan"
-  const shortLocation = (r: ReportListItem | null | undefined) => {
-    if (!r) return '';
-    if (r.location_name && r.location_name.trim().length > 0) return r.location_name;
-    const parts = [r.desa, r.kecamatan].filter(Boolean) as string[];
-    return parts.join(', ');
-  };
+  const shortLocation = (r: ReportListItem | null | undefined) => 
+    formatReportLocation(r?.location_name, r?.desa, r?.kecamatan);
 
   // Small helper to preview long text with ellipsis
   const previewText = (text?: string | null, max = 80) => {
@@ -179,25 +175,7 @@ const AdminDashboard = () => {
     return `${s.slice(0, Math.max(0, max - 3))}...`;
   };
 
-  const formatDate = (iso?: string | null) => {
-    try {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
-    } catch {
-      return '-';
-    }
-  };
-
-  const formatDateTime = (iso?: string | null) => {
-    try {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID');
-    } catch {
-      return '-';
-    }
-  };
+  const formatDate = (iso?: string | null) => formatDateTime(iso, false);
 
   const fetchReports = useCallback(async () => {
     const normalizeReport = (raw: Partial<ReportListItem>): ReportListItem => ({
@@ -865,10 +843,10 @@ const AdminDashboard = () => {
     const channel = supabase
       .channel('reports-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-        // Only refresh if tab is visible
-        if (!document.hidden) {
+        // Always refresh stats, refresh reports only if visible
+        void fetchStats();
+        if (activeTab === 'reports' && !document.hidden) {
           void fetchReports();
-          void fetchStats();
         }
       })
       .subscribe();

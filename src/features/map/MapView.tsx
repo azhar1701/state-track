@@ -1,3 +1,4 @@
+import { formatReportLocation } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -338,8 +339,8 @@ const MapView = () => {
   const locationCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const report of reports) {
-      // Coba berbagai field lokasi yang mungkin ada
-      const loc = report.location_name || (report as unknown as { kecamatan?: string; desa?: string }).kecamatan || (report as unknown as { kecamatan?: string; desa?: string }).desa || 'Lokasi Lain';
+      // Uses centralized formatter
+      const loc = formatReportLocation(report.location_name, (report as { desa?: string }).desa, (report as { kecamatan?: string }).kecamatan);
       if (loc && loc !== 'Lokasi Lain') {
         counts[loc] = (counts[loc] || 0) + 1;
       }
