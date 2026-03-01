@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { FileText, Clock, CheckCircle, Loader2, X, Trash2 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
+import { motion } from 'framer-motion';
 
 type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
 type ReportStatus = Database["public"]["Enums"]["report_status"];
@@ -1007,7 +1008,7 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full flex flex-wrap gap-2 mb-4 md:mb-6 bg-muted/50 p-2 h-auto">
+          <TabsList className="w-full flex flex-wrap gap-2 mb-4 md:mb-6 glass-surface rounded-xl p-2 h-auto">
             <TabsTrigger value="reports" className="flex-1 min-w-[140px] text-xs md:text-sm">Laporan</TabsTrigger>
             <TabsTrigger value="geo" className="flex-1 min-w-[140px] text-xs md:text-sm">Geo Data</TabsTrigger>
             <TabsTrigger value="help" className="flex-1 min-w-[140px] text-xs md:text-sm">Help Center</TabsTrigger>
@@ -1017,46 +1018,54 @@ const AdminDashboard = () => {
           <TabsContent value="reports" className="mt-0">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
-              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary">
-                <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Total Laporan</CardTitle>
-                    <FileText className="w-3 h-3 md:w-4 md:h-4 text-primary/60 flex-shrink-0" />
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold mt-1">{stats.total}</div>
-                </CardHeader>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
-                <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Baru</CardTitle>
-                    <Clock className="w-4 h-4 text-amber-500/60" />
-                  </div>
-                  <div className="text-2xl font-bold mt-1">{stats.baru}</div>
-                </CardHeader>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500">
-                <CardHeader className="pb-2 pt-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Diproses</CardTitle>
-                    <Loader2 className="w-4 h-4 text-primary/60" />
-                  </div>
-                  <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
-                </CardHeader>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
-                <CardHeader className="pb-2 pt-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Selesai</CardTitle>
-                    <CheckCircle className="w-4 h-4 text-green-500/60" />
-                  </div>
-                  <div className="text-2xl font-bold mt-1">{stats.selesai}</div>
-                </CardHeader>
-              </Card>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-primary">
+                  <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Total Laporan</CardTitle>
+                      <FileText className="w-3 h-3 md:w-4 md:h-4 text-primary/60 flex-shrink-0" />
+                    </div>
+                    <div className="text-xl md:text-2xl font-bold mt-1">{stats.total}</div>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Baru</CardTitle>
+                      <Clock className="w-4 h-4 text-amber-500/60" />
+                    </div>
+                    <div className="text-2xl font-bold mt-1">{stats.baru}</div>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Diproses</CardTitle>
+                      <Loader2 className="w-4 h-4 text-primary/60" />
+                    </div>
+                    <div className="text-2xl font-bold mt-1">{stats.diproses}</div>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-green-500">
+                  <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Selesai</CardTitle>
+                      <CheckCircle className="w-4 h-4 text-green-500/60" />
+                    </div>
+                    <div className="text-2xl font-bold mt-1">{stats.selesai}</div>
+                  </CardHeader>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Filters */}
-            <Card className="mb-4">
+            <Card className="mb-4 glass-surface">
               <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
                 <div className="space-y-3 md:space-y-4">
                   {/* Status Filter Tabs */}
@@ -1070,13 +1079,11 @@ const AdminDashboard = () => {
                         }
                       }}
                     >
-                      <TabsList className="grid grid-cols-4 w-full bg-muted/50 p-1">
+                      <TabsList className="grid grid-cols-4 w-full glass-surface p-1">
                         <TabsTrigger value="semua" className="text-2xs md:text-xs">Semua</TabsTrigger>
                         <TabsTrigger value="baru" className="text-2xs md:text-xs">Baru</TabsTrigger>
                         <TabsTrigger value="diproses" className="text-2xs md:text-xs">Diproses</TabsTrigger>
                         <TabsTrigger value="selesai" className="text-2xs md:text-xs">Selesai</TabsTrigger>
-                        <TabsTrigger value="diproses" className="text-[10px] md:text-xs">Diproses</TabsTrigger>
-                        <TabsTrigger value="selesai" className="text-[10px] md:text-xs">Selesai</TabsTrigger>
                       </TabsList>
                     </Tabs>
                   </div>
@@ -1232,7 +1239,7 @@ const AdminDashboard = () => {
             )}
 
             {/* Reports Table */}
-            <Card>
+            <Card className="glass-surface">
               <CardHeader className="pb-3">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
@@ -1488,10 +1495,10 @@ const AdminDashboard = () => {
 
             {/* Detail Drawer */}
             <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-              <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden">
+              <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden glass-overlay">
                 <DrawerErrorBoundary>
                   <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
-                    <div className="rounded-xl shadow-lg transition-all duration-300 bg-background border border-border flex flex-col flex-1 overflow-hidden">
+                    <div className="rounded-xl shadow-lg transition-all duration-300 glass-surface flex flex-col flex-1 overflow-hidden">
                       <AdminDetail
                         selectedReport={selectedReport}
                         fullReport={fullReport}
@@ -1533,7 +1540,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
                 {/* Chart Tren Laporan */}
-                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                <Card className="glass-floating hover:shadow-lg transition-all duration-500 rounded-xl">
                   <CardHeader className="pb-2 fade-in">
                     <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
                   </CardHeader>
@@ -1560,7 +1567,7 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
                 {/* Chart Kategori Terbanyak */}
-                <Card className="shadow-md hover:shadow-lg transition-all duration-500 rounded-xl border border-border scale-in">
+                <Card className="glass-floating hover:shadow-lg transition-all duration-500 rounded-xl">
                   <CardHeader className="pb-2 fade-in">
                     <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
                   </CardHeader>

@@ -5,10 +5,10 @@ import { FileText, Map as MapIcon } from 'lucide-react';
 export default function BottomCTA() {
   return (
     <section className="container py-12 md:py-16 lg:py-20 px-2 md:px-4">
-      <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-600/90 to-teal-600/90 backdrop-blur-xl border border-white/20 p-8 md:p-12 lg:p-16 text-center max-w-5xl mx-auto shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-primary/90 to-primary/70 backdrop-blur-xl border border-white/20 p-8 md:p-12 lg:p-16 text-center max-w-5xl mx-auto shadow-2xl">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-40 h-40 md:w-64 md:h-64 bg-teal-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 md:w-64 md:h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10">
           <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">Siap berkontribusi?</h3>

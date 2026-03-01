@@ -165,10 +165,10 @@ export default function RecentReports() {
   }, []);
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+    <div className="glass-surface border-white/20 rounded-2xl p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold">Laporan Terbaru</h3>
-        <Link to="/map" className="text-sm text-primary hover:text-blue-400 font-medium transition-colors">
+        <Link to="/map" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">
           Lihat semua →
         </Link>
       </div>
@@ -193,7 +193,7 @@ export default function RecentReports() {
               const createdLabel = formatDateTime(it.created_at);
 
               return (
-                <div key={it.id} className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 rounded-xl p-4 transition-all duration-300 cursor-pointer hover:scale-[1.02]">
+                <div key={it.id} className="group glass-floating rounded-xl p-4 transition-all duration-300 cursor-pointer hover:border-primary/40 hover:-translate-y-0.5">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
                       <FileText className="w-6 h-6 text-primary" />

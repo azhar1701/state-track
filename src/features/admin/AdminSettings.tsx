@@ -149,7 +149,7 @@ const AdminSettings = () => {
 
       <Tabs defaultValue="map" className="w-full">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="flex w-full gap-1 h-auto p-1 bg-muted/50">
+          <TabsList className="flex w-full gap-1 h-auto p-1 glass-surface rounded-xl">
             <TabsTrigger value="map" className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
               <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Peta & Layer</span>
@@ -183,13 +183,13 @@ const AdminSettings = () => {
 
         <TabsContent value="map" className="mt-6 space-y-4">
           <Tabs defaultValue="display" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-2 mb-4 glass-surface rounded-xl">
               <TabsTrigger value="display">Tampilan Peta</TabsTrigger>
               <TabsTrigger value="layers">Pengaturan Layer</TabsTrigger>
             </TabsList>
 
             <TabsContent value="display" className="space-y-4">
-              <Card className="border-0 shadow-md">
+              <Card className="glass-floating border-0">
                 <CardHeader className="p-4 sm:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                     <Settings className="h-5 w-5 text-primary" />
@@ -243,7 +243,7 @@ const AdminSettings = () => {
                     </div>
                   </div>
 
-                  <div className="bg-muted/30 rounded-lg p-3 border">
+                  <div className="glass-base rounded-lg p-3">
                     <label className="flex items-center justify-between">
                       <div>
                         <div className="text-sm font-medium">Tampilkan batas administrasi</div>
@@ -263,7 +263,7 @@ const AdminSettings = () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-muted/30 rounded-lg p-3 border">
+                      <div className="glass-base rounded-lg p-3">
                         <label className="flex items-center justify-between">
                           <div>
                             <div className="text-sm font-medium">Clustering marker</div>
@@ -276,7 +276,7 @@ const AdminSettings = () => {
                         </label>
                       </div>
 
-                      <div className="bg-muted/30 rounded-lg p-3 border">
+                      <div className="glass-base rounded-lg p-3">
                         <label className="flex items-center justify-between">
                           <div>
                             <div className="text-sm font-medium">Heatmap</div>
@@ -361,7 +361,7 @@ const AdminSettings = () => {
                       </div>
                     </div>
 
-                    <div className="bg-muted/30 rounded-lg p-3 border">
+                    <div className="glass-base rounded-lg p-3">
                       <label className="flex items-center justify-between">
                         <div>
                           <div className="text-sm font-medium">Geolocation otomatis</div>

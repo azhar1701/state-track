@@ -138,16 +138,16 @@ const Home = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="container py-12 md:py-20 lg:py-28 px-4">
+      <section className="container py-12 md:py-20 lg:py-28 px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-8">
-          <div className="inline-flex p-3 md:p-4 bg-gradient-to-br from-blue-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl mb-2 shadow-lg border border-white/10 animate-[page-enter_0.6s_ease-out]">
+          <div className="inline-flex p-3 md:p-4 bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-md rounded-2xl mb-2 shadow-float border border-white/20 animate-[page-enter_0.6s_ease-out]">
             <MapPin className="w-10 h-10 md:w-12 md:h-12 text-primary" />
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-teal-500 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out] leading-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 dark:from-white dark:to-white/70 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out] leading-[1.1]">
             Sistem Informasi Pelaporan SDA
           </h1>
-          <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
-            Aplikasi berbasis web yang dirancang untuk memudahkan pelaporan, pemantauan, dan penanganan permasalahan terkait sumber daya air (SDA).
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
+            Platform profesional untuk pelaporan, pemantauan, dan penanganan permasalahan sumber daya air secara real-time.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-4 md:pt-6 animate-[page-enter_1.2s_ease-out]">
             {authLoading ? null : !user ? (
@@ -184,72 +184,74 @@ const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="container py-12 md:py-16 lg:py-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6 max-w-6xl mx-auto px-2 md:px-4">
-          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-2 md:mb-4">
-              <div className="p-2 md:p-3 bg-primary/20 rounded-lg md:rounded-xl">
-                <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+      <section className="container py-12 md:py-16 lg:py-20 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4">
+          <div className="group glass-floating p-6 hover:border-primary/50 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-primary/20 rounded-xl">
+                <FileText className="w-8 h-8 text-primary" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-3xl md:text-4xl font-bold text-primary">{stats.total}</div>
-              <div className="text-xs md:text-sm text-muted-foreground">Total Laporan</div>
+              <div className="text-4xl font-bold text-primary">{stats.total}</div>
+              <div className="text-sm text-muted-foreground font-medium">Total Laporan</div>
             </div>
           </div>
-          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-warning/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-2 md:mb-4">
-              <div className="p-2 md:p-3 bg-amber-500/20 rounded-lg md:rounded-xl">
-                <Clock className="w-6 h-6 md:w-8 md:h-8 text-amber-500" />
+          <div className="group glass-floating p-6 hover:border-warning/50 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-amber-500/20 rounded-xl">
+                <Clock className="w-8 h-8 text-amber-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-3xl md:text-4xl font-bold text-amber-500">{stats.baru}</div>
-              <div className="text-xs md:text-sm text-muted-foreground">Laporan Baru</div>
+              <div className="text-4xl font-bold text-amber-500">{stats.baru}</div>
+              <div className="text-sm text-muted-foreground font-medium">Laporan Baru</div>
             </div>
           </div>
-          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-info/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-2 md:mb-4">
-              <div className="p-2 md:p-3 bg-cyan-500/20 rounded-lg md:rounded-xl">
-                <Users className="w-6 h-6 md:w-8 md:h-8 text-cyan-500" />
+          <div className="group glass-floating p-6 hover:border-info/50 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-cyan-500/20 rounded-xl">
+                <Users className="w-8 h-8 text-cyan-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-3xl md:text-4xl font-bold text-cyan-500">{stats.diproses}</div>
-              <div className="text-xs md:text-sm text-muted-foreground">Diproses</div>
+              <div className="text-4xl font-bold text-cyan-500">{stats.diproses}</div>
+              <div className="text-sm text-muted-foreground font-medium">Diproses</div>
             </div>
           </div>
-          <div className="group glass-subtle p-4 md:p-6 hover:bg-white/10 hover:border-success/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className="flex items-center justify-center mb-2 md:mb-4">
-              <div className="p-2 md:p-3 bg-green-500/20 rounded-lg md:rounded-xl">
-                <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-green-500" />
+          <div className="group glass-floating p-6 hover:border-success/50 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-green-500/20 rounded-xl">
+                <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
             </div>
             <div className="text-center space-y-1">
-              <div className="text-3xl md:text-4xl font-bold text-green-500">{stats.selesai}</div>
-              <div className="text-xs md:text-sm text-muted-foreground">Selesai</div>
+              <div className="text-4xl font-bold text-green-500">{stats.selesai}</div>
+              <div className="text-sm text-muted-foreground font-medium">Selesai</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Charts Section */}
-      <section className="container py-12 md:py-16 lg:py-20">
-        <div className="max-w-6xl mx-auto px-2 md:px-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold">Insight Laporan</h2>
+      <section className="container py-12 md:py-16 relative z-10">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <h2 className="text-3xl font-bold tracking-tight">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-              <SelectTrigger className="w-full sm:w-[140px] bg-white/5 backdrop-blur-md border-white/10 rounded-xl"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[140px] glass-surface border-white/20 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="7">7 hari</SelectItem>
                 <SelectItem value="30">30 hari</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
-            <div className="glass-subtle p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
-              <div className="mb-4">
-                <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Tren Laporan ({chartDays} hari)</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <div className="glass-floating p-6 rounded-2xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground">Tren Laporan ({chartDays} hari)</h3>
               </div>
               <div>
                 {chartDaily.length === 0 ? (
@@ -284,9 +286,9 @@ const Home = () => {
                 )}
               </div>
             </div>
-            <div className="glass-subtle p-4 md:p-6 hover:bg-white/10 transition-all duration-300">
-              <div className="mb-4">
-                <h3 className="text-base md:text-lg font-semibold text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
+            <div className="glass-floating p-6 rounded-2xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
               </div>
               <div>
                 {chartByCategory.length === 0 ? (
@@ -320,13 +322,13 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="container py-20">
+      <section className="container py-20 relative z-10">
         <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16">Fitur Unggulan</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-primary/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
-              <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
-                <FileText className="w-10 h-10 text-primary" />
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-tight">Fitur Unggulan</h2>
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+            <div className="group glass-floating p-8 rounded-2xl hover:border-primary/40 transition-all duration-300 hover:-translate-y-1">
+              <div className="p-4 bg-primary/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                <FileText className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">Laporan Mudah</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -334,9 +336,9 @@ const Home = () => {
               </p>
             </div>
 
-            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-info/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
-              <div className="p-4 bg-gradient-to-br from-teal-500/20 to-teal-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
-                <MapIcon className="w-10 h-10 text-teal-500" />
+            <div className="group glass-floating p-8 rounded-2xl hover:border-info/40 transition-all duration-300 hover:-translate-y-1">
+              <div className="p-4 bg-cyan-500/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                <MapIcon className="w-8 h-8 text-cyan-500" />
               </div>
               <h3 className="text-xl font-bold mb-3">Peta Interaktif</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -344,9 +346,9 @@ const Home = () => {
               </p>
             </div>
 
-            <div className="group glass-subtle p-8 hover:bg-white/10 hover:border-warning/40 hover:scale-105 transition-all duration-300 hover:shadow-2xl">
-              <div className="p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Users className="w-10 h-10 text-amber-500" />
+            <div className="group glass-floating p-8 rounded-2xl hover:border-warning/40 transition-all duration-300 hover:-translate-y-1">
+              <div className="p-4 bg-amber-500/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-8 h-8 text-amber-500" />
               </div>
               <h3 className="text-xl font-bold mb-3">Dashboard Admin</h3>
               <p className="text-muted-foreground leading-relaxed">

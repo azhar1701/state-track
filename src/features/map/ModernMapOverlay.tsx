@@ -101,7 +101,7 @@ export const ModernMapOverlay = ({
       <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
         {/* Main Toolbar */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-2 glass-panel shadow-lifted rounded-2xl px-3 py-2 pointer-events-auto">
+          <div className="flex items-center gap-2 glass-floating rounded-2xl px-3 py-2 pointer-events-auto">
           {/* Search Button */}
           <Button
             onClick={onToggleSearch}
@@ -159,8 +159,8 @@ export const ModernMapOverlay = ({
 
       {/* Draw Sub-Toolbar */}
       {drawingActive && drawToolbarContent && (
-        <div className="flex justify-center">
-          <div className="glass-panel shadow-lifted rounded-2xl px-3 py-2 pointer-events-auto">
+        <div className="flex justify-center mt-2">
+          <div className="glass-floating rounded-2xl px-3 py-2 pointer-events-auto">
             {drawToolbarContent}
           </div>
         </div>
@@ -179,7 +179,7 @@ export const ModernMapOverlay = ({
           </div>
         )}
         
-        <div className="w-full max-w-2xl glass-panel shadow-lifted rounded-2xl px-4 py-3 pointer-events-auto">
+        <div className="w-full max-w-2xl glass-floating rounded-2xl px-4 py-3 pointer-events-auto">
           <div className="flex items-center gap-3 mb-2">
             {/* Play Controls */}
             <div className="flex items-center gap-1">
@@ -247,7 +247,7 @@ export const ModernMapOverlay = ({
 
       {/* Bottom Left: Collapsible Legend */}
       <div className="absolute bottom-40 left-4 pointer-events-none">
-        <div className="glass shadow-lifted rounded-xl overflow-hidden pointer-events-auto max-w-xs">
+        <div className="glass-surface shadow-lifted rounded-xl overflow-hidden pointer-events-auto max-w-xs border border-white/20">
           {/* Legend Header */}
           <button
             onClick={() => setLegendCollapsed(!legendCollapsed)}

@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
 import { ReportDetailDrawer } from '@/features/map/ReportDetailDrawer';
 import EmptyState from '@/components/common/EmptyState';
+import { motion, AnimatePresence } from 'framer-motion';
 // Sync button removed per request
 
 type ReportRow = {
@@ -217,7 +218,7 @@ export default function MyReports() {
         </div>
       </div>
 
-      <Card className="mb-3 md:mb-4">
+      <Card className="mb-3 md:mb-4 glass-floating">
         <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 pt-4 md:pt-6">
           <CardTitle className="text-base md:text-lg">Filter</CardTitle>
         </CardHeader>
@@ -262,7 +263,7 @@ export default function MyReports() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-surface">
         <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 pt-4 md:pt-6">
           <CardTitle className="text-base md:text-lg">Daftar Laporan</CardTitle>
         </CardHeader>
@@ -297,8 +298,14 @@ export default function MyReports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((r: ReportRow) => (
-                    <TableRow key={r.id}>
+                  {rows.map((r: ReportRow, index: number) => (
+                    <motion.tr
+                      key={r.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04, duration: 0.3 }}
+                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                    >
                       <TableCell className="max-w-[12rem] md:max-w-[20rem] px-2 md:px-4">
                         <div className="font-medium line-clamp-2 text-xs md:text-sm">{r.title ?? 'Tanpa judul'}</div>
                         {r.description && <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 hidden sm:block">{r.description}</div>}
@@ -326,7 +333,7 @@ export default function MyReports() {
                           <MapPin className="w-4 h-4 mr-2" /> Detail
                         </Button>
                       </TableCell>
-                    </TableRow>
+                    </motion.tr>
                   ))}
                 </TableBody>
               </Table>
@@ -353,32 +360,14 @@ export default function MyReports() {
       </Card>
 
       {/* Floating detail card, sama seperti MapView */}
-      {selectedReport && (
-        <div
-          className={`fixed z - [1300] flex justify - center items - end md: items - start inset - 0 pointer - events - none`}
-        >
-          <div
-            className={
-              `pointer - events - auto w - full max - w - [42rem] bg - background / 95 rounded - xl shadow - lg border border - border / 70 ` +
-              (window.innerWidth < 768
-                ? 'mx-2 mb-20' // mobile: margin horizontal dan bawah
-                : 'mt-28 ml-4') // desktop: margin atas dan kiri
-            }
-            style={{
-              minHeight: window.innerWidth < 700 ? 'calc(100dvh - 120px)' : 'auto',
-              maxHeight: 'calc(100dvh - 32px)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <ReportDetailDrawer
-              report={selectedReport as ReportRow}
-              onClose={() => setSelectedReport(null)}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {selectedReport && (
+          <ReportDetailDrawer
+            report={selectedReport as ReportRow}
+            onClose={() => setSelectedReport(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

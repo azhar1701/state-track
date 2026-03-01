@@ -198,7 +198,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="sticky top-0 z-10 glass-surface border-b-0 px-5 py-4"
+            className="sticky top-0 z-10 glass-overlay border-b border-white/10 px-5 py-4"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1 min-w-0">

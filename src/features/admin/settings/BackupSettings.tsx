@@ -322,7 +322,7 @@ export const BackupSettings = () => {
   }
 
   return (
-    <Card className="border-0 shadow-md">
+    <Card className="glass-floating border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -342,7 +342,7 @@ export const BackupSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="backup" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-3 h-auto glass-surface rounded-xl">
             <TabsTrigger value="backup" className="gap-1.5 text-xs sm:text-sm py-2">
               <DownloadCloud className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Backup</span>
@@ -501,7 +501,7 @@ export const BackupSettings = () => {
                 <h4 className="text-sm font-semibold">Backup Otomatis</h4>
               </div>
 
-              <div className="bg-muted/30 rounded-lg p-3 border">
+              <div className="glass-base rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Aktifkan backup otomatis</div>
@@ -575,7 +575,7 @@ export const BackupSettings = () => {
                 </Label>
 
                 <div className="space-y-2">
-                  <div className="bg-muted/30 rounded-lg p-2 border flex items-center justify-between">
+                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Laporan</span>
                     <Switch
                       checked={backupSettings.includeReports}
@@ -586,7 +586,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="bg-muted/30 rounded-lg p-2 border flex items-center justify-between">
+                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Geo Layers</span>
                     <Switch
                       checked={backupSettings.includeGeoLayers}
@@ -597,7 +597,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="bg-muted/30 rounded-lg p-2 border flex items-center justify-between">
+                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Pengaturan Sistem</span>
                     <Switch
                       checked={backupSettings.includeSettings}
@@ -608,7 +608,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="bg-muted/30 rounded-lg p-2 border flex items-center justify-between">
+                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Data Pengguna</span>
                     <Switch
                       checked={backupSettings.includeUsers}

@@ -131,7 +131,7 @@ export const NotificationSettings = () => {
   const activeTriggers = Object.values(config.triggers).filter(Boolean).length;
 
   return (
-    <Card className="border-0 shadow-md">
+    <Card className="glass-floating border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -151,7 +151,7 @@ export const NotificationSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="channels" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6 glass-surface rounded-xl">
             <TabsTrigger value="channels" className="gap-1.5 text-xs sm:text-sm">
               <Bell className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Channel</span>
@@ -178,7 +178,7 @@ export const NotificationSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -238,7 +238,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export const NotificationSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan dibuat</div>
@@ -316,7 +316,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan diupdate</div>
@@ -333,7 +333,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan selesai</div>
@@ -350,7 +350,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan ditugaskan</div>
@@ -367,7 +367,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Komentar baru</div>
@@ -384,7 +384,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Eskalasi</div>
@@ -463,7 +463,7 @@ export const NotificationSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Batch notifikasi</div>
@@ -480,7 +480,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Quiet hours</div>
@@ -497,7 +497,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Hanya admin</div>
@@ -514,7 +514,7 @@ export const NotificationSettings = () => {
                   </label>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="glass-base rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Hanya pelapor</div>

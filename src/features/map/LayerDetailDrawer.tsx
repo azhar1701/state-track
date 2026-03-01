@@ -79,7 +79,7 @@ export function LayerDetailDrawer({
       {/* Desktop: Side Panel */}
       {!isMobile && (
         <div
-          className={`fixed top-0 right-0 h-full w-[400px] z-[1400] glass-strong shadow-[-8px_0_24px_rgba(0,0,0,0.15)] transition-transform duration-300 ${
+          className={`fixed top-0 right-0 h-full w-[400px] z-[1400] glass-overlay border-l border-white/20 transition-transform duration-300 ${
             isOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
@@ -150,7 +150,7 @@ export function LayerDetailDrawer({
       {/* Mobile: Bottom Sheet */}
       {isMobile && (
         <div
-          className={`fixed bottom-0 left-0 right-0 z-[1400] glass-strong rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.15)] transition-transform duration-300 ${
+          className={`fixed bottom-0 left-0 right-0 z-[1400] glass-overlay border-t border-white/20 rounded-t-3xl transition-transform duration-300 ${
             isOpen ? 'translate-y-0' : 'translate-y-full'
           }`}
           style={{ maxHeight: '50vh' }}
