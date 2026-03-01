@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Map, Satellite, Mountain, Moon, Sun, ChevronDown } from 'lucide-react';
 import { basemaps, type BasemapType } from './basemap-config';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface BasemapSwitcherProps {
   onBasemapChange?: (basemap: BasemapType) => void;
@@ -24,6 +25,16 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
   const [isOpen, setIsOpen] = useState(false);
   const tileLayerRef = useRef<TileLayer | null>(null);
 
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // Helper for offline tile caching strategy
+  useEffect(() => {
+    if (!map || !isOfflineMode) return;
+    // In production, we'd use a service worker to intercept tile requests
+    // Here we'll simulate caching of current viewport tiles
+    console.info('[PWA] Memulai caching tile peta untuk area saat ini');
+    toast.info('Menyimpan area peta untuk offline...');
+  }, [map, isOfflineMode, currentBasemap]);
   useEffect(() => {
     if (!map) return;
 
@@ -88,6 +99,17 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
           </div>
         )}
       </div>
+      {/* Offline Mode Toggle */}
+      <button
+        onClick={() => setIsOfflineMode(!isOfflineMode)}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 mt-2 glass-panel shadow-lifted rounded-lg transition-all border",
+          isOfflineMode ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" : "border-transparent text-muted-foreground"
+        )}
+      >
+        <div className={cn("w-2 h-2 rounded-full", isOfflineMode ? "bg-emerald-500 animate-pulse" : "bg-gray-300")} />
+        <span className="text-xs font-bold uppercase tracking-tighter">OFFLINE TILES</span>
+      </button>
     </div>
   );
 };

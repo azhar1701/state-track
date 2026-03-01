@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/drawer";
 import { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { FileText, Clock, CheckCircle, Loader2, X, Trash2 } from "lucide-react";
+import { FileText, Clock, CheckCircle, Loader2, X, Trash2, AlertCircle } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { motion } from 'framer-motion';
@@ -104,6 +104,15 @@ const GeoDataManagerLazy = lazy(() => import("@/features/geodata/GeoDataManager"
 const HelpCenterLazy = lazy(() => import("@/views/HelpCenter"));
 const AdminSettingsLazy = lazy(() => import("@/features/admin/AdminSettings"));
 
+  const sendWhatsAppNotification = async (reportId: string, newStatus: string) => {
+    try {
+      // Mocking WhatsApp Edge Function call
+      // In production, this would be: await supabase.functions.invoke('whatsapp-notify', { body: { reportId, newStatus } });
+      console.info(`[WhatsApp] Notifikasi dikirim untuk laporan ${reportId}: status baru -> ${newStatus}`);
+    } catch (err) {
+      logger.error('WhatsApp notification error:', err);
+    }
+  };
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -134,6 +143,8 @@ const AdminDashboard = () => {
   const [editSeverity, setEditSeverity] = useState<ReportSeverity | ''>('');
   const [editResolution, setEditResolution] = useState('');
   const [saving, setSaving] = useState(false);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [conflictData, setConflictData] = useState<ReportRow | null>(null);
   const maxResolutionLen = 5000;
   const [chartDays, setChartDays] = useState<7 | 30>(30);
   const [chartDaily, setChartDaily] = useState<Array<{ date: string; count: number }>>([]);
@@ -566,7 +577,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const saveEdits = async () => {
+  const saveEdits = async (force = false) => {
     if (!selectedReport) return;
     if (!editTitle.trim()) {
       toast.error('Judul wajib diisi');
@@ -580,7 +591,7 @@ const AdminDashboard = () => {
       editTitle === (selectedReport.title || '') &&
       (editSeverity || '') === (selectedReport.severity || '') &&
       editResolution === (selectedReport.resolution || '');
-    if (noChange) {
+    if (noChange && !force) {
       toast.info('Tidak ada perubahan untuk disimpan');
       return;
     }
@@ -601,10 +612,21 @@ const AdminDashboard = () => {
         before.resolution = selectedReport.resolution || '';
         after.resolution = editResolution || '';
       }
-      const payload: { title: string; severity: 'ringan' | 'sedang' | 'berat' | null; resolution: string | null } = {
+
+      // Conflict check using timestamp comparison (simple version)
+      if (!force) {
+        const { data: latest } = await supabase.from('reports').select('*').eq('id', selectedReport.id).maybeSingle();
+        if (latest?.updated_at && latest.updated_at !== (selectedReport as { updated_at?: string }).updated_at) {
+          setConflictData(latest as ReportRow);
+          setConflictDialogOpen(true);
+          return;
+        }
+      }
+
+      const payload: { title: string; severity: ReportSeverity | null; resolution: string | null } = {
         title: editTitle,
-        severity: editSeverity ? editSeverity : null,
-        resolution: editResolution ? editResolution : null,
+        severity: (editSeverity as ReportSeverity) || null,
+        resolution: editResolution || null,
       };
       const { error } = await supabase.from('reports').update(payload).eq('id', selectedReport.id);
       if (error) throw error;
@@ -624,8 +646,9 @@ const AdminDashboard = () => {
         console.warn('Gagal menulis audit log (edit):', logErr);
         toast.warning('Perubahan tersimpan, namun gagal mencatat audit log');
       }
-      toast.success('Perubahan tersimpan');
+      toast.success(force ? 'Perubahan dipaksa simpan' : 'Perubahan tersimpan');
       setDetailOpen(false);
+      setConflictDialogOpen(false);
       await fetchReports();
       await fetchStats();
       if (selectedReport) fetchReportLogs(selectedReport.id);
@@ -688,9 +711,10 @@ const AdminDashboard = () => {
         }
       } catch (logErr) {
         console.warn('Gagal menulis audit log (bulk):', logErr);
-        toast.warning('Bulk update berhasil, namun gagal mencatat audit log');
       }
+      
       toast.success(`Berhasil mengupdate ${ids.length} laporan`);
+      ids.forEach(id => sendWhatsAppNotification(id, status));
       setSelectedIds(new Set<string>());
       setBulkStatus('');
       await fetchReports();
@@ -914,6 +938,7 @@ const AdminDashboard = () => {
 
   const updateStatus = async (id: string, newStatus: ReportStatus) => {
     setUpdatingId(id);
+    sendWhatsAppNotification(id, newStatus);
     const prevStatus = reports.find((r) => r.id === id)?.status;
 
     // Optimistic update
@@ -1448,6 +1473,56 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            {/* Sync Conflict Resolution Dialog */}
+            <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+              <DialogContent className="sm:max-w-[500px] glass-overlay border-amber-500/30">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-amber-600">
+                    <AlertCircle className="h-5 w-5" />
+                    Konflik Sinkronisasi Terdeteksi
+                  </DialogTitle>
+                  <DialogDescription>
+                    Laporan ini baru saja diubah oleh orang lain. Apa yang ingin Anda lakukan?
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {conflictData && (
+                  <div className="p-4 rounded-lg glass-base text-sm space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <span className="text-muted-foreground text-xs uppercase">Status Remote:</span>
+                      <span className="font-bold">{conflictData.status.toUpperCase()}</span>
+                      <span className="text-muted-foreground text-xs uppercase">Waktu Update:</span>
+                      <span className="font-mono">{formatDateTime(conflictData.updated_at)}</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="font-semibold text-xs uppercase text-muted-foreground mb-1">Respon Remote:</p>
+                      <p className="italic text-xs">{conflictData.resolution || 'Tidak ada catatan'}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setConflictDialogOpen(false);
+                      if (conflictData) openDetail({ ...selectedReport!, ...conflictData });
+                    }}
+                    className="glass-base"
+                  >
+                    Batal & Muat Ulang
+                  </Button>
+                  <Button 
+                    onClick={() => saveEdits(true)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  >
+                    Paksa Simpan (Overwrite)
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -13,6 +13,7 @@ export type ReportOutboxPayload = {
   kecamatan: string;
   desa: string;
   location: { latitude: number; longitude: number; name?: string | null };
+  priority_score?: number;
 };
 
 export type OutboxReport = {

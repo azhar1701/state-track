@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '@/services/client';
 import { addReportToOutbox, deleteOutboxReport, listOutboxReports, registerBackgroundSync, type OutboxReport, type ReportOutboxPayload } from '@/features/reports/outbox';
+import { calculatePriorityScore } from '@/services/ai';
 
 async function uploadPhotos(userId: string, photos: OutboxReport['photos']) {
   const urls: string[] = [];
@@ -38,6 +39,7 @@ async function submitSingle(out: OutboxReport, userId: string) {
     phone: payload.phone,
     kecamatan: payload.kecamatan,
     desa: payload.desa,
+    priority_score: calculatePriorityScore(payload.category, payload.severity),
   };
   const fullPayload = { ...basePayload, location_name: payload.location.name || null } as typeof basePayload & { location_name?: string | null };
   let { error } = await supabase.from('reports').insert(fullPayload);

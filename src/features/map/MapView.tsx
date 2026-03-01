@@ -2,7 +2,7 @@ import { formatReportLocation } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from 'react-leaflet';
 import { supabase } from '@/services/client';
 import { Button } from '@/components/ui/button';
 import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
@@ -304,6 +304,7 @@ const MapView = () => {
     dateFrom: urlParams.dateFrom,
     dateTo: urlParams.dateTo,
   });
+  const [routingPath, setRoutingPath] = useState<[number, number][] | null>(null);
 
   // Sidebar removed per request; use floating mini panels instead
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -612,6 +613,34 @@ const MapView = () => {
       mapInstance.fitBounds(bounds.pad(0.1));
     }
   }, [selectedLayer, mapInstance]);
+  const fetchRoute = useCallback(async (targetCoords: [number, number]) => {
+    if (!userLocation) {
+      toast.error('Gunakan GPS untuk menentukan lokasi Anda sebelum membuat rute');
+      return;
+    }
+    setRoutingPath(null);
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${userLocation[1]},${userLocation[0]};${targetCoords[1]},${targetCoords[0]}?overview=full&geometries=geojson`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.routes && data.routes[0]) {
+        const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+        setRoutingPath(coords);
+        if (mapInstance) {
+          const bounds = L.latLngBounds(coords);
+          mapInstance.fitBounds(bounds.pad(0.1));
+        }
+        toast.success('Rute berhasil dibuat');
+      } else {
+        toast.error('Rute tidak ditemukan');
+      }
+    } catch (err) {
+      logger.error('Routing error:', err);
+      toast.error('Gagal memuat rute');
+    } finally {
+      // Logic for cleanup if needed
+    }
+  }, [userLocation, mapInstance]);
 
   // Memoize rendered layers to force re-render when style changes
   const renderedLayers = useMemo(() => {
@@ -1823,6 +1852,13 @@ const MapView = () => {
                 })}
               />
             )}
+            {/* OSRM Routing Path */}
+            {routingPath && (
+              <Polyline
+                positions={routingPath}
+                pathOptions={{ color: '#3b82f6', weight: 6, opacity: 0.8, dashArray: '10, 10' }}
+              />
+            )}
 
             {/* Map Interaction Layer - handles measuring inside MapContainer */}
             <MapInteractionLayer
@@ -1938,6 +1974,20 @@ const MapView = () => {
               />
             </div>
           )}
+
+          {/* Clear Route Button */}
+          {routingPath && (
+            <div className="absolute z-[1200] top-40 right-4">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setRoutingPath(null)}
+                className="glass-floating shadow-lg font-bold"
+              >
+                Hapus Rute
+              </Button>
+            </div>
+          )}
           {showFilterPanel && (
             <FilterPanel
               filters={filters}
@@ -1977,7 +2027,11 @@ const MapView = () => {
                 }`}
             >
               <div className="max-w-[42rem]">
-                <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
+                <ReportDetailDrawer 
+                  report={selectedReport} 
+                  onClose={() => setSelectedReport(null)} 
+                  onRoute={() => fetchRoute([selectedReport.latitude, selectedReport.longitude])}
+                />
               </div>
             </div>
           )}
@@ -2188,4 +2242,3 @@ const MapView = () => {
 };
 
 export default MapView;
-

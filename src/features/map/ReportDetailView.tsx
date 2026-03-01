@@ -36,7 +36,16 @@ interface ReportDetailViewProps {
   report: Report;
   onClose: () => void;
   onNavigate?: () => void;
+  onRoute?: () => void;
   isAdmin?: boolean;
+}
+
+interface ReportDetailViewProps {
+report: Report;
+onClose: () => void;
+  onNavigate?: () => void;
+  onRoute?: () => void;
+isAdmin?: boolean;
 }
 
 const statusConfig = {
@@ -118,7 +127,7 @@ const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: {
   );
 };
 
-export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: ReportDetailViewProps) => {
+export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin }: ReportDetailViewProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const y = useMotionValue(0);
@@ -486,22 +495,34 @@ export const ReportDetailView = ({ report, onClose, onNavigate, isAdmin }: Repor
           transition={{ delay: 0.36 }}
           className="absolute bottom-0 left-0 right-0 glass-surface border-t border-white/20 px-5 py-4 space-y-3"
         >
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              onClick={onNavigate}
-              className="w-full h-10 text-base font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-            >
-              <Navigation className="mr-2 h-4 w-4" />
-              Navigasi ke Lokasi
-            </Button>
-          </motion.div>
+          <div className="grid grid-cols-2 gap-3">
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={onRoute}
+                variant="outline"
+                className="w-full h-11 text-sm font-medium glass-floating border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-all"
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Cari Rute Terbaik
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={onNavigate}
+                className="w-full h-11 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
+              >
+                <Navigation className="mr-2 h-4 w-4" />
+                Google Maps
+              </Button>
+            </motion.div>
+          </div>
           {isAdmin && (
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
-                variant="outline"
-                className="w-full h-10 text-base font-medium hover:bg-muted/50 dark:hover:bg-muted/50"
+                variant="secondary"
+                className="w-full h-10 text-sm font-medium glass-base"
               >
-                Update Status
+                Update Status Laporan
               </Button>
             </motion.div>
           )}

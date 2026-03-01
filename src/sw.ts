@@ -31,12 +31,23 @@ registerRoute(
 );
 
 // Cache OSM tiles for offline use (respecting OSM tile usage policy with modest caps)
+// Cache OSM tiles for offline use (Zoom 12-16)
 registerRoute(
-  ({ url, request }) => request.destination === 'image' && url.hostname.endsWith('tile.openstreetmap.org'),
+  ({ url, request }) => {
+    const isTile = request.destination === 'image' && url.hostname.endsWith('tile.openstreetmap.org');
+    if (!isTile) return false;
+    // Limit to zoom levels 12-16 as requested
+    const match = url.pathname.match(/\/(\d+)\/\d+\/\d+\.png/);
+    if (match) {
+      const zoom = parseInt(match[1], 10);
+      return zoom >= 12 && zoom <= 16;
+    }
+    return false;
+  },
   new CacheFirst({
-    cacheName: 'osm-tiles',
+    cacheName: 'osm-tiles-v1',
     plugins: [
-      new ExpirationPlugin({ maxEntries: 1000, maxAgeSeconds: 14 * 24 * 60 * 60 }),
+      new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 7 * 24 * 60 * 60 }),
     ],
   })
 );
