@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -308,8 +310,8 @@ const AdminDashboard = () => {
           toast.warning('Beberapa kolom laporan tidak tersedia. Tampilkan data dasar saja.');
         } catch (minimalError) {
           const message = minimalError instanceof Error ? minimalError.message : String(minimalError);
-          console.error('[AdminDashboard] Minimal reports query failed:', minimalError);
-          toast.error('Gagal memuat laporan', { description: message });
+          logger.error('[AdminDashboard] Minimal reports query failed:', minimalError);
+          toast.error(handleApiError(minimalError, 'Gagal memuat laporan'));
           setReports([]);
           setTotalFiltered(0);
           setSelectedIds(new Set());
@@ -364,8 +366,8 @@ const AdminDashboard = () => {
       fetchReportLogs(reportId);
       fetchReportDetail(reportId);
     } catch (e) {
-      console.error('Failed to open detail:', e);
-      toast.error('Gagal membuka detail laporan');
+      logger.error('Failed to open detail:', e);
+      toast.error(handleApiError(e, 'Gagal membuka detail laporan'));
     }
   };
 
@@ -394,11 +396,11 @@ const AdminDashboard = () => {
         if (!fallbackErr && fallbackData) {
           const fallback = fallbackData as Partial<ReportDetail>;
           detail = {
-            description: fallback.description ?? null,
+            description: fallback.description ?? '',
             reporter_name: fallback.reporter_name ?? null,
             phone: fallback.phone ?? null,
-            latitude: null,
-            longitude: null,
+            latitude: 0,
+            longitude: 0,
             photo_url: null,
             photo_urls: null,
           };
@@ -412,7 +414,7 @@ const AdminDashboard = () => {
         throw primaryError;
       }
     } catch (err) {
-      console.error('Gagal memuat detail laporan:', err);
+      logger.error('Gagal memuat detail laporan:', err);
     } finally {
       setDetailLoading(false);
     }
@@ -430,8 +432,8 @@ const AdminDashboard = () => {
       const rows = (data ?? []) as ReportLogEntry[];
       setLogs(rows);
     } catch (err) {
-      console.error('Gagal memuat riwayat perubahan:', err);
-      toast.error('Gagal memuat riwayat perubahan');
+      logger.error('Gagal memuat riwayat perubahan:', err);
+      toast.error(handleApiError(err, 'Gagal memuat riwayat perubahan'));
     } finally {
       setLogsLoading(false);
     }
@@ -528,8 +530,8 @@ const AdminDashboard = () => {
       URL.revokeObjectURL(url);
       toast.success('Export CSV berhasil');
     } catch (err) {
-      console.error(err);
-      toast.error('Gagal export ke CSV');
+      logger.error('Error', err);
+      toast.error(handleApiError(err, 'Gagal export ke CSV'));
     }
   };
 
@@ -586,8 +588,8 @@ const AdminDashboard = () => {
       doc.save(`reports-export-${ts}.pdf`);
       toast.success('Export PDF berhasil');
     } catch (err) {
-      console.error(err);
-      toast.error('Gagal export ke PDF');
+      logger.error('Error', err);
+      toast.error(handleApiError(err, 'Gagal export ke PDF'));
     }
   };
 
@@ -655,8 +657,8 @@ const AdminDashboard = () => {
       await fetchStats();
       if (selectedReport) fetchReportLogs(selectedReport.id);
     } catch (err) {
-      console.error(err);
-      toast.error('Gagal menyimpan perubahan');
+      logger.error('Error', err);
+      toast.error(handleApiError(err, 'Gagal menyimpan perubahan'));
     } finally {
       setSaving(false);
     }
@@ -721,7 +723,7 @@ const AdminDashboard = () => {
       await fetchReports();
       await fetchStats();
     } catch (err) {
-      console.error(err);
+      logger.error('Error', err);
       toast.error('Gagal melakukan bulk update');
     } finally {
       setBulkLoading(false);
@@ -744,7 +746,7 @@ const AdminDashboard = () => {
       setStats({ total, baru, diproses, selesai });
       setStatsInitialized(true);
     } catch (err) {
-      console.error(err);
+      logger.error('Error', err);
     }
   }, []);
 
@@ -812,7 +814,7 @@ const AdminDashboard = () => {
   setChartByCategory(catArr);
   if (!chartInitialized) setChartInitialized(true);
     } catch (err) {
-      console.error(err);
+      logger.error('Error', err);
     } finally {
       const elapsed = Date.now() - loadingStart;
       if (elapsed < MIN_LOADING_MS) {
@@ -930,7 +932,7 @@ const AdminDashboard = () => {
       await fetchReports();
       await fetchStats();
     } catch (err) {
-      console.error(err);
+      logger.error('Error', err);
       toast.error('Gagal menghapus laporan');
     } finally {
       setDeleting(false);
@@ -1646,7 +1648,7 @@ class DrawerErrorBoundary extends Component<{ children: ReactNode }, { hasError:
     return { hasError: true };
   }
   componentDidCatch(error: unknown) {
-    console.error('Drawer render error:', error);
+    logger.error('Drawer render error:', error);
   }
   render() {
     if (this.state.hasError) {
@@ -1865,7 +1867,7 @@ const AdminDetail = lazy(async () => {
                 <div className="space-y-2 pb-4 border-b">
                   <label className="text-xs font-medium text-muted-foreground">Hasil/Respon Admin</label>
                   <textarea
-                    className="w-full min-h-[100px] rounded-md border bg-background p-3 text-sm focus:ring-2 focus:ring-primary/20 transition-shadow"
+                    className="w-full min-h-[100px] rounded-md border bg-background p-3 text-sm focus-visible:ring-2 focus:ring-primary/20 transition-shadow"
                     value={editResolution}
                     onChange={(e) => setEditResolution(e.target.value)}
                     placeholder="Tulis hasil penanganan atau respon admin di sini..."

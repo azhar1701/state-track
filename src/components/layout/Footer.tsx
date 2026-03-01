@@ -16,18 +16,18 @@ const Footer = () => {
             <div>
               <div className="font-medium mb-2">Menu</div>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                <li><Link to="/" className="hover:text-foreground">Beranda</Link></li>
-                <li><Link to="/map" className="hover:text-foreground">Peta</Link></li>
-                <li><Link to="/report" className="hover:text-foreground">Buat Laporan</Link></li>
-                <li><Link to="/admin" className="hover:text-foreground">Dashboard</Link></li>
+                <li><Link to="/" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Beranda</Link></li>
+                <li><Link to="/map" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Peta</Link></li>
+                <li><Link to="/report" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Buat Laporan</Link></li>
+                <li><Link to="/admin" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Dashboard</Link></li>
               </ul>
             </div>
             <div>
               <div className="font-medium mb-2">Bantuan</div>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">Panduan</a></li>
-                <li><a href="#" className="hover:text-foreground">Kebijakan Privasi</a></li>
-                <li><a href="#" className="hover:text-foreground">Syarat Layanan</a></li>
+                <li><a href="#" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Panduan</a></li>
+                <li><a href="#" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Kebijakan Privasi</a></li>
+                <li><a href="#" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Syarat Layanan</a></li>
               </ul>
             </div>
           </div>
@@ -35,9 +35,9 @@ const Footer = () => {
             <div className="font-medium mb-2">Kontak</div>
             <p className="text-sm text-muted-foreground">Email: psdaciamis2025@gmail.com</p>
             <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground">Instagram</a>
+              <a href="#" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Instagram</a>
               <span>·</span>
-              <a href="#" className="hover:text-foreground">GitHub</a>
+              <a href="#" className="hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">GitHub</a>
             </div>
           </div>
         </div>

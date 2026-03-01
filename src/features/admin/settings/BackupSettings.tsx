@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +44,7 @@ export const BackupSettings = () => {
       };
 
       if (backupSettings.includeReports) {
-        const { data, error } = await supabase.from("reports").select("*");
+        const { data, error } = await supabase.from("reports").select("*").limit(10000);
         if (error) throw error;
         backup.reports = data;
         tablesIncluded.push("reports");
@@ -50,7 +52,7 @@ export const BackupSettings = () => {
       }
 
       if (backupSettings.includeGeoLayers) {
-        const { data, error } = await supabase.from("geo_layers").select("*");
+        const { data, error } = await supabase.from("geo_layers").select("*").limit(1000);
         if (error) throw error;
         backup.geo_layers = data;
         tablesIncluded.push("geo_layers");
@@ -58,7 +60,7 @@ export const BackupSettings = () => {
       }
 
       if (backupSettings.includeSettings) {
-        const { data, error } = await supabase.from("system_settings").select("*");
+        const { data, error } = await supabase.from("system_settings").select("*").limit(1000);
         if (!error && data) {
           backup.system_settings = data;
           tablesIncluded.push("system_settings");
@@ -67,8 +69,8 @@ export const BackupSettings = () => {
       }
 
       if (backupSettings.includeUsers) {
-        const { data: profiles } = await supabase.from("profiles").select("*");
-        const { data: roles } = await supabase.from("user_roles").select("*");
+        const { data: profiles } = await supabase.from("profiles").select("*").limit(10000);
+        const { data: roles } = await supabase.from("user_roles").select("*").limit(10000);
         backup.profiles = profiles;
         backup.user_roles = roles;
         tablesIncluded.push("profiles", "user_roles");
@@ -105,7 +107,7 @@ export const BackupSettings = () => {
 
       toast.success("Backup database berhasil dibuat");
     } catch (error) {
-      console.error("Failed to backup database", error);
+      logger.error("Failed to backup database", error);
       
       // Log failed backup
       try {
@@ -119,7 +121,7 @@ export const BackupSettings = () => {
         console.warn("Failed to log backup error", logError);
       }
 
-      toast.error("Gagal membuat backup database");
+      toast.error(handleApiError(error, "Gagal membuat backup database"));
     } finally {
       setBackupInProgress(false);
     }
@@ -130,7 +132,7 @@ export const BackupSettings = () => {
     const fileName = `geo-layers-${Date.now()}.json`;
 
     try {
-      const { data, error } = await supabase.from("geo_layers").select("*");
+      const { data, error } = await supabase.from("geo_layers").select("*").limit(1000);
       if (error) throw error;
 
       const backup = {
@@ -168,7 +170,7 @@ export const BackupSettings = () => {
 
       toast.success("Backup geo layer berhasil");
     } catch (error) {
-      console.error("Failed to backup geo layers", error);
+      logger.error("Failed to backup geo layers", error);
       
       try {
         await supabase.rpc("log_backup", {
@@ -181,7 +183,7 @@ export const BackupSettings = () => {
         console.warn("Failed to log backup error", logError);
       }
 
-      toast.error("Gagal backup geo layer");
+      toast.error(handleApiError(error, "Gagal backup geo layer"));
     } finally {
       setBackupInProgress(false);
     }
@@ -192,7 +194,7 @@ export const BackupSettings = () => {
     const fileName = `reports-${Date.now()}.json`;
 
     try {
-      const { data, error } = await supabase.from("reports").select("*");
+      const { data, error } = await supabase.from("reports").select("*").limit(10000);
       if (error) throw error;
 
       const backup = {
@@ -231,7 +233,7 @@ export const BackupSettings = () => {
 
       toast.success(`Backup ${data.length} laporan berhasil`);
     } catch (error) {
-      console.error("Failed to backup reports", error);
+      logger.error("Failed to backup reports", error);
       
       try {
         await supabase.rpc("log_backup", {
@@ -244,7 +246,7 @@ export const BackupSettings = () => {
         console.warn("Failed to log backup error", logError);
       }
 
-      toast.error("Gagal backup laporan");
+      toast.error(handleApiError(error, "Gagal backup laporan"));
     } finally {
       setBackupInProgress(false);
     }
@@ -291,8 +293,8 @@ export const BackupSettings = () => {
         throw new Error("Format backup tidak valid");
       }
     } catch (error) {
-      console.error("Failed to restore", error);
-      toast.error("Gagal restore data");
+      logger.error("Failed to restore", error);
+      toast.error(handleApiError(error, "Gagal restore data"));
     } finally {
       setRestoreInProgress(false);
       if (event.target) event.target.value = "";
@@ -304,8 +306,8 @@ export const BackupSettings = () => {
       await saveConfig({ schedule: backupSettings });
       toast.success("Jadwal backup berhasil disimpan");
     } catch (error) {
-      console.error("Failed to save schedule", error);
-      toast.error("Gagal menyimpan jadwal");
+      logger.error("Failed to save schedule", error);
+      toast.error(handleApiError(error, "Gagal menyimpan jadwal"));
     }
   };
 

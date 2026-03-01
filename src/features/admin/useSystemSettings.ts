@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useCallback } from 'react';
 import { supabase } from '@/services/client';
 import { toast } from 'sonner';
@@ -19,7 +20,7 @@ export const useSystemSettings = () => {
       if (error) throw error;
       return data?.value as T || null;
     } catch (error) {
-      console.error(`Failed to fetch ${category}.${key}:`, error);
+      logger.error(`Failed to fetch ${category}.${key}:`, error);
       return null;
     } finally {
       setLoading(false);
@@ -36,7 +37,7 @@ export const useSystemSettings = () => {
       if (error) throw error;
       toast.success('Pengaturan berhasil disimpan');
     } catch (error) {
-      console.error(`Failed to save ${category}.${key}:`, error);
+      logger.error(`Failed to save ${category}.${key}:`, error);
       toast.error('Gagal menyimpan pengaturan');
       throw error;
     } finally {

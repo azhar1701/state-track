@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -93,7 +94,7 @@ export const SecuritySettings = () => {
       });
       toast.success("Pengaturan keamanan berhasil disimpan");
     } catch (error) {
-      console.error("Failed to save security settings", error);
+      logger.error("Failed to save security settings", error);
       toast.error("Gagal menyimpan pengaturan keamanan");
     } finally {
       setSaving(false);

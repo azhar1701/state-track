@@ -26,7 +26,7 @@ export const BottomNav = memo(() => {
           
           if (item.primary) {
             return (
-              <Link key={item.path} to={item.path} className="relative -mt-6">
+              <Link key={item.path} to={item.path} className="relative -mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full" aria-label={item.label}>
                 <div className="w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center">
                   <Icon className="w-5 h-5 text-primary-foreground" />
                 </div>
@@ -38,7 +38,8 @@ export const BottomNav = memo(() => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${
+              aria-label={item.label}
+              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md ${
                 active ? 'text-primary' : 'text-muted-foreground'
               }`}
             >

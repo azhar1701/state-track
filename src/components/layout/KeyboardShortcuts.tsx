@@ -47,7 +47,8 @@ export const KeyboardShortcuts = () => {
           <h2 className="text-2xl font-bold">Keyboard Shortcuts</h2>
           <button
             onClick={() => setVisible(false)}
-            className="p-1 hover:bg-muted rounded-full btn-haptic"
+            className="p-1 hover:bg-muted rounded-full btn-haptic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            aria-label="Tutup"
           >
             <X className="w-5 h-5" />
           </button>

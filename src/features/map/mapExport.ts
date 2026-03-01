@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import domtoimage from 'dom-to-image-more';
 import { Map } from 'leaflet';
 
@@ -64,7 +65,7 @@ export const exportMapToPNG = async (map: Map, options: ExportOptions = {}): Pro
     document.body.removeChild(a);
   } catch (error) {
     toggleControls(map, true);
-    console.error('Export failed:', error);
+    logger.error('Export failed:', error);
     alert('Gagal mengekspor peta. Error: ' + (error instanceof Error ? error.message : String(error)));
     throw error;
   }

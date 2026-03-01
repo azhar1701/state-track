@@ -1,5 +1,4 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -13,7 +12,6 @@ import ErrorBoundary from "@/components/layout/ErrorBoundary";
 import { useOutboxSync } from "@/features/reports/useOutboxSync";
 import { useAuth } from "@/features/auth/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { usePreventRefresh } from "@/hooks/usePreventRefresh";
 import { usePWAUpdateToast } from "@/hooks/usePWAUpdateToast";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
@@ -36,13 +34,12 @@ const AppInner = memo(() => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   useOutboxSync(user?.id);
-  usePreventRefresh();
   usePWAUpdateToast();
-  
+
   const mainStyle = useMemo(() => ({
     paddingBottom: isMobile && user ? '72px' : '0'
   }), [isMobile, user]);
-  
+
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
@@ -89,12 +86,12 @@ const App = () => (
   <>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
-  <Sonner />
-  <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Sonner />
+        <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <AppInner />
           </AuthProvider>
-  </BrowserRouter>
+        </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
   </>

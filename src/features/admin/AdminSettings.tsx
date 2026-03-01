@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/services/client";
 import type { Database } from "@/services/types";
@@ -99,13 +100,13 @@ const AdminSettings = () => {
     try {
       const { data, error } = await supabase
         .from("report_logs")
-        .select("id,report_id,action,actor_email,created_at")
+        .select("id,report_id,action,before,after,actor_id,actor_email,created_at")
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
-      setAuditLogs(data ?? []);
+      setAuditLogs((data as ReportLogEntry[]) ?? []);
     } catch (error) {
-      console.error("Failed to load audit logs", error);
+      logger.error("Failed to load audit logs", error);
       toast.error("Gagal memuat catatan audit");
     } finally {
       setAuditLoading(false);
@@ -164,7 +165,7 @@ const AdminSettings = () => {
       await saveSetting('map', 'preferences', mapPreferences);
       if (canUseBrowserStorage) localStorage.setItem(MAP_PREFS_STORAGE_KEY, JSON.stringify(mapPreferences));
     } catch (error) {
-      console.error("Failed to save map preferences", error);
+      logger.error("Failed to save map preferences", error);
     } finally {
       setMapPrefSaving(false);
     }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -194,7 +195,7 @@ const ReportForm = () => {
         }));
       }
     } catch (error) {
-      console.error('Error getting location name:', error);
+      logger.error('Error getting location name:', error);
     }
   }, []);
 
@@ -208,7 +209,7 @@ const ReportForm = () => {
           getLocationName(lat, lng);
         },
         (error) => {
-          console.log('Error getting location:', error);
+          logger.info('Error getting location:', error);
           setLocation({ latitude: -6.2088, longitude: 106.8456 });
         }
       );
@@ -247,7 +248,7 @@ const ReportForm = () => {
           ]);
         }
       } catch (err) {
-        console.error('Failed to load categories:', err);
+        logger.error('Failed to load categories:', err);
         // Fallback to default categories
         setCategories([
           { value: 'jalan', label: 'Jalan' },
@@ -405,7 +406,7 @@ const ReportForm = () => {
         description: 'Foto telah dikompres untuk menghemat data',
       });
     } catch (err) {
-      console.error('Compression failed', err);
+      logger.error('Compression failed', err);
       toast.error('Gagal memproses foto');
     }
   };
@@ -559,7 +560,7 @@ const ReportForm = () => {
       const id = inserted?.id as string | number | undefined;
       navigate(id ? `/report/success?id=${id}` : '/report/success');
     } catch (error) {
-      console.error('Error submitting report:', sanitizeForLog(error));
+      logger.error('Error submitting report:', sanitizeForLog(error));
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
       let message = 'Gagal mengirim laporan. Silakan coba lagi.';
   const errAny = error as unknown as { message?: string };
@@ -661,7 +662,7 @@ const ReportForm = () => {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40 text-sm"
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm"
                   autoComplete="off"
                 />
                 {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
@@ -675,7 +676,7 @@ const ReportForm = () => {
                     onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
                     required
                   >
-                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40 text-sm h-9 md:h-10">
+                    <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40 text-sm h-9 md:h-10">
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -690,7 +691,7 @@ const ReportForm = () => {
                 <div className="space-y-2">
                   <Label htmlFor="severity" className="text-xs md:text-sm">Tingkat Keparahan *</Label>
                   <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                    <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
                       <SelectValue placeholder="Pilih tingkat" />
                     </SelectTrigger>
                     <SelectContent>
@@ -713,7 +714,7 @@ const ReportForm = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                   autoComplete="off"
                 />
                 {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
@@ -728,7 +729,7 @@ const ReportForm = () => {
                   value={formData.incidentDate}
                   onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
                   required
-                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                  className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
                 {errors.incidentDate && <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>}
                 <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
@@ -752,7 +753,7 @@ const ReportForm = () => {
                       }
                     }}
                   >
-                    <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
                       <SelectValue placeholder="Pilih kecamatan" />
                     </SelectTrigger>
                     <SelectContent>
@@ -777,7 +778,7 @@ const ReportForm = () => {
                     }}
                     disabled={!selectedKecamatanId}
                   >
-                    <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus:ring-2 focus:ring-primary/40">
+                    <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
                       <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
                     </SelectTrigger>
                     <SelectContent>
@@ -797,7 +798,7 @@ const ReportForm = () => {
                     id="reporterName"
                     value={formData.reporterName}
                     onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
-                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                     autoComplete="name"
                   />
                   {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
@@ -810,7 +811,7 @@ const ReportForm = () => {
                     inputMode="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary/40"
+                    className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                     autoComplete="tel"
                   />
                   {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}

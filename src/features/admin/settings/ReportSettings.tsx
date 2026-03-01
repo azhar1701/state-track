@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,7 +134,7 @@ export const ReportSettings = () => {
         icon: <CheckCircle className="h-4 w-4" />,
       });
     } catch (error) {
-      console.error('Failed to save report settings', error);
+      logger.error('Failed to save report settings', error);
       toast.error('Gagal menyimpan pengaturan');
     } finally {
       setSaving(false);
@@ -224,6 +225,7 @@ export const ReportSettings = () => {
       let failed = 0;
       const errors: string[] = [];
 
+      const inserts: Database['public']['Tables']['reports']['Insert'][] = [];
       for (let i = 0; i < rows.length; i++) {
         try {
           const values = rows[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
@@ -250,7 +252,7 @@ export const ReportSettings = () => {
           const severity = validSeverities.includes(row.severity as Database['public']['Enums']['report_severity']) ? row.severity as Database['public']['Enums']['report_severity'] : null;
           const status = validStatuses.includes(row.status as Database['public']['Enums']['report_status']) ? row.status as Database['public']['Enums']['report_status'] : 'baru';
 
-          const { error } = await supabase.from('reports').insert({
+          inserts.push({
             title: row.title,
             description: row.description,
             category,
@@ -267,13 +269,16 @@ export const ReportSettings = () => {
             resolution: row.resolution || null,
             user_id: user?.id || '00000000-0000-0000-0000-000000000000'
           });
-
-          if (error) throw error;
-          success++;
         } catch (err) {
           failed++;
           errors.push(`Baris ${i + 2}: ${err instanceof Error ? err.message : 'Error tidak diketahui'}`);
         }
+      }
+
+      if (inserts.length > 0) {
+        const { error } = await supabase.from('reports').insert(inserts);
+        if (error) throw error;
+        success += inserts.length;
       }
 
       setImportResult({ success, failed, errors: errors.slice(0, 10) });
@@ -285,7 +290,7 @@ export const ReportSettings = () => {
         toast.error(`${failed} laporan gagal diimport`);
       }
     } catch (error) {
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
       toast.error('Gagal memproses file CSV');
     } finally {
       setImporting(false);

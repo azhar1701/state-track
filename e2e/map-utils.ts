@@ -1,3 +1,4 @@
+import { logger } from "../src/lib/logger";
 import { Page, expect } from '@playwright/test';
 
 /**
@@ -21,12 +22,12 @@ import { Page, expect } from '@playwright/test';
  * GUNAKAN INI UNTUK TROUBLESHOOT ERROR
  */
 export async function debugPageState(page: Page, context: string = 'Debug') {
-  console.log(`\n❌ [${context}] Capturing debug information...\n`);
+  logger.info(`\n❌ [${context}] Capturing debug information...\n`);
   
   try {
     // 1. Get current URL
     const url = page.url();
-    console.log(`📍 Current URL: ${url}`);
+    logger.info(`📍 Current URL: ${url}`);
     
     // 2. Check if on login page
     const isLoginPage = url.includes('/login') || url.includes('/auth');
@@ -37,7 +38,7 @@ export async function debugPageState(page: Page, context: string = 'Debug') {
     
     // 3. Get page title
     const title = await page.title();
-    console.log(`📄 Page Title: ${title}`);
+    logger.info(`📄 Page Title: ${title}`);
     
     // 4. Check untuk peta elements dengan multiple selectors
     const mapSelectors = [
@@ -48,12 +49,12 @@ export async function debugPageState(page: Page, context: string = 'Debug') {
       { name: '.map-wrapper, [class*="map"]', desc: 'Custom map wrapper' },
     ];
     
-    console.log('\n🔍 Map Element Selector Check:');
+    logger.info('\n🔍 Map Element Selector Check:');
     for (const selector of mapSelectors) {
       const count = await page.locator(selector.name).count();
       const isVisible = count > 0 ? await page.locator(selector.name).first().isVisible() : false;
       const status = count > 0 ? (isVisible ? '✅ FOUND & VISIBLE' : '⚠️  FOUND but HIDDEN') : '❌ NOT FOUND';
-      console.log(`   ${status} | ${selector.desc}`);
+      logger.info(`   ${status} | ${selector.desc}`);
     }
     
     // 5. Check page errors/console messages
@@ -73,14 +74,14 @@ export async function debugPageState(page: Page, context: string = 'Debug') {
         totalTime: nav?.duration || 'N/A',
       };
     });
-    console.log('\n⏱️  Performance Metrics:', requests);
+    logger.info('\n⏱️  Performance Metrics:', requests);
     
     // 7. Viewport info
     const viewport = page.viewportSize();
-    console.log(`📐 Viewport: ${viewport?.width}x${viewport?.height}`);
+    logger.info(`📐 Viewport: ${viewport?.width}x${viewport?.height}`);
     
   } catch (error) {
-    console.error('   Error saat mengambil debug info:', error);
+    logger.error('   Error saat mengambil debug info:', error);
   }
 }
 
@@ -97,7 +98,7 @@ export async function captureDebugScreenshot(
   
   try {
     await page.screenshot({ path: filename, fullPage: false });
-    console.log(`📸 Screenshot saved: ${filename}`);
+    logger.info(`📸 Screenshot saved: ${filename}`);
   } catch (error) {
     console.warn(`⚠️  Could not save screenshot: ${error}`);
   }
@@ -132,12 +133,12 @@ export async function waitForMapReady(
   const checkAuth = options?.checkAuth ?? true;
   const debugOnFailure = options?.debugOnFailure ?? true;
   
-  console.log('⏳ [MAP READY] Memulai wait for map dengan robust selectors...');
+  logger.info('⏳ [MAP READY] Memulai wait for map dengan robust selectors...');
   
   try {
     // STEP 1: Validasi URL (jangan stuck di halaman login)
     if (checkAuth) {
-      console.log('  [1/4] Checking URL untuk memastikan tidak ada auth issue...');
+      logger.info('  [1/4] Checking URL untuk memastikan tidak ada auth issue...');
       const url = page.url();
       
       // Soft assertion - jangan crash jika auth check gagal, tapi log warning
@@ -156,24 +157,24 @@ export async function waitForMapReady(
       // Verify URL berubah dari login
       try {
         await expect(page).not.toHaveURL(/\/(login|auth)/i, { timeout: 5000 });
-        console.log('     ✅ URL OK (tidak stuck di login)');
+        logger.info('     ✅ URL OK (tidak stuck di login)');
       } catch {
         console.warn('     ⚠️  URL masih berisi login path, cek auth flow');
       }
     }
     
     // STEP 2: Wait for network idle (tile loading selesai)
-    console.log('  [2/4] Waiting for network idle (tile images)...');
+    logger.info('  [2/4] Waiting for network idle (tile images)...');
     try {
       await page.waitForLoadState('networkidle', { timeout: 15000 });
-      console.log('     ✅ Network idle reached');
+      logger.info('     ✅ Network idle reached');
     } catch {
       console.warn('     ⚠️  Network idle timeout, continuing anyway...');
       // Jangan throw, lanjut ke next strategy
     }
     
     // STEP 3: Try multiple selectors dengan fallback
-    console.log('  [3/4] Checking untuk map element (multiple selectors)...');
+    logger.info('  [3/4] Checking untuk map element (multiple selectors)...');
     
     const mapSelectors = [
       '.leaflet-container',           // Default Leaflet
@@ -194,7 +195,7 @@ export async function waitForMapReady(
         if (count > 0) {
           mapFound = true;
           mapLocator = locator.first();
-          console.log(`     ✅ Found map: ${selector}`);
+          logger.info(`     ✅ Found map: ${selector}`);
           break;
         }
       } catch (e) {
@@ -207,16 +208,16 @@ export async function waitForMapReady(
     }
     
     // STEP 4: Wait untuk visibility dengan soft assertion
-    console.log('  [4/4] Waiting untuk map visible...');
+    logger.info('  [4/4] Waiting untuk map visible...');
     try {
       await expect(mapLocator).toBeVisible({ timeout });
-      console.log('     ✅ Map visible');
+      logger.info('     ✅ Map visible');
     } catch (error) {
       // Soft assertion - log error tapi coba screenshot untuk debugging
-      console.error('     ❌ Map not visible after timeout');
+      logger.error('     ❌ Map not visible after timeout');
       
       if (debugOnFailure) {
-        console.log('     📸 Taking debug screenshot...');
+        logger.info('     📸 Taking debug screenshot...');
         await captureDebugScreenshot(page, 'map-not-visible');
         await debugPageState(page, 'Map Visibility Failure');
       }
@@ -226,17 +227,17 @@ export async function waitForMapReady(
     }
     
     // Final verification: Tunggu DOM render complete
-    console.log('  [FINAL] Waiting untuk DOM rendering...');
+    logger.info('  [FINAL] Waiting untuk DOM rendering...');
     try {
       await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
     } catch {
       // OK jika timeout, peta sudah visible
     }
     
-    console.log('✅ [MAP READY] Peta siap untuk testing!\n');
+    logger.info('✅ [MAP READY] Peta siap untuk testing!\n');
     
   } catch (error) {
-    console.error('❌ [MAP READY] FAILED:', error);
+    logger.error('❌ [MAP READY] FAILED:', error);
     
     if (debugOnFailure) {
       await debugPageState(page, 'waitForMapReady');
@@ -255,7 +256,7 @@ export async function waitForMapElement(
   primarySelector?: string,
   timeout: number = 30000
 ) {
-  console.log(`⏳ [MAP ELEMENT] Waiting dengan fallback selectors...'`);
+  logger.info(`⏳ [MAP ELEMENT] Waiting dengan fallback selectors...'`);
   
   // Default selectors (dari yang paling spesifik ke general)
   const selectors = [
@@ -274,24 +275,24 @@ export async function waitForMapElement(
       const elapsedTime = Date.now() - startTime;
       const remainingTimeout = Math.max(1000, timeout - elapsedTime);
       
-      console.log(`   Trying selector: ${selector}`);
+      logger.info(`   Trying selector: ${selector}`);
       await page.locator(selector).waitFor({ 
         state: 'visible', 
         timeout: remainingTimeout 
       });
       
-      console.log(`   ✅ Found with selector: ${selector}`);
+      logger.info(`   ✅ Found with selector: ${selector}`);
       return selector;
       
     } catch (error) {
       lastError = error;
-      console.log(`   ❌ Not found, trying next...`);
+      logger.info(`   ❌ Not found, trying next...`);
       continue;
     }
   }
   
   // Jika semua gagal
-  console.error('❌ No map element found with any selector');
+  logger.error('❌ No map element found with any selector');
   throw lastError;
 }
 
@@ -304,11 +305,11 @@ export async function waitForTileLoading(
   timeout: number = 20000,
   failSoft: boolean = true
 ) {
-  console.log('⏳ [TILES] Waiting for tile loading...');
+  logger.info('⏳ [TILES] Waiting for tile loading...');
   
   try {
     await page.waitForLoadState('networkidle', { timeout });
-    console.log('   ✅ All tiles loaded');
+    logger.info('   ✅ All tiles loaded');
     return true;
   } catch (error) {
     if (failSoft) {
@@ -336,7 +337,7 @@ export async function waitForMapStable(
   checkInterval: number = 300,
   maxAttempts: number = 40
 ) {
-  console.log('⏳ [STABILITY] Waiting untuk map stabil (no animations)...');
+  logger.info('⏳ [STABILITY] Waiting untuk map stabil (no animations)...');
   
   try {
     // First fallback ke networkidle pakai strategy lain
@@ -382,7 +383,7 @@ export async function waitForMapStable(
       attempts++;
     }
     
-    console.log(`   ✅ Map stable after ${attempts * checkInterval}ms`);
+    logger.info(`   ✅ Map stable after ${attempts * checkInterval}ms`);
     
   } catch (error) {
     console.warn('   ⚠️  Stability check error:', error);
@@ -412,7 +413,7 @@ export async function dragMapToLocation(
   const selector = options?.selector ?? '.leaflet-container';
   const maxRetries = options?.retries ?? 2;
   
-  console.log(`🖱️  [DRAG] dari (${fromX}, ${fromY}) → (${toX}, ${toY})...`);
+  logger.info(`🖱️  [DRAG] dari (${fromX}, ${fromY}) → (${toX}, ${toY})...`);
   
   let lastError: unknown;
   
@@ -433,7 +434,7 @@ export async function dragMapToLocation(
 
       // Wait untuk drag animation
       await page.waitForTimeout(duration);
-      console.log(`   ✅ Drag selesai (attempt ${attempt}/${maxRetries})`);
+      logger.info(`   ✅ Drag selesai (attempt ${attempt}/${maxRetries})`);
       return;
       
     } catch (error) {
@@ -441,14 +442,14 @@ export async function dragMapToLocation(
       console.warn(`   ⚠️  Drag attempt ${attempt}/${maxRetries} failed:`, error);
       
       if (attempt < maxRetries) {
-        console.log(`   Retrying after 500ms...`);
+        logger.info(`   Retrying after 500ms...`);
         await page.waitForTimeout(500);
       }
     }
   }
   
   // Jika semua retries gagal
-  console.error(`   ❌ Drag failed after ${maxRetries} attempts`);
+  logger.error(`   ❌ Drag failed after ${maxRetries} attempts`);
   throw lastError;
 }
 
@@ -461,7 +462,7 @@ export async function zoomMap(
   steps: number = 1,
   wheelPosition?: { x: number; y: number }
 ) {
-  console.log(`🔍 [ZOOM] ${direction.toUpperCase()} (${steps} steps)...`);
+  logger.info(`🔍 [ZOOM] ${direction.toUpperCase()} (${steps} steps)...`);
   
   try {
     const mapContainer = page.locator('.leaflet-container');
@@ -483,10 +484,10 @@ export async function zoomMap(
       await page.waitForTimeout(200);
     }
 
-    console.log(`   ✅ Zoom completed`);
+    logger.info(`   ✅ Zoom completed`);
     
   } catch (error) {
-    console.error(`   ❌ Zoom failed:`, error);
+    logger.error(`   ❌ Zoom failed:`, error);
     throw error;
   }
 }
@@ -510,15 +511,15 @@ export async function doubleClickOnMap(
     const clickX = x ?? box.width / 2;
     const clickY = y ?? box.height / 2;
 
-    console.log(`👆 [DBLCLICK] pada peta di (${clickX}, ${clickY})...`);
+    logger.info(`👆 [DBLCLICK] pada peta di (${clickX}, ${clickY})...`);
     await mapContainer.dblclick({ position: { x: clickX, y: clickY } });
     
     // Wait untuk zoom animation
     await page.waitForTimeout(500);
-    console.log(`   ✅ Double click completed`);
+    logger.info(`   ✅ Double click completed`);
     
   } catch (error) {
-    console.error(`   ❌ Double click failed:`, error);
+    logger.error(`   ❌ Double click failed:`, error);
     throw error;
   }
 }
@@ -537,7 +538,7 @@ export async function takeMapSnapshot(
   snapshotName: string,
   options?: { mask?: string[]; fullPage?: boolean }
 ) {
-  console.log(`📸 [SNAPSHOT] Taking: ${snapshotName}`);
+  logger.info(`📸 [SNAPSHOT] Taking: ${snapshotName}`);
   
   try {
     // Ensure map ready sebelum screenshot
@@ -553,10 +554,10 @@ export async function takeMapSnapshot(
       maskColor: '#808080',
     });
 
-    console.log(`   ✅ Snapshot saved`);
+    logger.info(`   ✅ Snapshot saved`);
     
   } catch (error) {
-    console.error(`   ❌ Snapshot failed:`, error);
+    logger.error(`   ❌ Snapshot failed:`, error);
     throw error;
   }
 }
@@ -569,7 +570,7 @@ export async function compareMapSnapshot(
   baselineName: string,
   options?: { maxDiffPixels?: number; threshold?: number }
 ) {
-  console.log(`🔍 [COMPARE] Comparing: ${baselineName}`);
+  logger.info(`🔍 [COMPARE] Comparing: ${baselineName}`);
 
   try {
     await expect(page).toHaveScreenshot(baselineName, {
@@ -578,10 +579,10 @@ export async function compareMapSnapshot(
       threshold: options?.threshold ?? 0.2,
     });
 
-    console.log(`   ✅ Snapshot matches baseline`);
+    logger.info(`   ✅ Snapshot matches baseline`);
     
   } catch (error) {
-    console.error(`   ❌ Snapshot mismatch:`, error);
+    logger.error(`   ❌ Snapshot mismatch:`, error);
     throw error;
   }
 }
@@ -596,7 +597,7 @@ export async function compareMapSnapshot(
  * Get current map bounds (dengan error handling)
  */
 export async function getMapBounds(page: Page) {
-  console.log('📍 [BOUNDS] Getting map bounds...');
+  logger.info('📍 [BOUNDS] Getting map bounds...');
   
   try {
     const bounds = await page.evaluate(() => {
@@ -614,8 +615,8 @@ export async function getMapBounds(page: Page) {
     if (bounds) {
       const ne = bounds.northEast;
       const sw = bounds.southWest;
-      console.log(`   NE: (${ne.lat.toFixed(4)}, ${ne.lng.toFixed(4)})`);
-      console.log(`   SW: (${sw.lat.toFixed(4)}, ${sw.lng.toFixed(4)})`);
+      logger.info(`   NE: (${ne.lat.toFixed(4)}, ${ne.lng.toFixed(4)})`);
+      logger.info(`   SW: (${sw.lat.toFixed(4)}, ${sw.lng.toFixed(4)})`);
     } else {
       console.warn('   ⚠️  Map instance not found via window.map');
     }
@@ -623,7 +624,7 @@ export async function getMapBounds(page: Page) {
     return bounds;
     
   } catch (error) {
-    console.error('   ❌ Error getting bounds:', error);
+    logger.error('   ❌ Error getting bounds:', error);
     return null;
   }
 }
@@ -639,14 +640,14 @@ export async function getMapZoomLevel(page: Page): Promise<number | null> {
     });
     
     if (zoomLevel !== null) {
-      console.log(`🔍 [ZOOM LEVEL] Current: ${zoomLevel}`);
+      logger.info(`🔍 [ZOOM LEVEL] Current: ${zoomLevel}`);
     } else {
       console.warn('⚠️  Could not get zoom level');
     }
     
     return zoomLevel;
   } catch (error) {
-    console.error('❌ Error getting zoom level:', error);
+    logger.error('❌ Error getting zoom level:', error);
     return null;
   }
 }
@@ -660,7 +661,7 @@ export async function clickOnMapCoordinate(
   lng: number
 ) {
   try {
-    console.log(`👆 [CLICK] pada koordinat ${lat.toFixed(4)}, ${lng.toFixed(4)}...`);
+    logger.info(`👆 [CLICK] pada koordinat ${lat.toFixed(4)}, ${lng.toFixed(4)}...`);
     
     await page.evaluate(
       ({ lat, lng }) => {
@@ -690,10 +691,10 @@ export async function clickOnMapCoordinate(
     );
 
     await page.waitForTimeout(500);
-    console.log(`   ✅ Click completed`);
+    logger.info(`   ✅ Click completed`);
     
   } catch (error) {
-    console.error(`   ❌ Click failed:`, error);
+    logger.error(`   ❌ Click failed:`, error);
     throw error;
   }
 }

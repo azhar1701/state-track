@@ -1,3 +1,4 @@
+import { logger } from "../src/lib/logger";
 import { test, expect } from '@playwright/test';
 
 /**
@@ -13,29 +14,29 @@ test.describe('SIPASDA Smoke Test', () => {
   
   test('aplikasi harus load tanpa crash dan menampilkan peta', async ({ page }) => {
     // Step 1: Buka halaman utama
-    console.log('📍 Step 1: Membuka halaman utama...');
+    logger.info('📍 Step 1: Membuka halaman utama...');
     await page.goto('/', { waitUntil: 'networkidle' });
 
     // Step 2: Verifikasi judul halaman
-    console.log('📍 Step 2: Verifikasi judul halaman...');
+    logger.info('📍 Step 2: Verifikasi judul halaman...');
     const pageTitle = await page.title();
-    console.log(`   Title terdeteksi: "${pageTitle}"`);
+    logger.info(`   Title terdeteksi: "${pageTitle}"`);
     expect(pageTitle.toUpperCase()).toContain('SIPASDA');
 
     // Step 3: Tunggu peta terlihat
-    console.log('📍 Step 3: Memastikan peta terlihat...');
+    logger.info('📍 Step 3: Memastikan peta terlihat...');
     // Cek apakah Leaflet container ada (untuk peta berbasis Leaflet)
     const mapContainer = page.locator('.leaflet-container');
     await expect(mapContainer).toBeVisible({ timeout: 15000 });
-    console.log('   ✅ Peta terdeteksi dan visible');
+    logger.info('   ✅ Peta terdeteksi dan visible');
 
     // Step 4: Ambil screenshot sebagai bukti
-    console.log('📍 Step 4: Mengambil screenshot...');
+    logger.info('📍 Step 4: Mengambil screenshot...');
     await page.screenshot({ 
       path: 'test-results/smoke-test-screenshot.png',
       fullPage: true 
     });
-    console.log('   ✅ Screenshot disimpan: test-results/smoke-test-screenshot.png');
+    logger.info('   ✅ Screenshot disimpan: test-results/smoke-test-screenshot.png');
   });
 
   test('navbar harus menampilkan elemen utama', async ({ page }) => {
@@ -48,7 +49,7 @@ test.describe('SIPASDA Smoke Test', () => {
     const navbar = page.locator('nav');
     await expect(navbar).toBeVisible();
     
-    console.log('✅ Navbar terdeteksi dan visible');
+    logger.info('✅ Navbar terdeteksi dan visible');
   });
 
   test('tidak ada console error saat halaman load', async ({ page }) => {
@@ -90,6 +91,6 @@ test.describe('SIPASDA Smoke Test', () => {
       fullPage: true 
     });
     
-    console.log('✅ Mobile view OK - Screenshot disimpan: test-results/smoke-test-mobile.png');
+    logger.info('✅ Mobile view OK - Screenshot disimpan: test-results/smoke-test-mobile.png');
   });
 });

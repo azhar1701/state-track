@@ -1,3 +1,4 @@
+import { logger } from "../src/lib/logger";
 import { test, expect } from '@playwright/test';
 import {
   waitForMapReady,
@@ -36,11 +37,11 @@ test.describe('🗺️  Map Interaction Tests', () => {
   // ============================================
   
   test('harus bisa drag peta ke arah kanan (pan right)', async ({ page }) => {
-    console.log('\n📋 TEST: Drag peta ke kanan');
+    logger.info('\n📋 TEST: Drag peta ke kanan');
     
     // Get initial bounds sebelum drag
     const boundsBefore = await getMapBounds(page);
-    console.log('📍 Bounds sebelum drag:', boundsBefore);
+    logger.info('📍 Bounds sebelum drag:', boundsBefore);
     
     // Drag dari tengah peta ke kanan
     // Map container approximately 800px wide, 600px tall
@@ -54,17 +55,17 @@ test.describe('🗺️  Map Interaction Tests', () => {
     
     // Get bounds setelah drag
     const boundsAfter = await getMapBounds(page);
-    console.log('📍 Bounds setelah drag:', boundsAfter);
+    logger.info('📍 Bounds setelah drag:', boundsAfter);
     
     // Assert bahwa bounds berubah (longitude bergeser)
     if (boundsBefore && boundsAfter) {
       expect(boundsAfter.northEast.lng).not.toEqual(boundsBefore.northEast.lng);
-      console.log('✅ Map berhasil di-pan');
+      logger.info('✅ Map berhasil di-pan');
     }
   });
 
   test('harus bisa drag peta ke arah atas (pan up)', async ({ page }) => {
-    console.log('\n📋 TEST: Drag peta ke atas');
+    logger.info('\n📋 TEST: Drag peta ke atas');
     
     const boundsBefore = await getMapBounds(page);
     
@@ -80,12 +81,12 @@ test.describe('🗺️  Map Interaction Tests', () => {
     // Assert latitude berubah (geser atas/bawah)
     if (boundsBefore && boundsAfter) {
       expect(boundsAfter.northEast.lat).not.toEqual(boundsBefore.northEast.lat);
-      console.log('✅ Map berhasil di-pan ke atas');
+      logger.info('✅ Map berhasil di-pan ke atas');
     }
   });
 
   test('harus bisa drag peta secara diagonal', async ({ page }) => {
-    console.log('\n📋 TEST: Drag peta diagonal');
+    logger.info('\n📋 TEST: Drag peta diagonal');
     
     // Drag diagonal dari kanan atas ke kiri bawah
     await dragMapToLocation(
@@ -101,7 +102,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
     const mapContainer = page.locator('.leaflet-container');
     await expect(mapContainer).toBeVisible();
     
-    console.log('✅ Drag diagonal completed');
+    logger.info('✅ Drag diagonal completed');
   });
 
   // ============================================
@@ -109,48 +110,48 @@ test.describe('🗺️  Map Interaction Tests', () => {
   // ============================================
 
   test('harus bisa zoom in menggunakan mouse wheel', async ({ page }) => {
-    console.log('\n📋 TEST: Zoom In dengan scroll wheel');
+    logger.info('\n📋 TEST: Zoom In dengan scroll wheel');
     
     const zoomBefore = await getMapZoomLevel(page);
-    console.log('🔍 Zoom level sebelum:', zoomBefore);
+    logger.info('🔍 Zoom level sebelum:', zoomBefore);
     
     // Zoom in 3 steps
     await zoomMap(page, 'in', 3);
     
     const zoomAfter = await getMapZoomLevel(page);
-    console.log('🔍 Zoom level sesudah:', zoomAfter);
+    logger.info('🔍 Zoom level sesudah:', zoomAfter);
     
     // Assert zoom level meningkat
     if (zoomBefore && zoomAfter) {
       expect(zoomAfter).toBeGreaterThan(zoomBefore);
-      console.log(`✅ Zoom berhasil dari ${zoomBefore} ke ${zoomAfter}`);
+      logger.info(`✅ Zoom berhasil dari ${zoomBefore} ke ${zoomAfter}`);
     }
   });
 
   test('harus bisa zoom out menggunakan mouse wheel', async ({ page }) => {
-    console.log('\n📋 TEST: Zoom Out dengan scroll wheel');
+    logger.info('\n📋 TEST: Zoom Out dengan scroll wheel');
     
     // First zoom in
     await zoomMap(page, 'in', 2);
     
     const zoomBefore = await getMapZoomLevel(page);
-    console.log('🔍 Zoom level sebelum zoom out:', zoomBefore);
+    logger.info('🔍 Zoom level sebelum zoom out:', zoomBefore);
     
     // Then zoom out
     await zoomMap(page, 'out', 2);
     
     const zoomAfter = await getMapZoomLevel(page);
-    console.log('🔍 Zoom level sesudah zoom out:', zoomAfter);
+    logger.info('🔍 Zoom level sesudah zoom out:', zoomAfter);
     
     // Assert zoom level berkurang
     if (zoomBefore && zoomAfter) {
       expect(zoomAfter).toBeLessThan(zoomBefore);
-      console.log(`✅ Zoom out dari ${zoomBefore} ke ${zoomAfter}`);
+      logger.info(`✅ Zoom out dari ${zoomBefore} ke ${zoomAfter}`);
     }
   });
 
   test('double click harus zoom in pada lokasi clicked', async ({ page }) => {
-    console.log('\n📋 TEST: Double click untuk zoom in');
+    logger.info('\n📋 TEST: Double click untuk zoom in');
     
     const zoomBefore = await getMapZoomLevel(page);
     
@@ -162,12 +163,12 @@ test.describe('🗺️  Map Interaction Tests', () => {
     // Assert zoom level meningkat
     if (zoomBefore && zoomAfter) {
       expect(zoomAfter).toBeGreaterThan(zoomBefore);
-      console.log(`✅ Double click zoom dari ${zoomBefore} ke ${zoomAfter}`);
+      logger.info(`✅ Double click zoom dari ${zoomBefore} ke ${zoomAfter}`);
     }
   });
 
   test('zoom in harus load tile baru (network request)', async ({ page }) => {
-    console.log('\n📋 TEST: Zoom in trigger tile loading');
+    logger.info('\n📋 TEST: Zoom in trigger tile loading');
     
     // Setup network monitoring
     const tileRequests: string[] = [];
@@ -184,10 +185,10 @@ test.describe('🗺️  Map Interaction Tests', () => {
     // Tunggu tile loading selesai
     await waitForTileLoading(page);
     
-    console.log(`📊 Total tile request: ${tileRequests.length}`);
+    logger.info(`📊 Total tile request: ${tileRequests.length}`);
     
     // Bisa assert tile loading terjadi (tergantung tile provider)
-    console.log('✅ Tile loading untuk zoom completed');
+    logger.info('✅ Tile loading untuk zoom completed');
   });
 
   // ============================================
@@ -195,7 +196,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
   // ============================================
 
   test('[SNAPSHOT] default map view harus konsisten', async ({ page }) => {
-    console.log('\n📋 TEST: Visual Regression - Default Map View');
+    logger.info('\n📋 TEST: Visual Regression - Default Map View');
     
     // Tunggu semua tile selesai loading
     await waitForTileLoading(page);
@@ -213,11 +214,11 @@ test.describe('🗺️  Map Interaction Tests', () => {
       threshold: 0.2,
     });
     
-    console.log('✅ Visual regression check passed');
+    logger.info('✅ Visual regression check passed');
   });
 
   test('[SNAPSHOT] map setelah zoom in harus valid', async ({ page }) => {
-    console.log('\n📋 TEST: Visual Regression - Zoomed Map View');
+    logger.info('\n📋 TEST: Visual Regression - Zoomed Map View');
     
     // Zoom in
     await zoomMap(page, 'in', 3);
@@ -233,11 +234,11 @@ test.describe('🗺️  Map Interaction Tests', () => {
       threshold: 0.2,
     });
     
-    console.log('✅ Zoomed map visual regression check passed');
+    logger.info('✅ Zoomed map visual regression check passed');
   });
 
   test('[SNAPSHOT] map setelah pan harus valid', async ({ page }) => {
-    console.log('\n📋 TEST: Visual Regression - Panned Map View');
+    logger.info('\n📋 TEST: Visual Regression - Panned Map View');
     
     // Pan map
     await dragMapToLocation(page, 400, 300, 250, 300);
@@ -253,7 +254,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
       threshold: 0.2,
     });
     
-    console.log('✅ Panned map visual regression check passed');
+    logger.info('✅ Panned map visual regression check passed');
   });
 
   // ============================================
@@ -261,7 +262,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
   // ============================================
 
   test('waitForMapReady harus detect when peta fully loaded', async ({ page }) => {
-    console.log('\n📋 TEST: Waiting Strategy - Network Idle');
+    logger.info('\n📋 TEST: Waiting Strategy - Network Idle');
     
     // waitForMapReady sudah dijalankan di beforeEach
     // Test ini memastikan strategy bekerja dengan baik
@@ -269,11 +270,11 @@ test.describe('🗺️  Map Interaction Tests', () => {
     const mapContainer = page.locator('.leaflet-container');
     await expect(mapContainer).toBeVisible();
     
-    console.log('✅ Map ready detection working correctly');
+    logger.info('✅ Map ready detection working correctly');
   });
 
   test('network idle strategy harus wait untuk semua tile loading', async ({ page }) => {
-    console.log('\n📋 TEST: Network Idle for Tile Loading');
+    logger.info('\n📋 TEST: Network Idle for Tile Loading');
     
     // Take baseline zoom
     const zoomBefore = await getMapZoomLevel(page);
@@ -290,7 +291,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
       return (window as Record<string, unknown>).__networkActive ?? false;
     });
     
-    console.log('✅ Tile loading strategy validated');
+    logger.info('✅ Tile loading strategy validated');
   });
 
   // ============================================
@@ -298,35 +299,35 @@ test.describe('🗺️  Map Interaction Tests', () => {
   // ============================================
 
   test('combined interaction: zoom → pan → zoom out', async ({ page }) => {
-    console.log('\n📋 TEST: Combined Map Interactions');
+    logger.info('\n📋 TEST: Combined Map Interactions');
     
     const zoomLevel1 = await getMapZoomLevel(page);
-    console.log(`Step 1 - Initial zoom: ${zoomLevel1}`);
+    logger.info(`Step 1 - Initial zoom: ${zoomLevel1}`);
     
     // Step 1: Zoom in
     await zoomMap(page, 'in', 2);
     const zoomLevel2 = await getMapZoomLevel(page);
-    console.log(`Step 2 - After zoom in: ${zoomLevel2}`);
+    logger.info(`Step 2 - After zoom in: ${zoomLevel2}`);
     
     // Step 2: Pan
     await dragMapToLocation(page, 400, 300, 300, 250);
     const bounds = await getMapBounds(page);
-    console.log(`Step 3 - After pan:`, bounds);
+    logger.info(`Step 3 - After pan:`, bounds);
     
     // Step 3: Zoom out
     await zoomMap(page, 'out', 1);
     const zoomLevel3 = await getMapZoomLevel(page);
-    console.log(`Step 4 - After zoom out: ${zoomLevel3}`);
+    logger.info(`Step 4 - After zoom out: ${zoomLevel3}`);
     
     // Assertions
     expect(zoomLevel2).toBeGreaterThan(zoomLevel1);
     expect(zoomLevel3).toBeLessThan(zoomLevel2);
     
-    console.log('✅ Combined interactions completed successfully');
+    logger.info('✅ Combined interactions completed successfully');
   });
 
   test('should maintain visual consistency during interactions', async ({ page }) => {
-    console.log('\n📋 TEST: Visual Consistency During Interactions');
+    logger.info('\n📋 TEST: Visual Consistency During Interactions');
     
     // Perform various interactions
     await zoomMap(page, 'in', 2);
@@ -344,7 +345,7 @@ test.describe('🗺️  Map Interaction Tests', () => {
     expect(box!.width).toBeGreaterThan(0);
     expect(box!.height).toBeGreaterThan(0);
     
-    console.log('✅ Map visual consistency maintained');
+    logger.info('✅ Map visual consistency maintained');
   });
 });
 
@@ -375,7 +376,7 @@ test.describe('🔧 Troubleshooting Map Tests', () => {
       };
     });
     
-    console.log('🗺️  Map Debug Info:', JSON.stringify(mapInfo, null, 2));
+    logger.info('🗺️  Map Debug Info:', JSON.stringify(mapInfo, null, 2));
   });
 
   test.skip('debug: check tile provider', async ({ page }) => {
@@ -397,6 +398,6 @@ test.describe('🔧 Troubleshooting Map Tests', () => {
       };
     });
     
-    console.log('🎨 Tile Provider Info:', JSON.stringify(tileInfo, null, 2));
+    logger.info('🎨 Tile Provider Info:', JSON.stringify(tileInfo, null, 2));
   });
 });

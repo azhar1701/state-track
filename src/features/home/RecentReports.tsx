@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Clock, MapPin, FileText } from "lucide-react";
@@ -153,7 +154,7 @@ export default function RecentReports() {
       }
 
       if (error) {
-        console.error("Failed to load recent reports:", error);
+        logger.error("Failed to load recent reports:", error);
         setError("Gagal memuat data laporan.");
         setItems([]);
         return;

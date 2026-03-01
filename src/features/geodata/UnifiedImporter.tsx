@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -240,8 +242,7 @@ function reprojectFC(fc: GeoJSONFeatureCollection, from: SupportedCRS, to: Suppo
     const [lon, lat] = proj4(String(from), String(to), [x, y]);
     return [lon, lat];
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const reprojectGeometry = (geom: any): any => {
+  const reprojectGeometry = (geom: Record<string, unknown> | null | undefined): Record<string, unknown> | null | undefined => {
     if (!geom) return geom;
     const t = geom.type;
     const coords = geom.coordinates;
@@ -251,7 +252,7 @@ function reprojectFC(fc: GeoJSONFeatureCollection, from: SupportedCRS, to: Suppo
       return (arr as unknown[]).map((a) => mapCoords(a));
     };
     if (t === 'GeometryCollection') {
-      return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
+      return { type: 'GeometryCollection', geometries: (geom.geometries as unknown[]).map((g: unknown) => reprojectGeometry(g as Record<string, unknown>)) };
     }
     return { type: t, coordinates: mapCoords(coords) };
   };
@@ -384,8 +385,8 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
       
       setUploadHistory(prev => [{ name: file.name, time: new Date().toLocaleTimeString('id-ID'), status: 'success' }, ...prev.slice(0, 4)]);
     } catch (e) {
-      console.error(e);
-      toast.error('Gagal membaca file', { description: e instanceof Error ? e.message : 'Unknown error' });
+      logger.error(e);
+      toast.error(handleApiError(e, 'Gagal membaca file'));
       setUploadHistory(prev => [{ name: file.name, time: new Date().toLocaleTimeString('id-ID'), status: 'error' }, ...prev.slice(0, 4)]);
     }
   };
@@ -404,7 +405,7 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
       setProgressValue(100);
       setProgressText('Selesai');
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error('Gagal menyimpan layer');
     } finally {
       setSaving(false);
@@ -478,7 +479,7 @@ export default function UnifiedImporter({ mode, initialKey, initialName, onSaveL
       setProgressValue(100);
       setProgressText('Selesai');
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error('Gagal mengimpor aset');
     } finally {
       setSaving(false);

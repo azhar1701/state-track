@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,7 +83,7 @@ export const GeoLayerSettings = () => {
         icon: <CheckCircle className="h-4 w-4" />,
       });
     } catch (error) {
-      console.error('Failed to save geo layer settings', error);
+      logger.error('Failed to save geo layer settings', error);
       toast.error('Gagal menyimpan pengaturan');
     } finally {
       setSaving(false);

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -61,23 +62,25 @@ export const UserManagementSettings = () => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(1000);
 
       if (profilesError) {
-        console.error("Profiles error:", profilesError);
+        logger.error("Profiles error:", profilesError);
         toast.error(`Error loading profiles: ${profilesError.message}`);
         return;
       }
 
-      console.log("Profiles loaded:", profiles);
+      logger.info("Profiles loaded:", profiles);
 
       // Load roles with error handling
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role");
+        .select("user_id, role")
+        .limit(1000);
 
       if (rolesError) {
-        console.error("Roles error:", rolesError);
+        logger.error("Roles error:", rolesError);
       }
 
       const adminIds = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
@@ -85,10 +88,11 @@ export const UserManagementSettings = () => {
       // Get report counts with error handling
       const { data: reports, error: reportsError } = await supabase
         .from("reports")
-        .select("user_id");
+        .select("user_id")
+        .limit(1000);
 
       if (reportsError) {
-        console.error("Reports error:", reportsError);
+        logger.error("Reports error:", reportsError);
       }
 
       const reportCounts: Record<string, number> = {};
@@ -109,12 +113,12 @@ export const UserManagementSettings = () => {
         report_count: reportCounts[profile.id] || 0,
       }));
 
-      console.log("User list:", userList);
+      logger.info("User list:", userList);
       setUsers(userList);
       toast.success(`${userList.length} pengguna berhasil dimuat`);
     } catch (error) {
-      console.error("Failed to load users", error);
-      toast.error(`Gagal memuat pengguna: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error("Failed to load users", error);
+      toast.error(handleApiError(error, "Gagal memuat pengguna"));
     } finally {
       setLoading(false);
     }
@@ -142,8 +146,8 @@ export const UserManagementSettings = () => {
 
       setActivities(activityList);
     } catch (error) {
-      console.error("Failed to load activities", error);
-      toast.error("Gagal memuat aktivitas");
+      logger.error("Failed to load activities", error);
+      toast.error(handleApiError(error, "Gagal memuat aktivitas"));
     } finally {
       setActivityLoading(false);
     }
@@ -163,7 +167,7 @@ export const UserManagementSettings = () => {
           .from("user_roles")
           .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id" });
         if (error) {
-          console.error("Upsert error:", error);
+          logger.error("Upsert error:", error);
           throw error;
         }
       } else {
@@ -173,15 +177,15 @@ export const UserManagementSettings = () => {
           .eq("user_id", userId)
           .eq("role", "admin");
         if (error) {
-          console.error("Delete error:", error);
+          logger.error("Delete error:", error);
           throw error;
         }
       }
       toast.success(`Role berhasil diubah menjadi ${newRole === "admin" ? "Admin" : "User"}`);
       await loadUsers();
     } catch (error) {
-      console.error("Failed to update role", error);
-      toast.error(`Gagal memperbarui role: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error("Failed to update role", error);
+      toast.error(handleApiError(error, "Gagal memperbarui role"));
     } finally {
       setUpdatingUserId(null);
     }

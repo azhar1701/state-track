@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -154,7 +156,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           setStats({ featureCount, fields });
         }
       } catch (err) {
-        console.error('[LayerInspector] Load error:', err);
+        logger.error('[LayerInspector] Load error:', err);
         toast.error('Gagal memuat detail layer');
       } finally {
         setLoading(false);
@@ -193,15 +195,15 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
           .update(updatePayload)
           .eq('key', row.key);
         if (fallback.error) {
-          console.error('[LayerInspector] saveMeta fallback failed', sanitizeForLog(fallback.error));
-          toast.error('Gagal menyimpan metadata', { description: fallback.error.message });
+          logger.error('[LayerInspector] saveMeta fallback failed', sanitizeForLog(fallback.error));
+          toast.error(handleApiError(fallback.error, 'Gagal menyimpan metadata'));
           return;
         }
       }
       setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
       toast.success('Metadata disimpan');
     } catch (e) {
-      console.error('[LayerInspector] saveMeta exception', sanitizeForLog(e));
+      logger.error('[LayerInspector] saveMeta exception', sanitizeForLog(e));
       toast.error('Gagal menyimpan metadata');
     } finally {
       setSavingMeta(false);
@@ -223,10 +225,10 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
         console.warn('[LayerInspector] saveStyle failed by id', sanitizeForLog(error));
         const fallback = await updateByKey();
         if (fallback.error) {
-          console.error('[LayerInspector] saveStyle fallback failed', sanitizeForLog(fallback.error));
+          logger.error('[LayerInspector] saveStyle fallback failed', sanitizeForLog(fallback.error));
           const retry = await updateByKey();
           if (retry.error) {
-            toast.error('Gagal menyimpan style', { description: retry.error.message });
+            toast.error(handleApiError(retry.error, 'Gagal menyimpan style'));
             return;
           }
         }
@@ -234,7 +236,7 @@ export const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorP
       toast.success('Style disimpan');
       setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
     } catch (e) {
-      console.error('[LayerInspector] saveStyle exception', sanitizeForLog(e));
+      logger.error('[LayerInspector] saveStyle exception', sanitizeForLog(e));
       toast.error('Gagal menyimpan style');
     } finally {
       setSavingStyle(false);

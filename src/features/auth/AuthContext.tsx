@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -55,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (error) {
-      console.error("Error checking admin status:", error);
+      logger.error("Error checking admin status:", error);
       setIsAdmin(false);
     } finally {
       setLoading(false);
@@ -77,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
+        logger.info('Token refreshed successfully');
         return;
       }
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
@@ -104,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('Session error:', error);
+        logger.error('Session error:', error);
         setSession(null);
         setUser(null);
         setLoading(false);

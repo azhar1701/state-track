@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "@/services/client";
@@ -64,7 +66,7 @@ const Auth = () => {
         } else if (message.includes("invalid login credentials")) {
           toast.error("Email atau password salah");
         } else {
-          toast.error(error.message);
+          toast.error(handleApiError(error, "Terjadi kesalahan saat login"));
         }
         return;
       }
@@ -88,7 +90,7 @@ const Auth = () => {
       }
     } catch (error) {
       toast.error("Terjadi kesalahan saat login");
-      console.error("Login error:", error);
+      logger.error("Login error:", error);
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ const Auth = () => {
       });
 
       if (error) {
-        toast.error(error.message.includes("already registered") ? "Email sudah terdaftar. Silakan login." : error.message);
+        toast.error(error.message.includes("already registered") ? "Email sudah terdaftar. Silakan login." : handleApiError(error, "Terjadi kesalahan saat registrasi"));
         return;
       }
 
@@ -150,7 +152,7 @@ const Auth = () => {
       setFormData({ email: formData.email, password: "", fullName: "", phone: "", nikNip: "" });
     } catch (error) {
       toast.error("Terjadi kesalahan saat registrasi");
-      console.error("Signup error:", error);
+      logger.error("Signup error:", error);
     } finally {
       setLoading(false);
     }
@@ -244,7 +246,7 @@ const Auth = () => {
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       required
-                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                     />
                   </div>
                 </div>
@@ -260,7 +262,7 @@ const Auth = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
-                    className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                    className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                   />
                 </div>
               </div>
@@ -275,7 +277,7 @@ const Auth = () => {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
-                    className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                    className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                   />
                 </div>
               </div>
@@ -291,7 +293,7 @@ const Auth = () => {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       required
-                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                     />
                   </div>
                 </div>
@@ -308,7 +310,7 @@ const Auth = () => {
                       value={formData.nikNip}
                       onChange={(e) => setFormData({ ...formData, nikNip: e.target.value })}
                       required
-                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
+                      className="pl-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-2 focus:ring-blue-500 focus:border-transparent h-12"
                     />
                   </div>
                 </div>

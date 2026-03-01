@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/client';
@@ -167,7 +168,7 @@ export default function MyReports() {
           kecamatan: (rr.kecamatan as string | null | undefined) ?? null,
           desa: (rr.desa as string | null | undefined) ?? null,
         };
-        console.log('MyReports - Mapped row:', { id: row.id, reporter_name: row.reporter_name, phone: row.phone, kecamatan: row.kecamatan, desa: row.desa });
+        logger.info('MyReports - Mapped row:', { id: row.id, reporter_name: row.reporter_name, phone: row.phone, kecamatan: row.kecamatan, desa: row.desa });
         return row;
       });
       setRows(mapped);

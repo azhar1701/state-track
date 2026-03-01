@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/client';
 import { toast } from 'sonner';
@@ -55,7 +56,7 @@ export const useLayerManager = () => {
       
       setLayers(uniqueLayers as LayerData[]);
     } catch (error) {
-      console.error('[useLayerManager] Fetch failed:', error);
+      logger.error('[useLayerManager] Fetch failed:', error);
       toast.error('Gagal memuat layers', { id: 'fetch-layers-error' });
     } finally {
       setLoading(false);
@@ -134,7 +135,7 @@ export const useLayerManager = () => {
       
       return true;
     } catch (error) {
-      console.error('[useLayerManager] Upload failed:', error);
+      logger.error('[useLayerManager] Upload failed:', error);
       toast.error('Terjadi kesalahan saat upload', { id: toastId });
       return false;
     }
@@ -191,7 +192,7 @@ export const useLayerManager = () => {
       
       return true;
     } catch (error) {
-      console.error('[useLayerManager] Delete failed:', error);
+      logger.error('[useLayerManager] Delete failed:', error);
       toast.error('Gagal menghapus layer', { id: toastId });
       return false;
     }
@@ -223,7 +224,7 @@ export const useLayerManager = () => {
       
       return true;
     } catch (error) {
-      console.error('[useLayerManager] Update failed:', error);
+      logger.error('[useLayerManager] Update failed:', error);
       toast.error('Gagal memperbarui layer', { id: toastId });
       return false;
     }
@@ -280,7 +281,7 @@ export const useLayerManager = () => {
         return null;
       }
 
-      console.error(`[useLayerManager] Fetch layer ${key} failed:`, error);
+      logger.error(`[useLayerManager] Fetch layer ${key} failed:`, error);
       
       // Mark as errored
       errorLayersRef.current.add(key);

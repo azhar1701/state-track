@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { LatLng } from 'leaflet';
 
 // Use multiple free geocoding providers for better accuracy
@@ -200,7 +201,7 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<Geocodin
     }
     return result;
   } catch (error) {
-    console.error('Reverse geocoding error:', error);
+    logger.error('Reverse geocoding error:', error);
     return null;
   }
 };

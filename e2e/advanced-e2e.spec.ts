@@ -1,3 +1,4 @@
+import { logger } from "../src/lib/logger";
 import { test, expect } from '@playwright/test';
 import {
   waitForMapReady,
@@ -37,7 +38,7 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   
   test.beforeEach(async ({ page }) => {
     // Navigate ke halaman utama
-    console.log('Navigate ke halaman utama...');
+    logger.info('Navigate ke halaman utama...');
     await page.goto('/');
     
     /**
@@ -59,7 +60,7 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   // ============================================
   
   test('✅ [ROBUST] should render map dengan multiple selector fallback', async ({ page }) => {
-    console.log('📋 TEST: Map Rendering Robustness');
+    logger.info('📋 TEST: Map Rendering Robustness');
     
     // Verifikasi map ada dengan primary selector
     const mapLocator = page.locator('.leaflet-container');
@@ -71,7 +72,7 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
     expect(boundingBox!.width).toBeGreaterThan(100);
     expect(boundingBox!.height).toBeGreaterThan(100);
     
-    console.log(`✅ Map rendered: ${boundingBox!.width}x${boundingBox!.height}px`);
+    logger.info(`✅ Map rendered: ${boundingBox!.width}x${boundingBox!.height}px`);
   });
 
   // ============================================
@@ -79,7 +80,7 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   // ============================================
   
   test('✅ [SELECTORS] harus fallback ke alternative selectors', async ({ page }) => {
-    console.log('📋 TEST: Alternative Selector Fallback');
+    logger.info('📋 TEST: Alternative Selector Fallback');
     
     /**
      * CONTOH: Test multiple selectors dengan fallback
@@ -93,10 +94,10 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
         state: 'visible', 
         timeout: 5000 
       });
-      console.log('✅ Primary selector found: ' + primarySelector);
+      logger.info('✅ Primary selector found: ' + primarySelector);
     } catch {
       // Fallback ke alternative
-      console.log('Primary selector gagal, trying alternatives...');
+      logger.info('Primary selector gagal, trying alternatives...');
       
       const altSelectors = [
         '#map',
@@ -110,10 +111,10 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
             state: 'visible', 
             timeout: 3000 
           });
-          console.log(`✅ Found with alternative selector: ${selector}`);
+          logger.info(`✅ Found with alternative selector: ${selector}`);
           break;
         } catch (e) {
-          console.log(`   ❌ Not found: ${selector}`);
+          logger.info(`   ❌ Not found: ${selector}`);
         }
       }
     }
@@ -124,21 +125,21 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   // ============================================
   
   test('✅ [WAITING] network idle + DOM ready strategy', async ({ page }) => {
-    console.log('📋 TEST: Advanced Waiting Strategy');
+    logger.info('📋 TEST: Advanced Waiting Strategy');
     
     // Strategy 1: Network Idle
-    console.log('Strategy 1: Waiting for network idle...');
+    logger.info('Strategy 1: Waiting for network idle...');
     await page.waitForLoadState('networkidle', { timeout: 15000 });
-    console.log('✅ Network idle reached');
+    logger.info('✅ Network idle reached');
     
     // Strategy 2: DOM Content Loaded
-    console.log('Strategy 2: Waiting for DOM content...');
+    logger.info('Strategy 2: Waiting for DOM content...');
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
-    console.log('✅ DOM ready');
+    logger.info('✅ DOM ready');
     
     // Verify map visible
     await expect(page.locator('.leaflet-container')).toBeVisible();
-    console.log('✅ Map visible after combo strategy');
+    logger.info('✅ Map visible after combo strategy');
   });
 
   // ============================================
@@ -146,19 +147,19 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   // ============================================
   
   test('✅ [DEBUG] manual screenshot & debug capture example', async ({ page }) => {
-    console.log('📋 TEST: Manual Debugging Techniques');
+    logger.info('📋 TEST: Manual Debugging Techniques');
     
     // TECHNIQUE 1: Simple screenshot
-    console.log('Taking simple screenshot...');
+    logger.info('Taking simple screenshot...');
     await page.screenshot({ path: 'test-results/debug-screenshots/example-01-simple.png' });
-    console.log('✅ Screenshot saved');
+    logger.info('✅ Screenshot saved');
     
     // TECHNIQUE 2: Debug state capture
-    console.log('Capturing debug state...');
+    logger.info('Capturing debug state...');
     await debugPageState(page, 'Manual Test');
     
     // TECHNIQUE 3: Custom screenshot dengan specific element
-    console.log('Capturing just map container...');
+    logger.info('Capturing just map container...');
     const mapElement = page.locator('.leaflet-container');
     const box = await mapElement.boundingBox();
     if (box) {
@@ -166,11 +167,11 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
         path: 'test-results/debug-screenshots/example-02-map-only.png',
         clip: box,
       });
-      console.log('✅ Map screenshot saved');
+      logger.info('✅ Map screenshot saved');
     }
     
     // TECHNIQUE 4: Define custom breakpoint
-    console.log('Manual debug point - you can resume in UI mode');
+    logger.info('Manual debug point - you can resume in UI mode');
     // In --ui mode, you can now step through and inspect elements
   });
 
@@ -186,15 +187,15 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
     // 4. Click untuk buka form
     // 5. Submit report
     
-    console.log('📋 TEST: Map Exploration → Report Submission');
+    logger.info('📋 TEST: Map Exploration → Report Submission');
     
     // Step 1: Get initial bounds
     const initialBounds = await getMapBounds(page);
     expect(initialBounds).not.toBeNull();
-    console.log('✅ Initial bounds captured');
+    logger.info('✅ Initial bounds captured');
     
     // Step 2: Zoom in (dengan error handling)
-    console.log('Step 2: Zoom in dengan retry logic');
+    logger.info('Step 2: Zoom in dengan retry logic');
     await zoomMap(page, 'in', 2);
     
     // Tunggu tiles selesai loading
@@ -202,10 +203,10 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
     
     const zoomAfter = await getMapZoomLevel(page);
     expect(zoomAfter).toBeGreaterThan(1);
-    console.log(`✅ Zoomed to level: ${zoomAfter}`);
+    logger.info(`✅ Zoomed to level: ${zoomAfter}`);
     
     // Step 3: Pan ke lokasi tertentu
-    console.log('Step 3: Pan ke lokasi dengan retry');
+    logger.info('Step 3: Pan ke lokasi dengan retry');
     await dragMapToLocation(page, 400, 300, 300, 250, 500, { retries: 2 });
     await waitForMapStable(page, 3, 300);
     
@@ -213,20 +214,20 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
     const boundsAfterPan = await getMapBounds(page);
     expect(boundsAfterPan).not.toBeNull();
     expect(boundsAfterPan?.northEast.lng).not.toEqual(initialBounds?.northEast.lng);
-    console.log('✅ Map panned successfully');
+    logger.info('✅ Map panned successfully');
     
     // Step 5: Click pada peta
-    console.log('Step 4: Click peta untuk open form');
+    logger.info('Step 4: Click peta untuk open form');
     const mapContainer = page.locator('.leaflet-container');
     await mapContainer.click({ position: { x: 400, y: 300 } });
     
     // Tunggu form modal muncul
     const reportForm = page.locator('form, [role="dialog"]');
     await reportForm.waitFor({ state: 'visible', timeout: 5000 });
-    console.log('✅ Form appeared');
+    logger.info('✅ Form appeared');
     
     // Step 6: Fill & submit
-    console.log('Step 5: Fill form');
+    logger.info('Step 5: Fill form');
     await page.fill('input[name="title"]', 'Kerusakan Saluran');
     await page.fill('textarea[name="description"]', 'Test report');
     
@@ -235,7 +236,7 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
     const successMsg = page.locator('.toast, [role="alert"]');
     await expect(successMsg).toContainText(/success|berhasil/i, { timeout: 10000 });
     
-    console.log('✅ Report submitted');
+    logger.info('✅ Report submitted');
   });
 
   // ============================================
@@ -243,18 +244,18 @@ test.describe('🗺️  Advanced E2E: Map + Form Integration', () => {
   // ============================================
   
   test.skip('[SNAPSHOT] map state consistency', async ({ page }) => {
-    console.log('📋 TEST: Visual Regression');
+    logger.info('📋 TEST: Visual Regression');
     
-    console.log('Snapshot 1: Initial state');
+    logger.info('Snapshot 1: Initial state');
     await expect(page).toHaveScreenshot('e2e-map-initial.png');
     
-    console.log('Snapshot 2: After zoom');
+    logger.info('Snapshot 2: After zoom');
     await zoomMap(page, 'in', 1);
     await waitForTileLoading(page);
     await page.waitForTimeout(1000);
     await expect(page).toHaveScreenshot('e2e-map-zoomed.png');
     
-    console.log('✅ Snapshots captured');
+    logger.info('✅ Snapshots captured');
   });
 });
 
@@ -280,7 +281,7 @@ test.describe('♿ Map Accessibility Tests', () => {
     const bounds = await getMapBounds(page);
     expect(bounds).not.toBeNull();
     
-    console.log('✅ Keyboard navigation works');
+    logger.info('✅ Keyboard navigation works');
   });
 });
 
@@ -299,6 +300,6 @@ test.describe('📱 Mobile Map Tests', () => {
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThan(0);
     
-    console.log('✅ Map responsive');
+    logger.info('✅ Map responsive');
   });
 });

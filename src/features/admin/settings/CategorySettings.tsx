@@ -1,3 +1,5 @@
+import { handleApiError } from "@/lib/api-errors";
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/services/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -70,13 +72,13 @@ export const CategorySettings = () => {
         .from('custom_categories')
         .select('*')
         .order('label');
-      
+
       if (catsError) throw catsError;
 
       const { data: reports, error: reportsError } = await supabase
         .from('reports')
         .select('category');
-      
+
       if (reportsError) throw reportsError;
 
       const categoryCounts = (reports || []).reduce((acc, { category }) => {
@@ -125,9 +127,9 @@ export const CategorySettings = () => {
           color: newCategory.color,
           description: newCategory.description.trim() || null,
         });
-      
+
       if (error) throw error;
-      
+
       setNewCategory({ label: '', icon: '📋', color: '#3b82f6', description: '' });
       toast.success('Kategori berhasil ditambahkan', { icon: <CheckCircle className="h-4 w-4" /> });
       await loadCategories();
@@ -156,9 +158,9 @@ export const CategorySettings = () => {
           description: editingCategory.description?.trim() || null,
         })
         .eq('id', editingCategory.id);
-      
+
       if (error) throw error;
-      
+
       setEditingCategory(null);
       toast.success('Kategori berhasil diupdate', { icon: <CheckCircle className="h-4 w-4" /> });
       await loadCategories();
@@ -177,9 +179,9 @@ export const CategorySettings = () => {
         .from('custom_categories')
         .update({ is_active: isActive })
         .eq('id', id);
-      
+
       if (error) throw error;
-      
+
       toast.success(isActive ? 'Kategori diaktifkan' : 'Kategori dinonaktifkan');
       await loadCategories();
     } catch (error) {
@@ -206,9 +208,9 @@ export const CategorySettings = () => {
         .from('custom_categories')
         .delete()
         .eq('id', deleteCategory);
-      
+
       if (error) throw error;
-      
+
       setDeleteCategory(null);
       toast.success('Kategori berhasil dihapus');
       await loadCategories();
@@ -354,7 +356,7 @@ export const CategorySettings = () => {
                           size="sm"
                           variant="ghost"
                           className="h-8 w-8 p-0 text-destructive"
-                          disabled={cat.count && cat.count > 0}
+                          disabled={(cat.count || 0) > 0}
                         >
                           <X className="h-4 w-4" />
                         </Button>

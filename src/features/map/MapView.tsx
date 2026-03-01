@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane } from 'react-leaflet';
@@ -11,6 +12,10 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import 'leaflet.heat';
 import 'leaflet/dist/leaflet.css';
+
+declare module 'leaflet' {
+  export function heatLayer(latlngs: Array<[number, number, number]>, options?: Record<string, unknown>): L.Layer;
+}
 import { BasemapSwitcher } from '@/features/map/BasemapSwitcher';
 import type { BasemapType } from '@/features/map/basemap-config';
 import { Legend, type LegendOverlayItem } from '@/features/map/Legend';
@@ -88,7 +93,7 @@ const getColorForKey = (key: string) => {
   if (lower.includes('jalan') || lower.includes('road')) return '#6b7280'; // Gray
   if (lower.includes('irigasi') || lower.includes('irrigation')) return '#06b6d4'; // Cyan
   if (lower.includes('drainase') || lower.includes('drainage')) return '#8b5cf6'; // Purple
-  
+
   // Fallback to hash-based color for other layers
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
@@ -103,7 +108,7 @@ const createClusterCustomIcon = (cluster: L.MarkerCluster) => {
   const count = cluster.getChildCount();
   const size = count < 10 ? 44 : count < 100 ? 54 : 64;
   const fontSize = count < 10 ? '16px' : count < 100 ? '14px' : '12px';
-  
+
   return L.divIcon({
     html: `
       <div style="
@@ -399,12 +404,12 @@ const MapView = () => {
           ? parsed.showAdminBoundaries
           : prev.adminBoundaries;
         const adminChanged = nextAdminBoundaries !== prev.adminBoundaries;
-        
+
         const nextClustering = typeof parsed.enableClustering === 'boolean'
           ? parsed.enableClustering
           : prev.clustering;
         const clusterChanged = nextClustering !== prev.clustering;
-        
+
         const nextHeatmap = typeof parsed.enableHeatmap === 'boolean'
           ? parsed.enableHeatmap
           : prev.heatmap;
@@ -441,7 +446,7 @@ const MapView = () => {
       if (!hasUrlBasemap && parsed.basemap) {
         setBasemap(parsed.basemap);
       }
-      
+
       // Apply geolocation if enabled
       if (parsed.enableGeolocation && !userLocation) {
         getUserLocation();
@@ -621,8 +626,8 @@ const MapView = () => {
     return Object.entries(overlays.dynamic || {}).map(([key, on]) => {
       if (!on || !dynamicData[key]) return null;
       const config = dynamicStyle[key] || {};
-      console.log(`[MapView] Rendering layer ${key} with style:`, config);
-      
+      logger.info(`[MapView] Rendering layer ${key} with style:`, config);
+
       // Force dynamic layers (non-admin) to use the same visual style as
       // administrative boundaries. Only the admin boundary layer may have
       // a custom/different appearance.
@@ -689,7 +694,7 @@ const MapView = () => {
             onEachFeature={(feature, layer) => {
               const p = feature.properties as Record<string, unknown> | undefined;
               const featureId = `${key}-${Math.random().toString(36).substr(2, 9)}`;
-              
+
               // not registering dynamic layer for highlight
 
               const title = (p?.name as string) || (p?.title as string) || (p?.NAMOBJ as string) || key;
@@ -736,7 +741,7 @@ const MapView = () => {
   const legendOverlays = useMemo<LegendOverlayItem[]>(() => {
     const items: LegendOverlayItem[] = [];
     const seenLabels = new Set<string>();
-    
+
     if (overlays.adminBoundaries) {
       const label = 'Batas Administratif';
       if (!seenLabels.has(label)) {
@@ -747,23 +752,23 @@ const MapView = () => {
     const dyn = overlays.dynamic || {};
     const activeDyn = Object.entries(dyn).filter(([, on]) => on).map(([k]) => k);
     const getName = (key: string) => availableLayers.find((l) => l.key === key)?.name || key;
-    
+
     for (const key of activeDyn) {
       const lower = key.toLowerCase();
       if (lower === 'assets') continue;
-      
+
       // Compute dynamic color per-layer; keep ability to override via style
       const config = dynamicStyle[key] || {};
       const layerColor = getColorForKey(key);
       const strokeColor = config.color || layerColor;
       const fillColor = config.fillColor || layerColor;
       const dashArray = config.dashArray;
-      
+
       // Determine geometry type
       const gt = availableLayers.find((l) => l.key === key)?.geometry_type
         || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type
         || '';
-      
+
       if (/LineString/i.test(String(gt))) {
         items.push({ type: 'line', label: getName(key), color: strokeColor, dashArray });
       } else if (/Point/i.test(String(gt))) {
@@ -786,20 +791,20 @@ const MapView = () => {
   useEffect(() => {
     const handleLayerDeleted = (e: Event) => {
       const { layerId, layerKey } = (e as CustomEvent).detail;
-      console.log('[MapView] Layer deleted:', layerKey);
-      
+      logger.info('[MapView] Layer deleted:', layerKey);
+
       setDynamicData(prev => {
         const next = { ...prev };
         delete next[layerKey];
         return next;
       });
-      
+
       setOverlays(prev => {
         const nextDynamic = { ...prev.dynamic };
         delete nextDynamic[layerKey];
         return { ...prev, dynamic: nextDynamic };
       });
-      
+
       processedLayersRef.current.delete(layerKey);
       layerErrorsRef.current.delete(layerKey);
     };
@@ -913,8 +918,7 @@ const MapView = () => {
             }
             return null;
           };
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return peek((g as any).coordinates);
+          return peek((g as Record<string, unknown>).coordinates);
         })();
         const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
 
@@ -927,8 +931,7 @@ const MapView = () => {
             const [lon, lat] = proj4('EPSG:32749', 'EPSG:4326', [x, y]);
             return [lon, lat];
           };
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const reprojectGeometry = (geom: any): any => {
+          const reprojectGeometry = (geom: Record<string, unknown> | null | undefined): Record<string, unknown> | null | undefined => {
             if (!geom) return geom;
             const t = geom.type;
             const coords = geom.coordinates;
@@ -938,7 +941,7 @@ const MapView = () => {
               return (arr as unknown[]).map((a) => mapCoords(a));
             };
             if (t === 'GeometryCollection') {
-              return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
+              return { type: 'GeometryCollection', geometries: (geom.geometries as unknown[]).map((g: unknown) => reprojectGeometry(g as Record<string, unknown>)) };
             }
             return { type: t, coordinates: mapCoords(coords) };
           };
@@ -988,7 +991,7 @@ const MapView = () => {
 
         setAdminGeoJson(result);
       } catch (err) {
-        console.error('Failed to load admin boundaries', sanitizeForLog(err));
+        logger.error('Failed to load admin boundaries', sanitizeForLog(err));
         toast.error('Gagal memuat batas administratif', {
           description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson atau /public/data/adm_ciamis.geojson',
         });
@@ -1087,17 +1090,17 @@ const MapView = () => {
       const keysToLoad = Object.entries(dyn)
         .filter(([, on]) => on)
         .map(([k]) => k);
-      
+
       for (const key of keysToLoad) {
         // Skip if already loaded, loading, or previously errored
         if (dynamicData[key] || dynamicLoading[key] || layerErrorsRef.current.has(key)) continue;
-        
+
         // Skip if already processed in this session
         if (processedLayersRef.current.has(key)) continue;
-        
+
         processedLayersRef.current.add(key);
         setDynamicLoading((s) => ({ ...s, [key]: true }));
-        
+
         try {
           // Fetch full layer data
           const { data: fullLayer, error: layerError } = await supabase
@@ -1113,11 +1116,11 @@ const MapView = () => {
 
           if (!layerError && fullLayer) {
             raw = fullLayer.data as unknown as Record<string, unknown>;
-            
+
             // CRITICAL: Extract and store style FIRST before anything else
             const dataStyle = (raw?.style || {}) as Record<string, unknown>;
             const geomType = availableLayers.find((l) => l.key === key)?.geometry_type || '';
-            
+
             const styleConfig: LayerStyleConfig = {};
             if (/Point/i.test(geomType)) {
               const pt = dataStyle.point as Record<string, unknown> | undefined;
@@ -1146,10 +1149,10 @@ const MapView = () => {
                 styleConfig.fillOpacity = pg.fillOpacity as number;
               }
             }
-            
+
             // Store style SYNCHRONOUSLY before setting data
             if (Object.keys(styleConfig).length > 0) {
-              console.log(`[MapView] Loading style for ${key}:`, styleConfig);
+              logger.info(`[MapView] Loading style for ${key}:`, styleConfig);
               setDynamicStyle((s) => {
                 const next = { ...s, [key]: styleConfig };
                 try {
@@ -1248,96 +1251,96 @@ const MapView = () => {
             proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
             proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
 
-              // Decide source CRS: prefer stored srcCrs, fallback to embedded fc.crs.name, then heuristic
-              const embeddedCrsName = (fc as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
-              const src = (srcCrs || embeddedCrsName || '').toUpperCase();
-              const isEPSG4326 = src.includes('EPSG:4326');
-              const isEPSG3857 = src.includes('EPSG:3857') || src.includes('EPSG:900913');
-              const isEPSG32749 = src.includes('EPSG:32749') || src.includes('EPSG::32749') || src.includes('32749');
-              const sample = (() => {
-                const f = fc!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
-                if (!f) return null;
-                const g = f.geometry as unknown as { coordinates?: unknown };
-                const peek = (coords: unknown): [number, number] | null => {
-                  if (!Array.isArray(coords)) return null;
-                  if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                    return [coords[0] as number, coords[1] as number];
-                  }
-                  for (const c of coords as unknown[]) {
-                    const p = peek(c);
-                    if (p) return p;
-                  }
-                  return null;
-                };
-                return peek(g.coordinates);
-              })();
-              const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
+            // Decide source CRS: prefer stored srcCrs, fallback to embedded fc.crs.name, then heuristic
+            const embeddedCrsName = (fc as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
+            const src = (srcCrs || embeddedCrsName || '').toUpperCase();
+            const isEPSG4326 = src.includes('EPSG:4326');
+            const isEPSG3857 = src.includes('EPSG:3857') || src.includes('EPSG:900913');
+            const isEPSG32749 = src.includes('EPSG:32749') || src.includes('EPSG::32749') || src.includes('32749');
+            const sample = (() => {
+              const f = fc!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
+              if (!f) return null;
+              const g = f.geometry as unknown as { coordinates?: unknown };
+              const peek = (coords: unknown): [number, number] | null => {
+                if (!Array.isArray(coords)) return null;
+                if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                  return [coords[0] as number, coords[1] as number];
+                }
+                for (const c of coords as unknown[]) {
+                  const p = peek(c);
+                  if (p) return p;
+                }
+                return null;
+              };
+              return peek(g.coordinates);
+            })();
+            const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
 
-              let resultFC = fc as FeatureCollection<Geometry>;
-              // Determine transform only when needed
-              const needTransform = isEPSG3857 || isEPSG32749 || (!isEPSG4326 && looksProjected);
-              if (needTransform) {
-                const from = isEPSG3857 ? 'EPSG:3857' : (isEPSG32749 ? 'EPSG:32749' : 'EPSG:32749');
-                const transformCoord = (pt: number[]): [number, number] => {
-                  const [x, y] = pt;
-                  const [lon, lat] = proj4(from, 'EPSG:4326', [x, y]);
-                  return [lon, lat];
+            let resultFC = fc as FeatureCollection<Geometry>;
+            // Determine transform only when needed
+            const needTransform = isEPSG3857 || isEPSG32749 || (!isEPSG4326 && looksProjected);
+            if (needTransform) {
+              const from = isEPSG3857 ? 'EPSG:3857' : (isEPSG32749 ? 'EPSG:32749' : 'EPSG:32749');
+              const transformCoord = (pt: number[]): [number, number] => {
+                const [x, y] = pt;
+                const [lon, lat] = proj4(from, 'EPSG:4326', [x, y]);
+                return [lon, lat];
+              };
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const reprojectGeometry = (geom: any): any => {
+                if (!geom) return geom;
+                const t = geom.type;
+                const coords = geom.coordinates;
+                const mapCoords = (arr: unknown): unknown => {
+                  if (!Array.isArray(arr)) return arr;
+                  if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
+                  return (arr as unknown[]).map((a) => mapCoords(a));
                 };
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const reprojectGeometry = (geom: any): any => {
-                  if (!geom) return geom;
-                  const t = geom.type;
-                  const coords = geom.coordinates;
-                  const mapCoords = (arr: unknown): unknown => {
-                    if (!Array.isArray(arr)) return arr;
-                    if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
-                    return (arr as unknown[]).map((a) => mapCoords(a));
-                  };
-                  if (t === 'GeometryCollection') {
-                    return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
-                  }
-                  return { type: t, coordinates: mapCoords(coords) };
-                };
-                resultFC = {
-                  type: 'FeatureCollection',
-                  features: fc.features.map((f) => ({
-                    type: 'Feature',
-                    properties: f.properties || {},
-                    geometry: reprojectGeometry(f.geometry),
-                  })) as unknown as Feature<Geometry>[],
-                } as FeatureCollection<Geometry>;
-              }
-              setDynamicData((s) => ({ ...s, [key]: resultFC }));
-            } else {
-              // Mark as errored to prevent retry loops
-              layerErrorsRef.current.add(key);
-              processedLayersRef.current.delete(key);
-              
-              // Show ONE toast with unique ID
-              const toastId = `layer-error-${key}`;
-              toast.error(`Gagal memuat layer: ${key}`, {
-                id: toastId,
-                description: key === 'assets'
-                  ? (!layerError && !fullLayer?.data
-                    ? 'Tidak ditemukan data aset. Tambahkan aset dari GeoData Manager terlebih dahulu.'
-                    : 'Data aset belum tersedia atau koordinat aset belum lengkap.')
-                  : 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.',
+                if (t === 'GeometryCollection') {
+                  return { type: 'GeometryCollection', geometries: geom.geometries.map((g: unknown) => reprojectGeometry(g)) };
+                }
+                return { type: t, coordinates: mapCoords(coords) };
+              };
+              resultFC = {
+                type: 'FeatureCollection',
+                features: fc.features.map((f) => ({
+                  type: 'Feature',
+                  properties: f.properties || {},
+                  geometry: reprojectGeometry(f.geometry),
+                })) as unknown as Feature<Geometry>[],
+              } as FeatureCollection<Geometry>;
+            }
+            setDynamicData((s) => ({ ...s, [key]: resultFC }));
+          } else {
+            // Mark as errored to prevent retry loops
+            layerErrorsRef.current.add(key);
+            processedLayersRef.current.delete(key);
+
+            // Show ONE toast with unique ID
+            const toastId = `layer-error-${key}`;
+            toast.error(`Gagal memuat layer: ${key}`, {
+              id: toastId,
+              description: key === 'assets'
+                ? (!layerError && !fullLayer?.data
+                  ? 'Tidak ditemukan data aset. Tambahkan aset dari GeoData Manager terlebih dahulu.'
+                  : 'Data aset belum tersedia atau koordinat aset belum lengkap.')
+                : 'Format data tidak dikenali. Harap unggah GeoJSON FeatureCollection atau ZIP Shapefile.',
             });
-              
-              // Auto-remove from overlays to prevent re-render attempts
-              setOverlays(prev => {
-                const nextDynamic = { ...prev.dynamic };
-                delete nextDynamic[key];
-                return { ...prev, dynamic: nextDynamic };
-              });
+
+            // Auto-remove from overlays to prevent re-render attempts
+            setOverlays(prev => {
+              const nextDynamic = { ...prev.dynamic };
+              delete nextDynamic[key];
+              return { ...prev, dynamic: nextDynamic };
+            });
           }
         } catch (e) {
           console.warn('Failed to load layer', key, sanitizeForLog(e));
-          
+
           // Mark as errored
           layerErrorsRef.current.add(key);
           processedLayersRef.current.delete(key);
-          
+
           const toastId = `layer-error-${key}`;
           toast.error(`Gagal memuat layer: ${key}`, {
             id: toastId,
@@ -1345,7 +1348,7 @@ const MapView = () => {
               ? 'Terjadi kesalahan saat mengambil data aset.'
               : undefined,
           });
-          
+
           // Auto-remove from overlays
           setOverlays(prev => {
             const nextDynamic = { ...prev.dynamic };
@@ -1469,7 +1472,8 @@ const MapView = () => {
     const { data, error } = await supabase
       .from('reports')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1000);
 
     if (!error && data) {
       setReports(data as Report[]);
@@ -1493,7 +1497,7 @@ const MapView = () => {
           setUserLocation([position.coords.latitude, position.coords.longitude]);
         },
         (error) => {
-          console.log('Error getting location:', sanitizeForLog(error));
+          logger.info('Error getting location:', sanitizeForLog(error));
         }
       );
     }
@@ -1540,7 +1544,7 @@ const MapView = () => {
       setClusterLayer(null);
     }
     if (!overlays.clustering) return;
-    
+
     // Get cluster radius from settings or use default
     let clusterRadius = 80;
     try {
@@ -1552,9 +1556,8 @@ const MapView = () => {
     } catch (e) {
       console.warn('Failed to load cluster radius', sanitizeForLog(e));
     }
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mcg = new (L as any).MarkerClusterGroup({
+
+    const mcg = new L.MarkerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: clusterRadius,
       showCoverageOnHover: true,
@@ -1585,7 +1588,7 @@ const MapView = () => {
       setHeatLayer(null);
     }
     if (!overlays.heatmap) return;
-    
+
     // Get heatmap radius from settings or use default
     let heatmapRadius = 25;
     try {
@@ -1597,10 +1600,9 @@ const MapView = () => {
     } catch (e) {
       console.warn('Failed to load heatmap radius', sanitizeForLog(e));
     }
-    
+
     const pts: Array<[number, number, number]> = filteredReports.map((r) => [r.latitude, r.longitude, 0.6]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hl = (L as any).heatLayer(pts, { radius: heatmapRadius, blur: 15, maxZoom: 17, minOpacity: 0.25 }) as L.Layer;
+    const hl = L.heatLayer(pts, { radius: heatmapRadius, blur: 15, maxZoom: 17, minOpacity: 0.25 }) as L.Layer;
     hl.addTo(mapInstance);
     setHeatLayer(hl);
     return () => {
@@ -1731,7 +1733,7 @@ const MapView = () => {
           >
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
             <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
-            
+
             {isMobile && (
               <MobileMapControls
                 onZoomIn={() => mapInstance?.zoomIn()}
@@ -1739,7 +1741,7 @@ const MapView = () => {
                 onLocate={goToUserLocation}
               />
             )}
-            
+
             {/* Legend now integrated in ModernMapOverlay */}
             {/* DrawControls removed */}
 
@@ -1761,7 +1763,7 @@ const MapView = () => {
                   onEachFeature={(feature, layer) => {
                     const p = feature.properties as Record<string, unknown> | undefined;
                     const featureId = `admin-${Math.random().toString(36).substr(2, 9)}`;
-                    
+
                     registerLayer(featureId, layer, {
                       color: '#6b7280',
                       weight: 1,
@@ -1998,11 +2000,10 @@ const MapView = () => {
           {/* Floating detail card (left-aligned on desktop) */}
           {selectedReport && (
             <div
-              className={`absolute z-[1300] ${
-                isMobile
-                  ? 'bottom-32 left-2 right-2'
-                  : 'top-24 left-4'
-              }`}
+              className={`absolute z-[1300] ${isMobile
+                ? 'bottom-32 left-2 right-2'
+                : 'top-24 left-4'
+                }`}
             >
               <div className="max-w-[42rem]">
                 <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} />
@@ -2068,7 +2069,7 @@ const MapView = () => {
                     weight: 4,
                     opacity: 0.8,
                   }).addTo(mapInstance);
-                  
+
                   route.points.forEach((point, idx) => {
                     L.marker([point.coords[0], point.coords[1]], {
                       icon: L.divIcon({

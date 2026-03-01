@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -120,7 +121,7 @@ export const NotificationSettings = () => {
         icon: <CheckCircle className="h-4 w-4" />,
       });
     } catch (error) {
-      console.error('Failed to save notification settings', error);
+      logger.error('Failed to save notification settings', error);
       toast.error('Gagal menyimpan pengaturan');
     } finally {
       setSaving(false);

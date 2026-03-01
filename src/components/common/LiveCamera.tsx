@@ -117,6 +117,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
           variant="outline"
           size="icon"
           className="h-14 w-14 rounded-full btn-haptic"
+          aria-label="Tutup kamera"
         >
           <X className="w-6 h-6" />
         </Button>
@@ -127,6 +128,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
               onClick={capturePhoto}
               size="icon"
               className="h-16 w-16 rounded-full btn-haptic"
+              aria-label="Ambil foto"
             >
               <Camera className="w-8 h-8" />
             </Button>
@@ -135,6 +137,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
               variant="outline"
               size="icon"
               className="h-14 w-14 rounded-full btn-haptic"
+              aria-label="Ganti kamera"
             >
               <RotateCw className="w-6 h-6" />
             </Button>
@@ -146,6 +149,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
               variant="outline"
               size="icon"
               className="h-14 w-14 rounded-full btn-haptic"
+              aria-label="Ulangi foto"
             >
               <RotateCw className="w-6 h-6" />
             </Button>
@@ -153,6 +157,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
               onClick={confirmCapture}
               size="icon"
               className="h-16 w-16 rounded-full btn-haptic bg-emerald-600 hover:bg-emerald-700"
+              aria-label="Gunakan foto"
             >
               <Check className="w-8 h-8" />
             </Button>

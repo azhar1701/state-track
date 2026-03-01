@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/services/client";
 import { toast } from "sonner";
@@ -160,7 +161,7 @@ export const useSecurityConfig = () => {
 
       toast.success("Pengaturan keamanan berhasil disimpan");
     } catch (error) {
-      console.error("Failed to save security config", error);
+      logger.error("Failed to save security config", error);
       toast.error("Gagal menyimpan ke database, tersimpan lokal saja");
     }
   }, [config]);

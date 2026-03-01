@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/services/client";
 
@@ -108,7 +109,7 @@ export const useBackupConfig = () => {
 
       if (error) throw error;
     } catch (error) {
-      console.error("Failed to save backup config", error);
+      logger.error("Failed to save backup config", error);
     }
   }, [config]);
 

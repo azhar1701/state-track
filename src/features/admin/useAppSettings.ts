@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/services/client';
 import { toast } from 'sonner';
@@ -22,7 +23,7 @@ export const useAppSettings = (category: string, key: string) => {
       if (error && error.code !== 'PGRST116') throw error;
       setValue(data?.value || null);
     } catch (error) {
-      console.error('Failed to fetch setting:', error);
+      logger.error('Failed to fetch setting:', error);
       setValue(null);
     } finally {
       setLoading(false);
@@ -59,7 +60,7 @@ export const useAppSettings = (category: string, key: string) => {
       toast.success('Pengaturan berhasil disimpan');
       return true;
     } catch (error) {
-      console.error('Failed to save setting:', error);
+      logger.error('Failed to save setting:', error);
       toast.error('Gagal menyimpan pengaturan');
       return false;
     } finally {
