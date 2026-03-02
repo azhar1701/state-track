@@ -1,0 +1,136 @@
+================================================================================
+  SUMMARY - REKOMENDASI OPTIMASI reporting_App
+  Menurunkan Usage Limit (Egress, DB, Realtime, Storage)
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+ 1. KURANGI EGRESS (BANDWIDTH)
+────────────────────────────────────────────────────────────────────────────────
+ • Aktifkan Smart CDN untuk assets dan gunakan header Cache-Control.
+ • Kirim hanya field yang diperlukan (hindari SELECT *) dan gunakan LIMIT/paginasi.
+ • Kompres respons (gzip) di Edge Functions bila memungkinkan.
+ • Identifikasi endpoint heavy via Logs Explorer dan optimalkan atau batasi aksesnya.
+
+────────────────────────────────────────────────────────────────────────────────
+ 2. OPTIMALKAN QUERY & DATABASE
+────────────────────────────────────────────────────────────────────────────────
+ • Gunakan pg_stat_statements / Query Performance untuk temukan query paling
+   sering/terberat.
+ • Tambah index pada kolom yang sering di-filter/join
+   (email, user_id, tenant_id, created_at).
+ • Gunakan partial/composite index bila relevan.
+ • Hindari SELECT *; ambil kolom spesifik.
+ • Gunakan materialized views atau tabel pre-aggregated untuk laporan berat;
+   refresh berkala.
+ • Terapkan pagination/cursor-based untuk dataset besar.
+ • Periksa cache hit rate; jika rendah, pertimbangkan upgrade memori atau
+   optimasi query.
+
+────────────────────────────────────────────────────────────────────────────────
+ 3. KURANGI BEBAN REALTIME
+────────────────────────────────────────────────────────────────────────────────
+ • Gunakan realtime.broadcast_changes via triggers dengan payload kecil,
+   bukan postgres_changes saat skalabilitas dibutuhkan.
+ • Buat topik granular (scope:entity:id) dan batasi subscriptions per klien.
+ • Agregasi event sebelum broadcast (batching/debouncing) untuk mengurangi
+   frekuensi.
+ • Gunakan presence hanya bila perlu.
+
+────────────────────────────────────────────────────────────────────────────────
+ 4. EDGE FUNCTIONS & API
+────────────────────────────────────────────────────────────────────────────────
+ • Pindahkan transformasi berat ke Edge Functions; hasilkan payload ringkas.
+ • Cache hasil Edge Functions di CDN bila input jarang berubah.
+ • Gunakan EdgeRuntime.waitUntil untuk tugas background non-blocking.
+
+────────────────────────────────────────────────────────────────────────────────
+ 5. STORAGE OPTIMIZATIONS
+────────────────────────────────────────────────────────────────────────────────
+ • Serve file besar melalui Smart CDN dan gunakan thumbnails/resize untuk images.
+ • Analisa access logs untuk file yang paling banyak diunduh; tambahkan caching
+   atau batasi akses.
+ • Gunakan GZIP/kompresi saat memungkinkan.
+
+────────────────────────────────────────────────────────────────────────────────
+ 6. RATE LIMITING & ABUSE PREVENTION
+────────────────────────────────────────────────────────────────────────────────
+ • Terapkan rate-limiting di API / Edge Functions.
+ • Aktifkan CAPTCHA dan batasi signup otomatis bila terjadi spike pendaftaran.
+ • Konfigurasikan rate limits Auth (signup, OTP, token refresh) via dashboard.
+
+────────────────────────────────────────────────────────────────────────────────
+ 7. MONITORING & ALERTING
+────────────────────────────────────────────────────────────────────────────────
+ • Gunakan Reports / Observability (Database, Realtime, Storage, Edge Functions)
+   untuk memonitor:
+   - Top queries (pg_stat_statements)
+   - Top API paths by requests & bytes
+   - Realtime connections & broadcast volume
+   - Top storage objects by requests
+ • Buat alert untuk ambang egress, connections, atau message volume.
+
+────────────────────────────────────────────────────────────────────────────────
+ 8. ARSITEKTUR LAPORAN SKALA BESAR
+────────────────────────────────────────────────────────────────────────────────
+ • Precompute agregat harian/mingguan (cron / scheduled jobs).
+ • Gunakan materialized views + indexes;
+   REFRESH MATERIALIZED VIEW CONCURRENTLY secara terjadwal.
+ • Pertimbangkan read replicas / cache layer jika pembaca sangat banyak.
+
+────────────────────────────────────────────────────────────────────────────────
+ 9. KONEKSI & POOLING
+────────────────────────────────────────────────────────────────────────────────
+ • Gunakan Supavisor (shared pooler) untuk beban koneksi tinggi dari serverless.
+ • Batasi koneksi langsung dari klien; gunakan pooler di backend.
+
+────────────────────────────────────────────────────────────────────────────────
+ 10. TAKTIK CEPAT (LOW-EFFORT, HIGH-IMPACT)
+────────────────────────────────────────────────────────────────────────────────
+ • Set Cache-Control pada endpoint reporting (mis. cache 1–5 menit).
+ • Tambah default LIMIT pada API jika pengguna tidak menentukan range.
+ • Batasi result set size (mis. max 1000 rows) untuk mencegah queries
+   sangat besar.
+
+================================================================================
+  SQL / TEKNIK YANG BISA DIJALANKAN
+================================================================================
+
+ • Query untuk menemukan kebocoran egress di logs (contoh template dari docs).
+ • Daftar query teratas via pg_stat_statements.
+ • Rekomendasi index konkret berdasarkan schema/tabel dan contoh query berat.
+ • Contoh materialized view atau job refresh script.
+
+================================================================================
+  PRIORITAS TINDAKAN (LANGKAH DEMI LANGKAH)
+================================================================================
+
+ [1] INVESTIGASI
+     Jalankan Reports + Logs Explorer untuk menemukan sumber usage tertinggi.
+
+ [2] AUDIT TOP 3 ENDPOINT/QUERY
+     EXPLAIN ANALYZE, tambahkan index atau ubah query agar lebih selektif.
+
+ [3] IMPLEMENTASI CACHING
+     Caching di edge/API untuk endpoint laporan statis (5–15 menit kerja).
+
+ [4] PRE-AGGREGATION
+     Implementasikan materialized views untuk laporan berat.
+
+ [5] OPTIMASI REALTIME
+     Kurangi broadcast frequency dan payload dengan batching/debouncing.
+
+ [6] MONITORING
+     Tambahkan alerts untuk egress & connection count.
+
+================================================================================
+  PILIHAN AKSI SELANJUTNYA
+================================================================================
+
+ A) Jalankan audit otomatis sekarang:
+    - Daftar top queries (pg_stat_statements)
+    - Tabel terbesar
+    - RLS policies review
+
+ B) Kirimkan 1–3 query/report terberat untuk dioptimalkan langsung.
+
+================================================================================
