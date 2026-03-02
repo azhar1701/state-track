@@ -1,5 +1,7 @@
 import { formatReportLocation } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
+import { cachedQuery, invalidateCache } from '@/lib/supabase-cache';
+import { createRealtimeBatcher, type RealtimePayload } from '@/lib/realtime-batcher';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from 'react-leaflet';
@@ -847,22 +849,25 @@ const MapView = () => {
     fetchReports();
     getUserLocation();
 
+    const batcher = createRealtimeBatcher(
+      () => {
+        invalidateCache('map:reports');
+        void fetchReports();
+      },
+      { debounceMs: 500, maxWaitMs: 2000, channel: 'reports-changes' }
+    );
+
     const channel = supabase
       .channel('reports-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reports',
-        },
-        () => {
-          void fetchReports();
-        }
+        { event: '*', schema: 'public', table: 'reports' },
+        (payload) => batcher.push(payload as RealtimePayload)
       )
       .subscribe();
 
     return () => {
+      batcher.destroy();
       void supabase.removeChannel(channel);
     };
   }, []);
@@ -1065,32 +1070,18 @@ const MapView = () => {
       try {
         const { data, error } = await supabase
           .from('geo_layers')
-          .select('key,name,geometry_type,data')
+          .select('key,name,geometry_type')
           .order('created_at', { ascending: false });
         if (cancelled || error || !data) return;
 
-        const rows = data as Array<{ key: string; name: string; geometry_type: string | null; data?: Record<string, unknown> | null }>;
+        const rows = data as Array<{ key: string; name: string; geometry_type: string | null }>;
         const layers = rows.filter((l) => l.key !== 'admin_boundaries');
         const mapped = layers.map(({ key, name, geometry_type }) => ({ key, name, geometry_type }));
         setAvailableLayers(mapped);
         sessionStorage.setItem('map:availableLayers', JSON.stringify(mapped));
 
-        setOverlays((prev) => {
-          const dyn = { ...(prev.dynamic || {}) } as Record<string, boolean>;
-          let changed = false;
-          for (const l of layers) {
-            const visibility = Boolean(((l.data || undefined) as { meta?: { visibility_default?: boolean } } | undefined)?.meta?.visibility_default);
-            const keyLower = l.key.toLowerCase();
-            const allowAutoToggle = !keyLower.includes('sawah') && !keyLower.includes('padi');
-            if (visibility && allowAutoToggle && typeof dyn[l.key] === 'undefined') {
-              dyn[l.key] = true;
-              changed = true;
-            }
-          }
-          const hasAssets = layers.some((l) => l.key === 'assets');
-          if (hasAssets && typeof dyn['assets'] === 'undefined') { dyn['assets'] = true; changed = true; }
-          return changed ? { ...prev, dynamic: dyn } : prev;
-        });
+        // Layer visibility defaults removed — data column no longer fetched to reduce egress
+        // Users toggle layers on explicitly via overlay controls
       } catch (e) {
         console.warn('Failed to load layers list', sanitizeForLog(e));
       }
@@ -1469,11 +1460,15 @@ const MapView = () => {
 
   const fetchReports = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('reports')
-      .select('id, latitude, longitude, category, status, created_at, location_name')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+    const { data, error } = await cachedQuery(
+      'map:reports:v3',
+      () => supabase
+        .from('reports')
+        .select('id, user_id, latitude, longitude, category, status, created_at, location_name, title, description, severity, kecamatan, desa, photo_url, photo_urls, resolution, reporter_name, phone')
+        .order('created_at', { ascending: false })
+        .limit(1000),
+      { ttlMs: 30_000, staleWhileRevalidate: true }
+    );
 
     if (!error && data) {
       setReports(data as Report[]);
@@ -1714,7 +1709,7 @@ const MapView = () => {
                 <div className="px-4 py-2 bg-green-50/80 dark:bg-green-950/30 backdrop-blur-sm rounded-lg border border-green-200 dark:border-green-800">
                   <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Laporan Terbaru</p>
                   <p className="text-xs text-green-900 dark:text-green-100">
-                    <span className="font-semibold">{recentReports[0].title.slice(0, 30)}{recentReports[0].title.length > 30 ? '...' : ''}</span>
+                    <span className="font-semibold">{(recentReports[0].title || 'Tanpa Judul').slice(0, 30)}{(recentReports[0].title || '').length > 30 ? '...' : ''}</span>
                     <span className="text-green-600 dark:text-green-400 ml-1">• {format(new Date(recentReports[0].created_at), 'HH:mm')}</span>
                   </p>
                 </div>

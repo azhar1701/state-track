@@ -1,6 +1,8 @@
 import { handleApiError } from "@/lib/api-errors";
 import { formatDateTime, formatReportLocation, getOptimizedImageUrl } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
+import { cachedQuery, invalidateCache } from '@/lib/supabase-cache';
+import { createRealtimeBatcher, type RealtimePayload } from '@/lib/realtime-batcher';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -731,15 +733,18 @@ const AdminDashboard = () => {
   const fetchStats = useCallback(async () => {
     setStatsInitialized(false);
     try {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('id,status');
-      if (error) throw error;
-      const rows = (data ?? []) as Array<{ id: string; status: ReportStatus }>;
-      const total = rows.length;
-      const baru = rows.filter((r) => r.status === 'baru').length;
-      const diproses = rows.filter((r) => r.status === 'diproses').length;
-      const selesai = rows.filter((r) => r.status === 'selesai').length;
+      // Use count queries instead of fetching all rows
+      const [totalRes, baruRes, diprosesRes, selesaiRes] = await Promise.all([
+        supabase.from('reports').select('*', { count: 'exact', head: true }),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'baru'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'diproses'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'selesai'),
+      ]);
+      if (totalRes.error) throw totalRes.error;
+      const total = totalRes.count ?? 0;
+      const baru = baruRes.count ?? 0;
+      const diproses = diprosesRes.count ?? 0;
+      const selesai = selesaiRes.count ?? 0;
       setStats({ total, baru, diproses, selesai });
       setStatsInitialized(true);
     } catch (err) {
@@ -773,7 +778,12 @@ const AdminDashboard = () => {
         query = query.ilike('title', `%${debouncedSearch}%`);
       }
 
-      const { data, error } = await query;
+      const cacheKey = `admin:chart:${chartDays}:${statusFilter}:${severityFilter}:${categoryFilter}:${debouncedSearch}`;
+      const { data, error } = await cachedQuery(
+        cacheKey,
+        () => query,
+        { ttlMs: 60_000, staleWhileRevalidate: true }
+      );
       if (error) throw error;
 
       const items = (data ?? []) as Array<{ created_at: string; category: ReportCategory | null }>;
@@ -864,18 +874,26 @@ const AdminDashboard = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const channel = supabase
-      .channel('reports-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-        // Always refresh stats, refresh reports only if visible
+    const batcher = createRealtimeBatcher(
+      () => {
+        invalidateCache('admin:chart');
         void fetchStats();
         if (activeTab === 'reports' && !document.hidden) {
           void fetchReports();
         }
-      })
+      },
+      { debounceMs: 500, maxWaitMs: 2000, channel: 'reports-realtime' }
+    );
+
+    const channel = supabase
+      .channel('reports-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' },
+        (payload) => batcher.push(payload as RealtimePayload)
+      )
       .subscribe();
 
     return () => {
+      batcher.destroy();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       channel.unsubscribe();
     };

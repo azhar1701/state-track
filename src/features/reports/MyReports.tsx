@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { createRealtimeBatcher, type RealtimePayload } from '@/lib/realtime-batcher';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/client';
@@ -150,15 +151,22 @@ export default function MyReports() {
   // Realtime sync for user's reports
   useEffect(() => {
     if (!user) return;
+    const batcher = createRealtimeBatcher(
+      () => { void loadData(); },
+      { debounceMs: 500, maxWaitMs: 2000, channel: 'myreports-changes' }
+    );
     const channel = supabase
       .channel('myreports-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reports', filter: `user_id = eq.${user.id} ` },
-        () => { void loadData(); }
+        (payload) => batcher.push(payload as RealtimePayload)
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      batcher.destroy();
+      supabase.removeChannel(channel);
+    };
   }, [user, loadData]);
 
   const resetFilters = () => {

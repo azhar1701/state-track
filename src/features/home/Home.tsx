@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/useAuth";
-import { MapPin, FileText, Map as MapIcon, Users, CheckCircle, Clock } from "lucide-react";
+import { FileText, Map as MapIcon, Users, CheckCircle, Clock, ArrowRight, Activity } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "@/services/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, ResponsiveContainer } from "recharts";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import Footer from "@/components/layout/Footer";
 import LoadingOverlay from "@/components/common/LoadingOverlay";
@@ -15,6 +15,27 @@ import CategoryLegend from "@/features/home/CategoryLegend";
 import RecentReports from "@/features/home/RecentReports";
 import FAQ from "@/features/home/FAQ";
 import BottomCTA from "@/features/home/BottomCTA";
+import { motion, Variants } from "framer-motion";
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { type: "spring", stiffness: 300, damping: 24 } 
+  },
+};
 
 const Home = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -131,287 +152,299 @@ const Home = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Background Mesh */}
-      <div className="absolute inset-0 -z-10">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-background to-teal-500/5" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-primary/10 rounded-full blur-[100px]" 
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.5, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-teal-500/10 rounded-full blur-[120px]" 
+        />
       </div>
 
       {/* Hero Section */}
-      <section className="container py-12 md:py-20 lg:py-28 px-4 relative z-10">
-        <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-8">
-          <div className="inline-flex p-3 md:p-4 bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-md rounded-2xl mb-2 shadow-float border border-white/20 animate-[page-enter_0.6s_ease-out]">
-            <MapPin className="w-10 h-10 md:w-12 md:h-12 text-primary" />
-          </div>
-          <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 dark:from-white dark:to-white/70 bg-clip-text text-transparent animate-[page-enter_0.8s_ease-out] leading-[1.1]">
-            Sistem Informasi Pelaporan SDA
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-[page-enter_1s_ease-out]">
+      <section className="container pt-24 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 relative z-10">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="max-w-5xl mx-auto text-center space-y-8 md:space-y-10"
+        >
+          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-surface border-primary/20 text-primary text-sm font-medium mb-4 shadow-float">
+            <Activity className="w-4 h-4" />
+            <span>Sistem Pemantauan Real-time</span>
+          </motion.div>
+          
+          <motion.h1 variants={itemVariants} className="text-5xl md:text-6xl lg:text-8xl font-extrabold tracking-tighter bg-gradient-to-br from-foreground via-foreground/90 to-foreground/50 dark:from-white dark:via-white/90 dark:to-white/50 bg-clip-text text-transparent leading-[1.05]">
+            Sistem Informasi <br className="hidden md:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-teal-400">Pelaporan SDA</span>
+          </motion.h1>
+          
+          <motion.p variants={itemVariants} className="text-lg md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-light">
             Platform profesional untuk pelaporan, pemantauan, dan penanganan permasalahan sumber daya air secara real-time.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-4 md:pt-6 animate-[page-enter_1.2s_ease-out]">
+          </motion.p>
+          
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
             {authLoading ? null : !user ? (
               <Link to="/auth">
-                <Button size="lg" className="gap-2 shadow-xl rounded-xl py-6 px-8 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:shadow-blue-500/50 hover:scale-105">
+                <Button size="lg" className="group gap-2 shadow-xl shadow-primary/25 rounded-2xl py-7 px-10 text-lg bg-gradient-to-r from-primary to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:scale-105">
                   Masuk / Daftar
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             ) : (
               <>
                 <Link to="/report">
-                  <Button size="lg" className="gap-2 shadow-xl rounded-xl py-6 px-8 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:shadow-blue-500/50 hover:scale-105">
+                  <Button size="lg" className="group gap-2 shadow-xl shadow-primary/25 rounded-2xl py-7 px-10 text-lg bg-gradient-to-r from-primary to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:scale-105">
                     <FileText className="w-5 h-5" />
                     Buat Laporan
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link to="/map">
-                  <Button size="lg" variant="outline" className="gap-2 rounded-xl py-6 px-8 text-base border-2 hover:bg-white/5 hover:scale-105 transition-all">
+                  <Button size="lg" variant="outline" className="gap-2 rounded-2xl py-7 px-10 text-lg border-2 glass-surface hover:bg-white/10 hover:scale-105 transition-all">
                     <MapIcon className="w-5 h-5" />
                     Lihat Peta
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button size="lg" variant="outline" className="gap-2 rounded-xl py-6 px-8 text-base border-2 hover:bg-white/5 hover:scale-105 transition-all">
+                    <Button size="lg" variant="outline" className="gap-2 rounded-2xl py-7 px-10 text-lg border-2 glass-surface hover:bg-white/10 hover:scale-105 transition-all">
                       Dashboard Admin
                     </Button>
                   </Link>
                 )}
               </>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Stats Section */}
-      <section className="container py-12 md:py-16 lg:py-20 relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4">
-          <div className="group glass-floating p-6 hover:border-primary/50 transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-primary/20 rounded-xl">
-                <FileText className="w-8 h-8 text-primary" />
+      <section className="container py-12 relative z-10">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto px-4"
+        >
+          {[
+            { label: "Total Laporan", value: stats.total, icon: FileText, color: "text-primary", bg: "bg-primary/10", border: "hover:border-primary/50" },
+            { label: "Laporan Baru", value: stats.baru, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", border: "hover:border-amber-500/50" },
+            { label: "Diproses", value: stats.diproses, icon: Users, color: "text-cyan-500", bg: "bg-cyan-500/10", border: "hover:border-cyan-500/50" },
+            { label: "Selesai", value: stats.selesai, icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10", border: "hover:border-green-500/50" },
+          ].map((stat, i) => (
+            <motion.div key={i} variants={itemVariants} className={`group glass-floating p-6 md:p-8 rounded-3xl ${stat.border} transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl`}>
+              <div className="flex items-center justify-between mb-6">
+                <div className={`p-4 ${stat.bg} rounded-2xl group-hover:scale-110 transition-transform duration-500`}>
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                </div>
               </div>
-            </div>
-            <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-primary">{stats.total}</div>
-              <div className="text-sm text-muted-foreground font-medium">Total Laporan</div>
-            </div>
-          </div>
-          <div className="group glass-floating p-6 hover:border-warning/50 transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-amber-500/20 rounded-xl">
-                <Clock className="w-8 h-8 text-amber-500" />
+              <div className="space-y-2">
+                <div className={`text-5xl font-black tracking-tighter ${stat.color}`}>{stat.value}</div>
+                <div className="text-base text-muted-foreground font-medium">{stat.label}</div>
               </div>
-            </div>
-            <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-amber-500">{stats.baru}</div>
-              <div className="text-sm text-muted-foreground font-medium">Laporan Baru</div>
-            </div>
-          </div>
-          <div className="group glass-floating p-6 hover:border-info/50 transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-cyan-500/20 rounded-xl">
-                <Users className="w-8 h-8 text-cyan-500" />
-              </div>
-            </div>
-            <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-cyan-500">{stats.diproses}</div>
-              <div className="text-sm text-muted-foreground font-medium">Diproses</div>
-            </div>
-          </div>
-          <div className="group glass-floating p-6 hover:border-success/50 transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-green-500/20 rounded-xl">
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              </div>
-            </div>
-            <div className="text-center space-y-1">
-              <div className="text-4xl font-bold text-green-500">{stats.selesai}</div>
-              <div className="text-sm text-muted-foreground font-medium">Selesai</div>
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
       {/* Charts Section */}
-      <section className="container py-12 md:py-16 relative z-10">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <h2 className="text-3xl font-bold tracking-tight">Insight Laporan</h2>
+      <section className="container py-16 md:py-24 relative z-10">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="max-w-6xl mx-auto px-4"
+        >
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Insight Laporan</h2>
             <Select value={String(chartDays)} onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}>
-              <SelectTrigger className="w-full sm:w-[140px] glass-surface border-white/20 rounded-xl">
+              <SelectTrigger className="w-full sm:w-[160px] glass-surface border-white/20 rounded-xl h-12 text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">7 hari</SelectItem>
-                <SelectItem value="30">30 hari</SelectItem>
+                <SelectItem value="7">7 Hari Terakhir</SelectItem>
+                <SelectItem value="30">30 Hari Terakhir</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </motion.div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <div className="glass-floating p-6 rounded-2xl">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-foreground">Tren Laporan ({chartDays} hari)</h3>
+            <motion.div variants={itemVariants} className="glass-floating p-6 md:p-8 rounded-3xl">
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-foreground">Tren Laporan</h3>
+                <p className="text-muted-foreground text-sm mt-1">Perkembangan jumlah laporan dalam {chartDays} hari terakhir</p>
               </div>
-              <div>
+              <div className="relative w-full overflow-hidden">
                 {chartDaily.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
-                  <div className="relative w-full overflow-x-auto">
-                    <ChartContainer
-                      config={{ reports: { label: 'Laporan', color: 'hsl(215 70% 55%)' } }}
-                      className="h-48 md:h-64 lg:h-72 w-full"
-                      withAspect={false}
-                    >
-                      <LineChart data={chartDaily} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <defs>
-                          <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(215 70% 55%)" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="hsl(215 70% 55%)" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartDaily.length / 8) - 1)} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="count" stroke="hsl(215 70% 55%)" strokeWidth={3} dot={false} fill="url(#colorReports)" />
-                      </LineChart>
+                  <div className="h-64 md:h-72 w-full">
+                    <ChartContainer config={{ count: { label: "Laporan", color: "hsl(var(--primary))" } }} className="h-full w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartDaily} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} vertical={false} />
+                          <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                          <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                          <Line type="monotone" dataKey="count" name="Laporan" stroke="hsl(var(--primary))" strokeWidth={4} dot={false} activeDot={{ r: 6, fill: 'hsl(var(--primary))', stroke: 'white', strokeWidth: 2 }} fill="url(#colorReports)" />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </ChartContainer>
                     <LoadingOverlay show={chartLoading} text="Memuat data..." />
                   </div>
                 )}
               </div>
-            </div>
-            <div className="glass-floating p-6 rounded-2xl">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-foreground">Kategori Terbanyak ({chartDays} hari)</h3>
+            </motion.div>
+            
+            <motion.div variants={itemVariants} className="glass-floating p-6 md:p-8 rounded-3xl">
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-foreground">Kategori Terbanyak</h3>
+                <p className="text-muted-foreground text-sm mt-1">Distribusi laporan berdasarkan kategori</p>
               </div>
-              <div>
+              <div className="relative w-full overflow-hidden">
                 {chartByCategory.length === 0 ? (
                   chartLoading ? (
-                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Memuat chart...</div>
                   ) : (
-                    <div className="h-48 md:h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
+                    <div className="h-64 flex items-center justify-center text-muted-foreground">Tidak ada data</div>
                   )
                 ) : (
-                  <div className="relative w-full overflow-x-auto">
-                    <ChartContainer
-                      config={{ count: { label: 'Jumlah', color: 'hsl(142 65% 50%)' } }}
-                      className="h-64 md:h-72"
-                      withAspect={false}
-                    >
-                      <BarChart data={chartByCategory} margin={{ top: 8, left: 12, right: 12, bottom: 12 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} height={52} tickMargin={6} />
-                        <YAxis allowDecimals={false} width={32} tickMargin={6} domain={[0, 'dataMax + 1']} tickCount={5} />
-                        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Bar dataKey="count" fill="hsl(142 65% 50%)" radius={[8, 8, 0, 0]} />
-                      </BarChart>
+                  <div className="h-64 md:h-72 w-full">
+                    <ChartContainer config={{ count: { label: "Jumlah", color: "hsl(var(--primary))" } }} className="h-full w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartByCategory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} vertical={false} />
+                          <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} cursor={{ fill: 'hsl(var(--muted)/0.5)' }} />
+                          <Bar dataKey="count" name="Jumlah" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </ChartContainer>
                     <LoadingOverlay show={chartLoading} text="Memuat data..." />
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="container py-20 relative z-10">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 tracking-tight">Fitur Unggulan</h2>
+      <section className="container py-16 md:py-24 relative z-10">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="max-w-6xl mx-auto px-4"
+        >
+          <motion.div variants={itemVariants} className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Fitur Unggulan</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Platform yang dirancang untuk memudahkan pelaporan dan pemantauan infrastruktur secara komprehensif.</p>
+          </motion.div>
+          
           <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            <div className="group glass-floating p-8 rounded-2xl hover:border-primary/40 transition-all duration-300 hover:-translate-y-1">
-              <div className="p-4 bg-primary/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
-                <FileText className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Laporan Mudah</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.
-              </p>
-            </div>
-
-            <div className="group glass-floating p-8 rounded-2xl hover:border-info/40 transition-all duration-300 hover:-translate-y-1">
-              <div className="p-4 bg-cyan-500/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
-                <MapIcon className="w-8 h-8 text-cyan-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Peta Interaktif</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.
-              </p>
-            </div>
-
-            <div className="group glass-floating p-8 rounded-2xl hover:border-warning/40 transition-all duration-300 hover:-translate-y-1">
-              <div className="p-4 bg-amber-500/10 rounded-xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Users className="w-8 h-8 text-amber-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Dashboard Admin</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.
-              </p>
-</div>
-        </div>
-        </div>
-</section>
+            {[
+              { title: "Laporan Mudah", desc: "Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.", icon: FileText, color: "text-primary", bg: "bg-primary/10" },
+              { title: "Peta Interaktif", desc: "Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.", icon: MapIcon, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+              { title: "Dashboard Admin", desc: "Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.", icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" }
+            ].map((feature, i) => (
+              <motion.div key={i} variants={itemVariants} className="group glass-floating p-8 md:p-10 rounded-3xl hover:border-white/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl">
+                <div className={`p-5 ${feature.bg} rounded-2xl w-fit mb-8 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                  <feature.icon className={`w-10 h-10 ${feature.color}`} />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  {feature.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
 
       {/* How It Works Section */}
-      <section className="container py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16">Cara Kerja</h2>
+      <section className="container py-16 md:py-24 relative z-10">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="max-w-5xl mx-auto px-4"
+        >
+          <motion.div variants={itemVariants} className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Cara Kerja</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Tiga langkah mudah untuk berpartisipasi dalam pemeliharaan infrastruktur.</p>
+          </motion.div>
+          
           <div className="relative">
             {/* Connection Line */}
-            <div className="hidden md:block absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 opacity-30" style={{ top: '2rem' }} />
+            <div className="hidden md:block absolute top-10 left-[10%] right-[10%] h-1 bg-gradient-to-r from-primary/20 via-teal-500/20 to-green-500/20 rounded-full" />
 
-            <div className="grid md:grid-cols-3 gap-12 relative">
-              <div className="text-center space-y-6 relative">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-2xl font-bold shadow-xl shadow-blue-500/50 relative z-10">
-                  1
-                </div>
-                <h3 className="text-2xl font-bold">Daftar & Masuk</h3>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Buat akun gratis untuk mulai membuat laporan
-                </p>
-              </div>
-              <div className="text-center space-y-6 relative">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-2xl font-bold shadow-xl shadow-teal-500/50 relative z-10">
-                  2
-                </div>
-                <h3 className="text-2xl font-bold">Buat Laporan</h3>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Ambil foto, tandai lokasi, dan kirim laporan
-                </p>
-              </div>
-              <div className="text-center space-y-6 relative">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white text-2xl font-bold shadow-xl shadow-green-500/50 relative z-10">
-                  3
-                </div>
-                <h3 className="text-2xl font-bold">Pantau Progress</h3>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Lihat status perbaikan secara real-time di peta
-                </p>
-              </div>
+            <div className="grid md:grid-cols-3 gap-12 md:gap-8 relative">
+              {[
+                { step: 1, title: "Daftar & Masuk", desc: "Buat akun gratis untuk mulai membuat laporan", color: "from-primary to-blue-600", shadow: "shadow-primary/30" },
+                { step: 2, title: "Buat Laporan", desc: "Ambil foto, tandai lokasi, dan kirim laporan", color: "from-teal-500 to-teal-600", shadow: "shadow-teal-500/30" },
+                { step: 3, title: "Pantau Progress", desc: "Lihat status perbaikan secara real-time di peta", color: "from-green-500 to-green-600", shadow: "shadow-green-500/30" }
+              ].map((item, i) => (
+                <motion.div key={i} variants={itemVariants} className="text-center space-y-6 relative group">
+                  <div className={`mx-auto flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} text-white text-3xl font-bold shadow-xl ${item.shadow} relative z-10 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500`}>
+                    {item.step}
+                  </div>
+                  <h3 className="text-2xl font-bold">{item.title}</h3>
+                  <p className="text-muted-foreground text-lg leading-relaxed max-w-[250px] mx-auto">
+                    {item.desc}
+                  </p>
+                </motion.div>
+              ))}
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Information Blocks */}
-      <section className="container py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
-          <div className="lg:col-span-2 flex flex-col gap-8">
+      <section className="container py-16 md:py-24 relative z-10">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto px-4"
+        >
+          <motion.div variants={itemVariants} className="lg:col-span-2 flex flex-col gap-8">
             <RecentReports />
             <CategoryLegend />
-          </div>
-          <div className="flex flex-col gap-8">
+          </motion.div>
+          <motion.div variants={itemVariants} className="flex flex-col gap-8">
             <StatusLegend />
             <FAQ />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       <BottomCTA />

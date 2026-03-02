@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { cachedQuery } from '@/lib/supabase-cache';
 import { getOptimizedImageUrl } from "@/lib/formatters";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -119,11 +120,15 @@ export default function RecentReports() {
       const selectFields =
         "id,title,status,severity,created_at,category,kecamatan,desa";
 
-      let { data, error } = await supabase
-        .from("reports")
-        .select(selectFields + ",photo_url")
-        .order("created_at", { ascending: false })
-        .limit(5);
+      let { data, error } = await cachedQuery(
+        'home:recent-reports',
+        () => supabase
+          .from("reports")
+          .select(selectFields + ",photo_url")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        { ttlMs: 30_000, staleWhileRevalidate: true }
+      );
 
       // Fallback: if 400 error occurs, try minimal select
       if (error) {
