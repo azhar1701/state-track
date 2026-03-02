@@ -82,7 +82,9 @@ export default function MyReports() {
     setLoading(true);
     setError(null);
     try {
-      // Primary query without location_name (column doesn't exist)
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('reports')
         .select(
@@ -90,92 +92,52 @@ export default function MyReports() {
           { count: 'exact' }
         )
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-      if (where.status !== 'all') query = query.eq('status', where.status as unknown as 'baru' | 'diproses' | 'selesai');
-      if (where.category !== 'all') query = query.eq('category', where.category as unknown as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya');
-      if (where.q) query = query.ilike('title', `% ${where.q}% `);
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      query = query.range(from, to);
+      if (where.status !== 'all') query = query.eq('status', where.status as 'baru' | 'diproses' | 'selesai');
+      if (where.category !== 'all') query = query.eq('category', where.category as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya');
+      if (where.q) query = query.ilike('title', `%${where.q}%`);
 
-      let { data, error, count } = await query;
+      const { data: initialData, error: initialError, count: initialCount } = await query;
+      let data = initialData;
+      const error = initialError;
+      let count = initialCount;
+
       if (error) {
-        // Retry with fallback fields if error occurs
-        const lower = (error.message || '').toLowerCase();
-        const missingColumn =
-          (lower.includes('column') && lower.includes('does not exist')) ||
-          lower.includes('schema cache') ||
-          lower.includes('could not find');
-        if (missingColumn) {
-          // Fallback A: drop risky fields like location_name, but keep photo_urls, severity, resolution
-          const trySelect = async (sel: string) => {
-            let q = supabase
-              .from('reports')
-              .select(sel, { count: 'exact' })
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .range(from, to);
-            if (where.status !== 'all') q = q.eq('status', where.status as unknown as 'baru' | 'diproses' | 'selesai');
-            if (where.category !== 'all') q = q.eq('category', where.category as unknown as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya');
-            if (where.q) q = q.ilike('title', `% ${where.q}% `);
-            return await q;
-          };
-
-          const selKeepPhotos = 'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution,reporter_name,phone,kecamatan,desa';
-          let attempt = await trySelect(selKeepPhotos);
-          if (attempt.error) {
-            // Fallback B: minimal
-            attempt = await trySelect('id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url');
-          }
-          data = attempt.data as unknown as ReportRow[];
-          error = attempt.error;
-          count = attempt.count ?? 0;
-          if (error) throw error;
-        } else {
-          throw error;
-        }
+        // Fallback for missing columns - ensure all ReportRow fields are present
+        const { data: fallbackData, error: fallbackError, count: fallbackCount } = await supabase
+          .from('reports')
+          .select('id,title,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        
+        if (fallbackError) throw fallbackError;
+        data = (fallbackData || []).map((r: Record<string, unknown>) => ({
+          ...r,
+          severity: null,
+          kecamatan: null,
+          desa: null,
+          resolution: null,
+          reporter_name: null,
+          phone: null,
+          description: 'Tidak ada deskripsi'
+        })) as unknown as ReportRow[];
+        count = fallbackCount;
       }
+      const mapped = (data || []).map((r: Record<string, unknown>) => ({
+        ...r,
+        latitude: typeof r.latitude === 'string' ? Number(r.latitude) : r.latitude,
+        longitude: typeof r.longitude === 'string' ? Number(r.longitude) : r.longitude,
+      })) as ReportRow[];
 
-      // Map to ReportRow with safe defaults
-      type PartialRow = Partial<Record<keyof ReportRow, unknown>> & {
-        id: string;
-        created_at: string;
-        user_id: string;
-        latitude: number | string;
-        longitude: number | string;
-      };
-      const mapped = (data || []).map((r) => {
-        const rr = r as PartialRow;
-        const row: ReportRow = {
-          id: rr.id,
-          title: (rr.title as string) ?? 'Tanpa Judul',
-          description: (rr.description as string) ?? 'Tidak ada deskripsi',
-          category: (rr.category as 'jalan' | 'jembatan' | 'irigasi' | 'sungai' | 'drainase' | 'lainnya') ?? 'lainnya',
-          status: (rr.status as 'baru' | 'diproses' | 'selesai') ?? 'baru',
-          incident_date: (rr.incident_date as string) ?? null,
-          created_at: rr.created_at,
-          user_id: rr.user_id,
-          latitude: typeof rr.latitude === 'string' ? Number(rr.latitude) : (rr.latitude as number),
-          longitude: typeof rr.longitude === 'string' ? Number(rr.longitude) : (rr.longitude as number),
-          location_name: (rr.location_name as string) ?? null,
-          photo_url: (rr.photo_url as string) ?? null,
-          photo_urls: (rr.photo_urls as string[] | null | undefined) ?? null,
-          severity: rr.severity as 'ringan' | 'sedang' | 'berat' | null,
-          resolution: (rr.resolution as string | null | undefined) ?? null,
-          reporter_name: (rr.reporter_name as string | null | undefined) ?? null,
-          phone: (rr.phone as string | null | undefined) ?? null,
-          kecamatan: (rr.kecamatan as string | null | undefined) ?? null,
-          desa: (rr.desa as string | null | undefined) ?? null,
-        };
-        logger.info('MyReports - Mapped row:', { id: row.id, reporter_name: row.reporter_name, phone: row.phone, kecamatan: row.kecamatan, desa: row.desa });
-        return row;
-      });
       setRows(mapped);
       setTotal(count ?? 0);
     } catch (e: unknown) {
-      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message) : undefined;
-      setError(msg ?? 'Gagal memuat laporan');
+      const msg = e instanceof Error ? e.message : 'Gagal memuat laporan';
+      logger.error('Failed to load reports:', e);
+      setError(msg);
     } finally {
       setLoading(false);
     }

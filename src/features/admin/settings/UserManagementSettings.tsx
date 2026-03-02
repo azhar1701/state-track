@@ -60,7 +60,7 @@ export const UserManagementSettings = () => {
       // Test basic query first
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, full_name, phone, nik_nip, created_at, email")
         .order("created_at", { ascending: false })
         .limit(1000);
 

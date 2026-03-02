@@ -58,7 +58,7 @@ export const CategorySettings = () => {
       setLoading(true);
       const { data: cats, error: catsError } = await supabase
         .from('custom_categories')
-        .select('*')
+        .select('id, value, label, icon, color, description, is_active, created_at')
         .order('label');
 
       if (catsError) throw catsError;
