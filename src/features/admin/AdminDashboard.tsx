@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/drawer";
 import { Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { FileText, Clock, CheckCircle, Loader2, X, Trash2, AlertCircle } from "lucide-react";
+import { FileText, Clock, CheckCircle, Loader2, X, Trash2, AlertCircle, Sparkles, Navigation } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { motion } from 'framer-motion';
@@ -1678,10 +1678,39 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="help" className="mt-0">
-            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
-              <HelpCenterLazy />
-            </Suspense>
-          </TabsContent>
+            <Card className="glass-surface p-6 border-l-4 border-l-primary mb-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-primary/10 rounded-xl">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold">Pembaruan Sistem: Enterprise Intelligence</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Dashboard Anda telah ditingkatkan dengan fitur operasional cerdas untuk meningkatkan efisiensi tim.</p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50">
+                      <h4 className="text-sm font-bold flex items-center gap-2">
+                        <Navigation className="w-4 h-4 text-blue-500" />
+                        Optimasi Rute OSRM
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">Gunakan "Cari Rute Terbaik" pada detail laporan untuk navigasi presisi bagi tim teknis di lapangan.</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50">
+                      <h4 className="text-sm font-bold flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-500" />
+                        Sistem Anti-Konflik
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">Sistem kini otomatis mendeteksi perubahan data di server saat Anda sedang bekerja, menjamin integritas data.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+<Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
+<HelpCenterLazy />
+</Suspense>
+</TabsContent>
 
           <TabsContent value="settings" className="mt-0">
             <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Pengaturan...</div>}>

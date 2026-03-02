@@ -23,6 +23,18 @@ export default function FAQ() {
             Setelah dikirim, laporan berstatus "Baru". Petugas akan meninjau ("Diproses") dan menutup jika selesai ("Selesai").
           </AccordionContent>
         </AccordionItem>
+        <AccordionItem value="item-4">
+          <AccordionTrigger>Apa itu fitur SARAN AI?</AccordionTrigger>
+          <AccordionContent>
+            Fitur SARAN AI membantu Anda menentukan kategori dan tingkat keparahan laporan secara otomatis berdasarkan foto yang Anda unggah.
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="item-5">
+          <AccordionTrigger>Bagaimana cara mencari rute terbaik?</AccordionTrigger>
+          <AccordionContent>
+            Gunakan tombol "Cari Rute Terbaik" pada detail laporan di peta untuk mendapatkan jalur perjalanan paling efisien ke lokasi kejadian.
+          </AccordionContent>
+        </AccordionItem>
       </Accordion>
     </div>
   );

@@ -26,6 +26,8 @@ const faqs = [
   { q: 'Bagaimana cara membuat laporan?', a: 'Buka menu Buat Laporan lalu isi formulir dan kirim.' },
   { q: 'Bagaimana cara melihat status laporan?', a: 'Buka halaman Laporan Saya untuk melihat status terkini.' },
   { q: 'Mengapa peta kosong?', a: 'Periksa koneksi internet, izinkan lokasi, atau segarkan halaman.' },
+  { q: 'Apa itu fitur SARAN AI?', a: 'Fitur ini menggunakan kecerdasan buatan untuk menganalisis foto laporan Anda dan memberikan saran kategori serta tingkat keparahan secara otomatis.' },
+  { q: 'Bagaimana cara menggunakan fitur Cari Rute Terbaik?', a: 'Buka detail laporan pada peta, lalu klik tombol "Cari Rute Terbaik" untuk merencanakan jalur perjalanan optimal ke lokasi tersebut.' },
 ];
 
 type SopModule = {
@@ -62,10 +64,14 @@ const userSopModules: SopModule[] = [
     goal: 'Pengguna dapat membuat laporan insiden lengkap dengan kategori, lokasi, dan deskripsi.',
     steps: [
       'Pilih menu Buat Laporan atau tombol + Laporan Baru di beranda.',
+      'Unggah foto kejadian dan gunakan tombol "SARAN AI" untuk mendapatkan rekomendasi otomatis kategori serta tingkat keparahan.',
+      'Gunakan peta untuk mem-pin lokasi kejadian atau isi alamat manual jika koordinat sulit dideteksi.',
       'Isi judul laporan yang ringkas, pilih kategori (jalan, jembatan, irigasi, drainase, sungai, lainnya) dan tingkat keparahan.',
       'Gunakan peta untuk mem-pin lokasi kejadian atau isi alamat manual jika koordinat sulit dideteksi.',
       'Tambah deskripsi kronologi dan dampak yang terjadi secara jelas.',
       'Unggah dokumentasi (foto/ video) yang relevan, pastikan ukuran file sesuai batas yang ditampilkan.',
+      'Gunakan tombol "SARAN AI" setelah mengunggah foto untuk mendapatkan rekomendasi kategori dan tingkat keparahan secara otomatis.',
+      'Periksa kembali ringkasan data, lalu kirim laporan dan tunggu konfirmasi berhasil.',
       'Periksa kembali ringkasan data, lalu kirim laporan dan tunggu konfirmasi berhasil.',
     ],
     outputs: [
@@ -113,6 +119,7 @@ const userSopModules: SopModule[] = [
     tips: [
       'Selalu sertakan referensi nomor laporan saat berkoordinasi via telepon/WhatsApp.',
       'Gunakan fitur filter tanggal untuk mencari laporan lama yang sudah terselesaikan.',
+      'Manfaatkan fitur "Cari Rute Terbaik" pada detail laporan untuk merencanakan rute peninjauan lokasi yang paling efisien.',
     ],
   },
   {
@@ -162,6 +169,9 @@ const adminSopModules: SopModule[] = [
     goal: 'Admin menyeleksi laporan masuk, memastikan kelengkapan data, dan menentukan penanggung jawab.',
     steps: [
       'Buka detail laporan yang berstatus “baru” melalui drawer detail.',
+      'Gunakan asisten AI untuk memvalidasi kategori dan tingkat keparahan berdasarkan bukti foto.',
+      'Jika muncul peringatan "Konflik Sinkronisasi", tinjau perubahan terbaru sebelum menimpa data laporan.',
+      'Tetapkan tingkat keparahan dan ubah status menjadi “diproses” ketika laporan siap ditindak.',
       'Periksa deskripsi, kategori, dan bukti foto untuk memastikan kelayakan.',
       'Jika data kurang, hubungi pelapor melalui kontak yang tersedia atau kirim permintaan koreksi.',
       'Tetapkan tingkat keparahan dan ubah status menjadi “diproses” ketika laporan siap ditindak.',
@@ -181,6 +191,8 @@ const adminSopModules: SopModule[] = [
     goal: 'Admin mengatur penugasan tim lapangan dan memantau progres pelaksanaan.',
     steps: [
       'Dari detail laporan, pilih tindakan “Buat catatan tindak lanjut” dan isi instruksi untuk tim.',
+      'Gunakan fitur "Cari Rute Terbaik" untuk menghitung jalur tercepat menuju lokasi menggunakan teknologi OSRM.',
+      'Update status menjadi “diproses” dan masukkan estimasi penyelesaian.',
       'Bagikan koordinat lokasi melalui tombol Lihat di Peta atau tautan Google Maps.',
       'Update status menjadi “diproses” dan masukkan estimasi penyelesaian.',
       'Pantau update tim melalui log laporan atau unggahan dokumentasi lapangan.',

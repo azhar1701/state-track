@@ -354,10 +354,10 @@ const Home = () => {
               <p className="text-muted-foreground leading-relaxed">
                 Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.
               </p>
-            </div>
-          </div>
+</div>
         </div>
-      </section>
+        </div>
+</section>
 
       {/* How It Works Section */}
       <section className="container py-20">
