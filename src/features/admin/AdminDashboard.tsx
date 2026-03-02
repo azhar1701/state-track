@@ -1,5 +1,5 @@
 import { handleApiError } from "@/lib/api-errors";
-import { formatDateTime, formatReportLocation } from "@/lib/formatters";
+import { formatDateTime, formatReportLocation, getOptimizedImageUrl } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import { useCallback, useEffect, useMemo, useState, Component, ReactNode } from "react";
@@ -615,7 +615,7 @@ const AdminDashboard = () => {
 
       // Conflict check using timestamp comparison (simple version)
       if (!force) {
-        const { data: latest } = await supabase.from('reports').select('*').eq('id', selectedReport.id).maybeSingle();
+        const { data: latest } = await supabase.from('reports').select('id, updated_at, status, resolution').eq('id', selectedReport.id).maybeSingle();
         if (latest?.updated_at && latest.updated_at !== (selectedReport as { updated_at?: string }).updated_at) {
           setConflictData(latest as ReportRow);
           setConflictDialogOpen(true);
@@ -1756,7 +1756,7 @@ const AdminDetail = lazy(async () => {
     default: function AdminDetailView({
       selectedReport,
       fullReport,
-      detailLoading,
+      detailLoading: _detailLoading,
       editTitle,
       setEditTitle,
       editSeverity,
@@ -1790,13 +1790,13 @@ const AdminDetail = lazy(async () => {
     }) {
       const [lightboxOpen, setLightboxOpen] = useState(false);
       const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
       return (
         <div className="flex flex-col h-full overflow-hidden">
           <DrawerHeader className="text-left pb-3 border-b flex-shrink-0">
             <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
             <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
           </DrawerHeader>
-          {/* Scrollable detail area for Windows compatibility */}
           <div
             className="flex-1 overflow-y-auto px-6 py-4"
             style={{
@@ -1809,14 +1809,12 @@ const AdminDetail = lazy(async () => {
               <div className="text-sm text-muted-foreground py-8 text-center">Data laporan tidak tersedia.</div>
             ) : (
               <div className="space-y-5">
-                {/* Judul Section */}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Judul Laporan</label>
                   <Input className="h-9 text-sm" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Masukkan judul laporan" />
                 </div>
 
-                {/* Metadata Badges */}
-                <div className="flex flex-wrap gap-2 items-center pb-4 border-b">
+                <div className="flex wrap gap-2 items-center pb-4 border-b">
                   <Badge variant="outline" className="text-xs px-2.5 py-1">{selectedReport.category || '-'}</Badge>
                   <select
                     className="h-8 px-3 rounded-md border bg-background text-xs font-medium transition-colors hover:bg-muted"
@@ -1835,21 +1833,11 @@ const AdminDetail = lazy(async () => {
                   </select>
                   {renderStatusBadge(selectedReport.status)}
                 </div>
-                {/* Info Grid */}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Lokasi</label>
-                    <div className="text-sm font-medium">{(() => {
-                      if (!selectedReport) return '-';
-                      const byName = (selectedReport.location_name || '').trim();
-                      if (byName) return byName;
-                      const parts = [selectedReport.desa, selectedReport.kecamatan].filter(Boolean) as string[];
-                      return parts.length > 0 ? parts.join(', ') : '-';
-                    })()}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Wilayah</label>
-                    <div className="text-sm font-medium">{(selectedReport.desa || selectedReport.kecamatan) ? [selectedReport.desa ?? '', selectedReport.kecamatan ?? ''].filter(Boolean).join(', ') : '-'}</div>
+                    <div className="text-sm font-medium">{formatReportLocation(selectedReport.location_name, selectedReport.desa, selectedReport.kecamatan)}</div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Tanggal Dibuat</label>
@@ -1864,57 +1852,12 @@ const AdminDetail = lazy(async () => {
                     <div className="text-sm font-medium">{fullReport?.phone || '-'}</div>
                   </div>
                 </div>
-                {/* Deskripsi */}
+
                 <div className="space-y-2 pb-4 border-b">
                   <label className="text-xs font-medium text-muted-foreground">Deskripsi Laporan</label>
                   <div className="text-sm leading-relaxed bg-muted/30 p-3 rounded-md">{fullReport?.description || '-'}</div>
                 </div>
 
-                {/* Koordinat */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Koordinat Lokasi</label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                      {(() => {
-                        const lat = typeof fullReport?.latitude === 'number' ? fullReport?.latitude : undefined;
-                        const lon = typeof fullReport?.longitude === 'number' ? fullReport?.longitude : undefined;
-                        return lat != null && lon != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : '-';
-                      })()}
-                    </code>
-                    {typeof fullReport?.latitude === 'number' && typeof fullReport?.longitude === 'number' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={async () => {
-                            const lat = fullReport?.latitude;
-                            const lon = fullReport?.longitude;
-                            if (typeof lat !== 'number' || typeof lon !== 'number') return;
-                            await navigator.clipboard.writeText(`${lat}, ${lon}`);
-                            toast.success('Koordinat disalin');
-                          }}
-                        >
-                          Salin
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            const lat = fullReport?.latitude;
-                            const lon = fullReport?.longitude;
-                            if (typeof lat !== 'number' || typeof lon !== 'number') return;
-                            window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`, '_blank', 'noopener,noreferrer');
-                          }}
-                        >
-                          Buka Maps
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Dokumentasi */}
                 <div className="space-y-2 pb-4 border-b">
                   <label className="text-xs font-medium text-muted-foreground">Dokumentasi Foto</label>
                   <div>
@@ -1927,15 +1870,12 @@ const AdminDetail = lazy(async () => {
                           {photos.slice(0, 6).map((src, i) => (
                             <div key={src + i} className="relative group">
                               <img
-                                src={src}
+                                src={getOptimizedImageUrl(src, 300, 70)}
                                 alt={`Dokumentasi ${i + 1}`}
                                 loading="lazy"
                                 decoding="async"
                                 className="h-24 w-full object-cover rounded-lg border cursor-zoom-in transition-all hover:scale-105 hover:shadow-md"
                                 onClick={() => { setActivePhotoIndex(i); setLightboxOpen(true); }}
-                                onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="14" text-anchor="middle" dy=".3em" fill="%23999"%3EError%3C/text%3E%3C/svg%3E';
-                                }}
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg pointer-events-none" />
                             </div>
@@ -1948,7 +1888,6 @@ const AdminDetail = lazy(async () => {
                   </div>
                 </div>
 
-                {/* Respon Admin */}
                 <div className="space-y-2 pb-4 border-b">
                   <label className="text-xs font-medium text-muted-foreground">Hasil/Respon Admin</label>
                   <textarea
@@ -1959,7 +1898,6 @@ const AdminDetail = lazy(async () => {
                   />
                 </div>
 
-                {/* Riwayat */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">Riwayat Perubahan</label>
                   {logsLoading ? (
@@ -1981,18 +1919,17 @@ const AdminDetail = lazy(async () => {
             )}
           </div>
 
-          {/* Lightbox for Dokumentasi */}
           {(() => {
             const photos: string[] = (fullReport?.photo_urls && fullReport.photo_urls.length > 0)
               ? fullReport.photo_urls
               : (fullReport?.photo_url ? [fullReport.photo_url] : []);
             return photos.length > 0 ? (
               <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-                <DialogContent className="sm:max-w-[90vw] p-0 rounded-xl shadow-lg transition-all duration-300 border border-border bg-background" aria-describedby="lightbox-description">
+                <DialogContent className="sm:max-w-[90vw] p-0 rounded-xl border border-border bg-background">
                   <DialogHeader className="px-4 pt-4 pb-2">
                     <DialogTitle>Dokumentasi Foto</DialogTitle>
-                    <DialogDescription id="lightbox-description">
-                      Foto {activePhotoIndex + 1} dari {photos.length}. Klik di luar gambar untuk menutup.
+                    <DialogDescription>
+                      Foto {activePhotoIndex + 1} dari {photos.length}.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="w-full flex items-center justify-center p-2">

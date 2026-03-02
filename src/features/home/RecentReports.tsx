@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { getOptimizedImageUrl } from "@/lib/formatters";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Clock, MapPin, FileText } from "lucide-react";
@@ -16,6 +17,7 @@ interface RecentItem {
   kecamatan?: string | null;
   desa?: string | null;
   created_at: string;
+  photo_url?: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -119,7 +121,7 @@ export default function RecentReports() {
 
       let { data, error } = await supabase
         .from("reports")
-        .select(selectFields)
+        .select(selectFields + ",photo_url")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -158,7 +160,7 @@ export default function RecentReports() {
         return;
       }
 
-      setItems((data || []) as RecentItem[]);
+      setItems((data || []) as unknown as RecentItem[]);
     };
 
     void load();
@@ -195,8 +197,16 @@ export default function RecentReports() {
               return (
                 <div key={it.id} className="group glass-floating rounded-xl p-4 transition-all duration-300 cursor-pointer hover:border-primary/40 hover:-translate-y-0.5">
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-primary" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+                      {it.photo_url ? (
+                        <img 
+                          src={getOptimizedImageUrl(it.photo_url, 100, 60)} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <FileText className="w-6 h-6 text-primary" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-start justify-between gap-3">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getOptimizedImageUrl } from '@/lib/formatters';
 import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -276,7 +277,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                     <div key={i} className="flex-[0_0_100%] min-w-0">
                       <div className="aspect-video relative group bg-muted dark:bg-gray-700">
                         <img
-                          src={photo}
+                          src={getOptimizedImageUrl(photo, 800, 80)}
                           alt={`${report.title} ${i + 1}`}
                           className="w-full h-full object-cover"
                         />

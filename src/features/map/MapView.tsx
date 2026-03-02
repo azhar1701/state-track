@@ -1471,7 +1471,7 @@ const MapView = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('reports')
-      .select('*')
+      .select('id, latitude, longitude, category, status, created_at, location_name')
       .order('created_at', { ascending: false })
       .limit(1000);
 

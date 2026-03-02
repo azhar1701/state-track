@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink } from '@/components/ui/pagination';
+import { getOptimizedImageUrl } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin, RefreshCw } from 'lucide-react';
@@ -85,7 +86,7 @@ export default function MyReports() {
       let query = supabase
         .from('reports')
         .select(
-          'id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,resolution,reporter_name,phone,kecamatan,desa',
+          'id,title,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,severity,kecamatan,desa',
           { count: 'exact' }
         )
         .eq('user_id', user.id)
@@ -289,6 +290,7 @@ export default function MyReports() {
               <Table className="text-xs md:text-sm">
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12 text-[10px] md:text-xs">Foto</TableHead>
                     <TableHead className="text-[10px] md:text-xs">Judul</TableHead>
                     <TableHead className="text-[10px] md:text-xs hidden sm:table-cell">Kategori</TableHead>
                     <TableHead className="text-[10px] md:text-xs">Status</TableHead>
@@ -306,6 +308,21 @@ export default function MyReports() {
                       transition={{ delay: index * 0.04, duration: 0.3 }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                     >
+                      <TableCell className="px-2 md:px-4">
+                        <div className="w-10 h-10 rounded border border-border/50 overflow-hidden bg-muted/50">
+                          {r.photo_url ? (
+                            <img 
+                              src={getOptimizedImageUrl(r.photo_url, 80, 60)} 
+                              alt="" 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <MapPin className="w-4 h-4 text-muted-foreground/50" />
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="max-w-[12rem] md:max-w-[20rem] px-2 md:px-4">
                         <div className="font-medium line-clamp-2 text-xs md:text-sm">{r.title ?? 'Tanpa judul'}</div>
                         {r.description && <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 hidden sm:block">{r.description}</div>}

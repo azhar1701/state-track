@@ -442,7 +442,7 @@ const ReportForm = () => {
     if (!files.length) return;
     const selected = files.slice(0, 10);
     // compress each image to <= 1600px max, ~0.7 quality; cap 1.5MB if possible
-    const opts = { maxSizeMB: 1.5, maxWidthOrHeight: 1600, useWebWorker: true, initialQuality: 0.7 } as const;
+    const opts = { maxSizeMB: 1.0, maxWidthOrHeight: 1200, useWebWorker: true, initialQuality: 0.7 } as const;
     try {
       const compressed: File[] = [];
       const previews: string[] = [];

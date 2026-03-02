@@ -40,3 +40,23 @@ export const formatReportLocation = (
   const parts = [desa, kecamatan].filter(Boolean) as string[];
   return parts.length > 0 ? parts.join(', ') : 'Lokasi tidak tersedia';
 };
+/**
+ * Appends Supabase Image Transformation parameters to a URL for egress optimization.
+ * @param url Original image URL
+ * @param width Desired width
+ * @param quality Desired quality (1-100)
+ * @returns Optimized URL
+ */
+export const getOptimizedImageUrl = (url?: string | null, width: number = 400, quality: number = 70) => {
+  if (!url) return '';
+  if (!url.includes('report-photos')) return url; // Only apply to reports
+  
+  // Check if it's already a public URL from Supabase
+  if (url.includes('supabase.co/storage/v1/object/public')) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}width=${width}&quality=${quality}`;
+  }
+  
+  return url;
+};
+
