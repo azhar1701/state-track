@@ -52,7 +52,7 @@ export const GeoLayerSettings = () => {
         setSettings(prev => ({ ...prev, ...parsed }));
       }
     } catch (error) {
-      console.warn('Failed to load geo layer settings', error);
+      logger.warn('Failed to load geo layer settings', error);
     }
   }, []);
 
@@ -91,7 +91,7 @@ export const GeoLayerSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="glass-floating border-0">
+      <Card variant="glass" className="border-0">
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -118,7 +118,7 @@ export const GeoLayerSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Wajibkan CRS EPSG:4326</div>
@@ -135,7 +135,7 @@ export const GeoLayerSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Publikasi otomatis</div>
@@ -152,7 +152,7 @@ export const GeoLayerSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Wajibkan metadata</div>
@@ -169,7 +169,7 @@ export const GeoLayerSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Visible by default</div>

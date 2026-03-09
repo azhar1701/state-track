@@ -68,7 +68,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-2 glass-panel shadow-lifted rounded-lg transition-all text-foreground btn-haptic"
+          className="flex items-center gap-2 px-3 py-2 bg-card border-border shadow-sm shadow-lifted rounded-lg transition-all text-foreground btn-haptic"
           aria-label="Basemap Switcher"
         >
           {basemapIcons[currentBasemap]}
@@ -80,7 +80,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
         </button>
 
         {isOpen && (
-          <div className="absolute top-full right-0 mt-2 w-40 glass-panel shadow-lifted rounded-lg overflow-hidden border border-border">
+          <div className="absolute top-full right-0 mt-2 w-40 bg-card border-border shadow-sm shadow-lifted rounded-lg overflow-hidden border border-border">
             {(Object.keys(basemaps) as BasemapType[]).map((key) => (
               <button
                 key={key}
@@ -103,7 +103,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
       <button
         onClick={() => setIsOfflineMode(!isOfflineMode)}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 mt-2 glass-panel shadow-lifted rounded-lg transition-all border",
+          "flex items-center gap-2 px-3 py-2 mt-2 bg-card border-border shadow-sm shadow-lifted rounded-lg transition-all border",
           isOfflineMode ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" : "border-transparent text-muted-foreground"
         )}
       >

@@ -13,7 +13,7 @@ const ReportSuccess = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-surface rounded-2xl p-8 border border-white/10 space-y-6 shadow-xl"
+        className="bg-card border-border shadow-sm rounded-2xl p-8 border border-white/10 space-y-6 shadow-xl"
       >
         <div className="mx-auto h-20 w-20 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-4xl shadow-[0_0_20px_rgba(34,197,94,0.3)]">✓</div>
         <h1 className="text-2xl font-semibold">Terima kasih! Laporan terkirim</h1>
@@ -25,7 +25,7 @@ const ReportSuccess = () => {
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={() => navigate('/map')}
-            className="glass-base border border-white/10 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-white/10 transition-all"
+            className="bg-card border-border shadow-sm border border-white/10 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-white/10 transition-all"
           >
             Lihat di Peta
           </button>

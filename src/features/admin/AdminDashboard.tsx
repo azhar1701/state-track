@@ -106,15 +106,15 @@ const GeoDataManagerLazy = lazy(() => import("@/features/geodata/GeoDataManager"
 const HelpCenterLazy = lazy(() => import("@/views/HelpCenter"));
 const AdminSettingsLazy = lazy(() => import("@/features/admin/AdminSettings"));
 
-  const sendWhatsAppNotification = async (reportId: string, newStatus: string) => {
-    try {
-      // Mocking WhatsApp Edge Function call
-      // In production, this would be: await supabase.functions.invoke('whatsapp-notify', { body: { reportId, newStatus } });
-      console.info(`[WhatsApp] Notifikasi dikirim untuk laporan ${reportId}: status baru -> ${newStatus}`);
-    } catch (err) {
-      logger.error('WhatsApp notification error:', err);
-    }
-  };
+const sendWhatsAppNotification = async (reportId: string, newStatus: string) => {
+  try {
+    // Mocking WhatsApp Edge Function call
+    // In production, this would be: await supabase.functions.invoke('whatsapp-notify', { body: { reportId, newStatus } });
+    console.info(`[WhatsApp] Notifikasi dikirim untuk laporan ${reportId}: status baru -> ${newStatus}`);
+  } catch (err) {
+    logger.error('WhatsApp notification error:', err);
+  }
+};
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const shortLocation = (r: ReportListItem | null | undefined) => 
+  const shortLocation = (r: ReportListItem | null | undefined) =>
     formatReportLocation(r?.location_name, r?.desa, r?.kecamatan);
 
   // Small helper to preview long text with ellipsis
@@ -282,13 +282,13 @@ const AdminDashboard = () => {
       const { items, total } = await runPagedQuery(primaryQuery, true);
       applyResult(items, total);
     } catch (primaryError) {
-      console.warn('[AdminDashboard] Extended reports query failed, trying fallback', primaryError);
+      logger.warn('[AdminDashboard] Extended reports query failed, trying fallback', primaryError);
       try {
         const fallbackQuery = buildQuery(REPORT_FALLBACK_COLUMNS, { includeSeverity: false, withCount: true });
         const { items, total } = await runPagedQuery(fallbackQuery, false);
         applyResult(items, total);
       } catch (fallbackError) {
-        console.warn('[AdminDashboard] Fallback reports query failed, trying minimal', fallbackError);
+        logger.warn('[AdminDashboard] Fallback reports query failed, trying minimal', fallbackError);
         try {
           const minimalQuery = buildQuery(REPORT_MINIMAL_COLUMNS, { includeSeverity: false, withCount: false });
           const { items } = await runPagedQuery(minimalQuery, false);
@@ -372,7 +372,7 @@ const AdminDashboard = () => {
         detail = (data ?? null) as ReportDetail | null;
       } catch (err) {
         primaryError = err;
-        console.warn('[AdminDashboard] Detail select failed, using fallback columns', err);
+        logger.warn('[AdminDashboard] Detail select failed, using fallback columns', err);
         const { data: fallbackData, error: fallbackErr } = await supabase
           .from('reports')
           .select('description, reporter_name, phone, resolution')
@@ -645,7 +645,7 @@ const AdminDashboard = () => {
           });
         }
       } catch (logErr) {
-        console.warn('Gagal menulis audit log (edit):', logErr);
+        logger.warn('Gagal menulis audit log (edit):', logErr);
         toast.warning('Perubahan tersimpan, namun gagal mencatat audit log');
       }
       toast.success(force ? 'Perubahan dipaksa simpan' : 'Perubahan tersimpan');
@@ -712,9 +712,9 @@ const AdminDashboard = () => {
           await supabase.from('report_logs').insert(rows);
         }
       } catch (logErr) {
-        console.warn('Gagal menulis audit log (bulk):', logErr);
+        logger.warn('Gagal menulis audit log (bulk):', logErr);
       }
-      
+
       toast.success(`Berhasil mengupdate ${ids.length} laporan`);
       ids.forEach(id => sendWhatsAppNotification(id, status));
       setSelectedIds(new Set<string>());
@@ -991,7 +991,7 @@ const AdminDashboard = () => {
           actor_email: user?.email ?? null,
         });
       } catch (logErr) {
-        console.warn('Gagal menulis audit log (status):', logErr);
+        logger.warn('Gagal menulis audit log (status):', logErr);
       }
       toast.success("Status berhasil diupdate", {
         description: `Status diubah dari ${prevStatus} menjadi ${newStatus}`,
@@ -1029,7 +1029,7 @@ const AdminDashboard = () => {
             }
           }}
         >
-          <TabsList className="w-full flex flex-wrap gap-2 mb-4 md:mb-6 glass-surface rounded-xl p-2 h-auto">
+          <TabsList className="w-full flex flex-wrap gap-2 mb-4 md:mb-6 bg-card border-border shadow-sm rounded-xl p-2 h-auto">
             <TabsTrigger value="reports" className="flex-1 min-w-[140px] text-xs md:text-sm">Laporan</TabsTrigger>
             <TabsTrigger value="geo" className="flex-1 min-w-[140px] text-xs md:text-sm">Geo Data</TabsTrigger>
             <TabsTrigger value="help" className="flex-1 min-w-[140px] text-xs md:text-sm">Help Center</TabsTrigger>
@@ -1040,7 +1040,7 @@ const AdminDashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-primary">
+                <Card variant="glass" className="border-l-4 border-l-primary">
                   <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Total Laporan</CardTitle>
@@ -1051,7 +1051,7 @@ const AdminDashboard = () => {
                 </Card>
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-amber-500">
+                <Card variant="glass" className="border-l-4 border-l-amber-500">
                   <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Baru</CardTitle>
@@ -1062,7 +1062,7 @@ const AdminDashboard = () => {
                 </Card>
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
+                <Card variant="glass" className="border-l-4 border-l-blue-500">
                   <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Diproses</CardTitle>
@@ -1073,7 +1073,7 @@ const AdminDashboard = () => {
                 </Card>
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <Card className="glass-floating hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-green-500">
+                <Card variant="glass" className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-4">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Selesai</CardTitle>
@@ -1086,7 +1086,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Filters */}
-            <Card className="mb-4 glass-surface">
+            <Card className="mb-4 bg-card border-border shadow-sm">
               <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
                 <div className="space-y-3 md:space-y-4">
                   {/* Status Filter Tabs */}
@@ -1100,7 +1100,7 @@ const AdminDashboard = () => {
                         }
                       }}
                     >
-                      <TabsList className="grid grid-cols-4 w-full glass-surface p-1">
+                      <TabsList className="grid grid-cols-4 w-full bg-card border-border shadow-sm p-1">
                         <TabsTrigger value="semua" className="text-2xs md:text-xs">Semua</TabsTrigger>
                         <TabsTrigger value="baru" className="text-2xs md:text-xs">Baru</TabsTrigger>
                         <TabsTrigger value="diproses" className="text-2xs md:text-xs">Diproses</TabsTrigger>
@@ -1260,7 +1260,7 @@ const AdminDashboard = () => {
             )}
 
             {/* Reports Table */}
-            <Card className="glass-surface">
+            <Card className="bg-card border-border shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
@@ -1495,7 +1495,7 @@ const AdminDashboard = () => {
             {/* Delete Confirmation Dialog */}
             {/* Sync Conflict Resolution Dialog */}
             <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
-              <DialogContent className="sm:max-w-[500px] glass-overlay border-amber-500/30">
+              <DialogContent className="sm:max-w-[500px] bg-popover/95 backdrop-blur-md border-border shadow-lg border-amber-500/30">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-amber-600">
                     <AlertCircle className="h-5 w-5" />
@@ -1505,9 +1505,9 @@ const AdminDashboard = () => {
                     Laporan ini baru saja diubah oleh orang lain. Apa yang ingin Anda lakukan?
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 {conflictData && (
-                  <div className="p-4 rounded-lg glass-base text-sm space-y-3">
+                  <div className="p-4 rounded-lg bg-card border-border shadow-sm text-sm space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <span className="text-muted-foreground text-xs uppercase">Status Remote:</span>
                       <span className="font-bold">{conflictData.status.toUpperCase()}</span>
@@ -1522,17 +1522,17 @@ const AdminDashboard = () => {
                 )}
 
                 <div className="grid grid-cols-2 gap-3 pt-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setConflictDialogOpen(false);
                       if (conflictData) openDetail({ ...selectedReport!, ...conflictData });
                     }}
-                    className="glass-base"
+                    className="bg-card border-border shadow-sm"
                   >
                     Batal & Muat Ulang
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => saveEdits(true)}
                     className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
                   >
@@ -1566,10 +1566,10 @@ const AdminDashboard = () => {
 
             {/* Detail Drawer */}
             <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-              <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden glass-overlay">
+              <DrawerContent className="flex flex-col h-[85vh] md:h-[80vh] overflow-hidden bg-popover/95 backdrop-blur-md border-border shadow-lg">
                 <DrawerErrorBoundary>
                   <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat detail...</div>}>
-                    <div className="rounded-xl shadow-lg transition-all duration-300 glass-surface flex flex-col flex-1 overflow-hidden">
+                    <div className="rounded-xl shadow-lg transition-all duration-300 bg-card border-border shadow-sm flex flex-col flex-1 overflow-hidden">
                       <AdminDetail
                         selectedReport={selectedReport}
                         fullReport={fullReport}
@@ -1611,7 +1611,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 mb-8">
                 {/* Chart Tren Laporan */}
-                <Card className="glass-floating hover:shadow-lg transition-all duration-500 rounded-xl">
+                <Card variant="glass" className="rounded-xl">
                   <CardHeader className="pb-2 fade-in">
                     <CardTitle className="text-sm text-muted-foreground">Tren Laporan ({chartDays} hari)</CardTitle>
                   </CardHeader>
@@ -1638,7 +1638,7 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
                 {/* Chart Kategori Terbanyak */}
-                <Card className="glass-floating hover:shadow-lg transition-all duration-500 rounded-xl">
+                <Card variant="glass" className="rounded-xl">
                   <CardHeader className="pb-2 fade-in">
                     <CardTitle className="text-sm text-muted-foreground">Kategori Terbanyak ({chartDays} hari)</CardTitle>
                   </CardHeader>
@@ -1696,7 +1696,7 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="help" className="mt-0">
-            <Card className="glass-surface p-6 border-l-4 border-l-primary mb-6">
+            <Card className="bg-card border-border shadow-sm p-6 border-l-4 border-l-primary mb-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-xl">
                   <Sparkles className="w-6 h-6 text-primary" />
@@ -1725,10 +1725,10 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </Card>
-<Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
-<HelpCenterLazy />
-</Suspense>
-</TabsContent>
+            <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Help Center...</div>}>
+              <HelpCenterLazy />
+            </Suspense>
+          </TabsContent>
 
           <TabsContent value="settings" className="mt-0">
             <Suspense fallback={<div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Memuat Pengaturan...</div>}>

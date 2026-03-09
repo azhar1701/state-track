@@ -212,7 +212,7 @@ export const CategorySettings = () => {
 
   if (loading) {
     return (
-      <Card className="glass-floating border-0">
+      <Card variant="glass" className="border-0">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
@@ -226,7 +226,7 @@ export const CategorySettings = () => {
 
   return (
     <>
-      <Card className="glass-floating border-0">
+      <Card variant="glass" className="border-0">
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -510,7 +510,7 @@ export const CategorySettings = () => {
 
               <Separator />
 
-              <div className="glass-base rounded-lg p-4">
+              <div className="bg-card border-border shadow-sm rounded-lg p-4">
                 <div className="text-xs font-semibold mb-3">Preview</div>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{editingCategory.icon || '📋'}</span>

@@ -42,7 +42,7 @@ export const KeyboardShortcuts = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 animate-in fade-in">
-      <Card className="max-w-2xl w-full glass-panel shadow-lifted p-6 animate-in slide-in-from-bottom-4">
+      <Card className="max-w-2xl w-full bg-card border-border shadow-sm shadow-lifted p-6 animate-in slide-in-from-bottom-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Keyboard Shortcuts</h2>
           <button

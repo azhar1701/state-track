@@ -103,7 +103,7 @@ export const ReportSettings = () => {
         if (parsed.notification) setNotificationConfig(prev => ({ ...prev, ...parsed.notification }));
       }
     } catch (error) {
-      console.warn('Failed to load report settings', error);
+      logger.warn('Failed to load report settings', error);
     }
   }, []);
 
@@ -125,7 +125,7 @@ export const ReportSettings = () => {
 
       const data = { config, export: exportConfig, notification: notificationConfig };
       await saveSetting('reports', 'config', data);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
@@ -158,7 +158,7 @@ export const ReportSettings = () => {
       'incident_date',
       'resolution'
     ];
-    
+
     const example = [
       'Jalan Rusak di Desa Sukamaju',
       'Jalan berlubang sepanjang 50 meter',
@@ -208,7 +208,7 @@ export const ReportSettings = () => {
     try {
       const text = await file.text();
       const lines = text.split('\n').filter(l => l.trim());
-      
+
       if (lines.length < 2) {
         toast.error('File CSV kosong atau tidak valid');
         return;
@@ -282,7 +282,7 @@ export const ReportSettings = () => {
       }
 
       setImportResult({ success, failed, errors: errors.slice(0, 10) });
-      
+
       if (success > 0) {
         toast.success(`Berhasil import ${success} laporan`);
       }
@@ -301,7 +301,7 @@ export const ReportSettings = () => {
   };
 
   return (
-    <Card className="glass-floating border-0">
+    <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -321,7 +321,7 @@ export const ReportSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="workflow" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6 glass-surface rounded-xl">
+          <TabsList className="grid w-full grid-cols-5 mb-6 bg-card border-border shadow-sm rounded-xl">
             <TabsTrigger value="workflow" className="gap-1.5 text-xs sm:text-sm">
               <Workflow className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Workflow</span>
@@ -352,7 +352,7 @@ export const ReportSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Auto-approve laporan</div>
@@ -369,7 +369,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Auto-assign ke petugas</div>
@@ -386,7 +386,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Izinkan laporan anonim</div>
@@ -403,7 +403,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Tampilan publik</div>
@@ -485,7 +485,7 @@ export const ReportSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Wajibkan foto</div>
@@ -502,7 +502,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Wajibkan lokasi</div>
@@ -519,7 +519,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Verifikasi pelapor</div>
@@ -582,7 +582,7 @@ export const ReportSettings = () => {
                 </AlertDescription>
               </Alert>
 
-              <div className="glass-base rounded-lg p-4 space-y-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <h5 className="text-sm font-medium mb-1">Template CSV</h5>
@@ -646,7 +646,7 @@ export const ReportSettings = () => {
                 </div>
               </div>
 
-              <div className="glass-base rounded-lg p-4 space-y-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-4 space-y-3">
                 <h5 className="text-sm font-medium">Upload File CSV</h5>
                 <div className="flex items-center gap-3">
                   <Input
@@ -665,7 +665,7 @@ export const ReportSettings = () => {
               </div>
 
               {importResult && (
-                <div className="glass-base rounded-lg p-4 space-y-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-4 space-y-3">
                   <h5 className="text-sm font-medium">Hasil Import</h5>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-green-500/10 border border-green-500/20 rounded p-3">
@@ -770,7 +770,7 @@ export const ReportSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Sertakan foto</div>
@@ -787,7 +787,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Sertakan komentar</div>
@@ -804,7 +804,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Kirim via email</div>
@@ -832,7 +832,7 @@ export const ReportSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan baru</div>
@@ -849,7 +849,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Update laporan</div>
@@ -866,7 +866,7 @@ export const ReportSettings = () => {
                   </label>
                 </div>
 
-                <div className="glass-base rounded-lg p-3">
+                <div className="bg-card border-border shadow-sm rounded-lg p-3">
                   <label className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium">Laporan selesai</div>

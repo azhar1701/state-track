@@ -1,31 +1,56 @@
-import { logger } from '@/lib/logger';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import { supabase, isSupabaseConfigured } from '@/services/client';
-import { useAuth } from '@/features/auth/useAuth';
-import type { Database } from '@/services/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { MapPin, Upload, Navigation, Loader as Loader2, Search, Camera } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { z } from 'zod';
-import { BasemapSwitcher } from '@/features/map/BasemapSwitcher';
-import { reverseGeocode, geocodeAddress, formatAddress, type GeocodingResult } from '@/features/map/geocoding';
-import { enqueueReportForSync } from '@/features/reports/useOutboxSync';
-import { sanitizeForLog } from '@/lib/security';
-import { LiveCamera } from '@/components/common/LiveCamera';
+import { logger } from "@/lib/logger";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
+import { supabase, isSupabaseConfigured } from "@/services/client";
+import { useAuth } from "@/features/auth/useAuth";
+import type { Database } from "@/services/types";
+import confetti from "canvas-confetti";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import {
+  MapPin,
+  Upload,
+  Navigation,
+  Loader as Loader2,
+  Search,
+  Camera,
+} from "lucide-react";
+import imageCompression from "browser-image-compression";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { z } from "zod";
+import { BasemapSwitcher } from "@/features/map/BasemapSwitcher";
+import {
+  reverseGeocode,
+  geocodeAddress,
+  formatAddress,
+  type GeocodingResult,
+} from "@/features/map/geocoding";
+import { enqueueReportForSync } from "@/features/reports/useOutboxSync";
+import { sanitizeForLog } from "@/lib/security";
+import { LiveCamera } from "@/components/common/LiveCamera";
 
-type ReportStatus = Database['public']['Enums']['report_status'];
-type Severity = 'ringan' | 'sedang' | 'berat';
+type ReportStatus = Database["public"]["Enums"]["report_status"];
+type Severity = "ringan" | "sedang" | "berat";
 type Category = string;
 
 type ReportFormData = {
@@ -41,28 +66,42 @@ type ReportFormData = {
 };
 
 const reportSchema = z.object({
-  title: z.string().min(5, { message: 'Judul minimal 5 karakter' }).max(100),
-  description: z.string().min(10, { message: 'Deskripsi minimal 10 karakter' }).max(2000),
-  category: z.enum(['jalan', 'jembatan', 'irigasi', 'sungai', 'lainnya']),
-  severity: z.enum(['ringan', 'sedang', 'berat']),
+  title: z.string().min(5, { message: "Judul minimal 5 karakter" }).max(100),
+  description: z
+    .string()
+    .min(10, { message: "Deskripsi minimal 10 karakter" })
+    .max(2000),
+  category: z.enum(["jalan", "jembatan", "irigasi", "sungai", "lainnya"]),
+  severity: z.enum(["ringan", "sedang", "berat"]),
   incidentDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Tanggal tidak valid' })
-    .refine((v) => {
-      const d = new Date(`${v}T00:00:00`);
-      if (Number.isNaN(d.getTime())) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return d.getTime() <= today.getTime();
-    }, { message: 'Tanggal kejadian tidak boleh di masa depan' }),
-  reporterName: z.string().min(3, { message: 'Nama minimal 3 karakter' }).max(120),
-  phone: z.string().min(8).max(20).regex(/^\+?[0-9\s-]+$/, { message: 'Nomor telepon tidak valid' }),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Tanggal tidak valid" })
+    .refine(
+      (v) => {
+        const d = new Date(`${v}T00:00:00`);
+        if (Number.isNaN(d.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return d.getTime() <= today.getTime();
+      },
+      { message: "Tanggal kejadian tidak boleh di masa depan" },
+    ),
+  reporterName: z
+    .string()
+    .min(3, { message: "Nama minimal 3 karakter" })
+    .max(120),
+  phone: z
+    .string()
+    .min(8)
+    .max(20)
+    .regex(/^\+?[0-9\s-]+$/, { message: "Nomor telepon tidak valid" }),
   kecamatan: z.string().min(2).max(120),
   desa: z.string().min(2).max(120),
 });
 
 const markerIcon = L.icon({
-  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTYgNDhDMTYgNDggMzIgMjguNCAzMiAxNkMzMiA3LjE2MzQ0IDI0LjgzNjYgMCAxNiAwQzcuMTYzNDQgMCAwIDcuMTYzNDQgMCAxNkMwIDI4LjQgMTYgNDggMTYgNDhaIiBmaWxsPSIjMzk4MmY2Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+',
+  iconUrl:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTYgNDhDMTYgNDggMzIgMjguNCAzMiAxNkMzMiA3LjE2MzQ0IDI0LjgzNjYgMCAxNiAwQzcuMTYzNDQgMCAwIDcuMTYzNDQgMCAxNkMwIDI4LjQgMTYgNDggMTYgNDhaIiBmaWxsPSIjMzk4MmY2Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",
   iconSize: [32, 48],
   iconAnchor: [16, 48],
   popupAnchor: [0, -48],
@@ -93,7 +132,15 @@ const DraggableMarker = ({
     },
   };
 
-  return <Marker position={markerPosition} draggable={true} eventHandlers={eventHandlers} ref={markerRef} icon={markerIcon} />;
+  return (
+    <Marker
+      position={markerPosition}
+      draggable={true}
+      eventHandlers={eventHandlers}
+      ref={markerRef}
+      icon={markerIcon}
+    />
+  );
 };
 
 const MapClickHandler = ({
@@ -109,7 +156,13 @@ const MapClickHandler = ({
   return null;
 };
 
-const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+const FlyToLocation = ({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}) => {
   const map = useMap();
 
   useEffect(() => {
@@ -122,7 +175,9 @@ const FlyToLocation = ({ center, zoom }: { center: [number, number]; zoom: numbe
 const ReportForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const [loading, setLoading] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -135,7 +190,16 @@ const ReportForm = () => {
     name?: string;
   } | null>(null);
 
-  const DRAFT_KEY = 'report_form_draft_v2';
+  const DRAFT_KEY = "report_draft";
+
+  // Delightful loading messages for AI analysis
+  const AI_LOADING_MESSAGES = [
+    "Menganalisis piksel...",
+    "Mengukur tingkat kerusakan...",
+    "Memeriksa pola infrastruktur...",
+    "Menyiapkan rekomendasi terbaik...",
+    "Hampir selesai...",
+  ];
   const savedDraft = useMemo((): ReportFormData | null => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
@@ -147,71 +211,107 @@ const ReportForm = () => {
 
   const [formData, setFormData] = useState<ReportFormData>(
     savedDraft ?? {
-      title: '',
-      description: '',
-      category: 'irigasi',
-      severity: 'sedang',
+      title: "",
+      description: "",
+      category: "irigasi",
+      severity: "sedang",
       incidentDate: new Date().toISOString().slice(0, 10),
-      reporterName: '',
-      phone: '',
-      kecamatan: '',
-      desa: '',
-    }
+      reporterName: "",
+      phone: "",
+      kecamatan: "",
+      desa: "",
+    },
   );
   // Autosave draft
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">(
+    "saved",
+  );
 
   useEffect(() => {
-    setSaveStatus('saving');
+    setSaveStatus("saving");
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-        setSaveStatus('saved');
+        setSaveStatus("saved");
       } catch {
-        setSaveStatus('unsaved');
+        setSaveStatus("unsaved");
       }
     }, 500);
     return () => clearTimeout(timer);
   }, [formData]);
 
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
-  const [errors, setErrors] = useState<Partial<Record<keyof ReportFormData | 'location', string>>>({});
-  const [kecamatanList, setKecamatanList] = useState<Array<{ id: string; name: string }>>([]);
-  const [desaList, setDesaList] = useState<Array<{ id: string; name: string; kecamatan_id: string }>>([]);
-  const [allDesaList, setAllDesaList] = useState<Array<{ id: string; name: string; kecamatan_id: string }>>([]);
-  const [selectedKecamatanId, setSelectedKecamatanId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ReportFormData | "location", string>>
+  >({});
+  const [kecamatanList, setKecamatanList] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [desaList, setDesaList] = useState<
+    Array<{ id: string; name: string; kecamatan_id: string }>
+  >([]);
+  const [allDesaList, setAllDesaList] = useState<
+    Array<{ id: string; name: string; kecamatan_id: string }>
+  >([]);
+  const [selectedKecamatanId, setSelectedKecamatanId] = useState<string | null>(
+    null,
+  );
   const [selectedDesaId, setSelectedDesaId] = useState<string | null>(null);
 
-
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
   const searchTimerRef = useRef<number | null>(null);
 
-  const calculatePriorityScore = (category: string, severity: string): number => {
+  const calculatePriorityScore = (
+    category: string,
+    severity: string,
+  ): number => {
     const severityWeight = { ringan: 1, sedang: 2, berat: 3 }[severity] || 1;
-    const categoryWeight = { irigasi: 3, sungai: 2, jalan: 2, jembatan: 3, lainnya: 1 }[category] || 1;
+    const categoryWeight =
+      { irigasi: 3, sungai: 2, jalan: 2, jembatan: 3, lainnya: 1 }[category] ||
+      1;
     return Math.min(10, severityWeight * categoryWeight);
   };
 
+  const [aiLoadingMsgIndex, setAiLoadingMsgIndex] = useState(0);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isAnalyzing) {
+      interval = setInterval(() => {
+        setAiLoadingMsgIndex((prev) => (prev + 1) % AI_LOADING_MESSAGES.length);
+      }, 1500);
+    } else {
+      setAiLoadingMsgIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
+
   const suggestAIAssistance = async () => {
     if (photoFiles.length === 0) {
-      toast.error('Unggah foto terlebih dahulu untuk menggunakan asisten AI');
+      toast.error("Unggah foto terlebih dahulu untuk menggunakan asisten AI");
       return;
     }
     setIsAnalyzing(true);
     try {
       // Mocking AI Vision API call (GPT-4o-mini / TensorFlow)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 3500));
       const suggestions = {
-        category: 'irigasi',
-        severity: 'berat',
-        confidence: 0.89
+        category: "irigasi",
+        severity: "berat",
+        confidence: 0.89,
       };
-      setFormData(prev => ({...prev, category: suggestions.category, severity: suggestions.severity as Severity}));
-      toast.success('Analisis AI Selesai', { description: `Kategori: ${suggestions.category}, Keparahan: ${suggestions.severity}` });
+      setFormData((prev) => ({
+        ...prev,
+        category: suggestions.category,
+        severity: suggestions.severity as Severity,
+      }));
+      toast.success("Analisis AI Selesai", {
+        description: `Kategori: ${suggestions.category}, Keparahan: ${suggestions.severity}`,
+      });
     } catch (err) {
-      logger.error('AI Analysis error:', err);
+      logger.error("AI Analysis error:", err);
     } finally {
       setIsAnalyzing(false);
     }
@@ -226,7 +326,7 @@ const ReportForm = () => {
         }));
       }
     } catch (error) {
-      logger.error('Error getting location name:', error);
+      logger.error("Error getting location name:", error);
     }
   }, []);
 
@@ -240,16 +340,16 @@ const ReportForm = () => {
           getLocationName(lat, lng);
         },
         (error) => {
-          logger.info('Error getting location:', error);
+          logger.info("Error getting location:", error);
           setLocation({ latitude: -6.2088, longitude: 106.8456 });
-        }
+        },
       );
     }
   }, [getLocationName]);
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
     getUserLocation();
@@ -260,34 +360,34 @@ const ReportForm = () => {
     const loadCategories = async () => {
       try {
         const { data, error } = await supabase
-          .from('custom_categories')
-          .select('value, label')
-          .eq('is_active', true)
-          .order('label');
+          .from("custom_categories")
+          .select("value, label")
+          .eq("is_active", true)
+          .order("label");
 
         if (!error && data) {
           setCategories(data as Array<{ value: string; label: string }>);
         } else {
           // Fallback to default categories
           setCategories([
-            { value: 'jalan', label: 'Jalan' },
-            { value: 'jembatan', label: 'Jembatan' },
-            { value: 'irigasi', label: 'Irigasi' },
-            { value: 'drainase', label: 'Drainase' },
-            { value: 'sungai', label: 'Sungai' },
-            { value: 'lainnya', label: 'Lainnya' }
+            { value: "jalan", label: "Jalan" },
+            { value: "jembatan", label: "Jembatan" },
+            { value: "irigasi", label: "Irigasi" },
+            { value: "drainase", label: "Drainase" },
+            { value: "sungai", label: "Sungai" },
+            { value: "lainnya", label: "Lainnya" },
           ]);
         }
       } catch (err) {
-        logger.error('Failed to load categories:', err);
+        logger.error("Failed to load categories:", err);
         // Fallback to default categories
         setCategories([
-          { value: 'jalan', label: 'Jalan' },
-          { value: 'jembatan', label: 'Jembatan' },
-          { value: 'irigasi', label: 'Irigasi' },
-          { value: 'drainase', label: 'Drainase' },
-          { value: 'sungai', label: 'Sungai' },
-          { value: 'lainnya', label: 'Lainnya' }
+          { value: "jalan", label: "Jalan" },
+          { value: "jembatan", label: "Jembatan" },
+          { value: "irigasi", label: "Irigasi" },
+          { value: "drainase", label: "Drainase" },
+          { value: "sungai", label: "Sungai" },
+          { value: "lainnya", label: "Lainnya" },
         ]);
       }
     };
@@ -298,16 +398,24 @@ const ReportForm = () => {
   useEffect(() => {
     const loadKecamatan = async () => {
       if (!isSupabaseConfigured) return;
-      const { data, error } = await supabase.from('kecamatan').select('id,name').order('name');
+      const { data, error } = await supabase
+        .from("kecamatan")
+        .select("id,name")
+        .order("name");
       if (!error && data) {
         setKecamatanList(data as Array<{ id: string; name: string }>);
       }
     };
     const loadAllDesa = async () => {
       if (!isSupabaseConfigured) return;
-      const { data, error } = await supabase.from('desa').select('id,name,kecamatan_id').order('name');
+      const { data, error } = await supabase
+        .from("desa")
+        .select("id,name,kecamatan_id")
+        .order("name");
       if (!error && data) {
-        setAllDesaList(data as Array<{ id: string; name: string; kecamatan_id: string }>);
+        setAllDesaList(
+          data as Array<{ id: string; name: string; kecamatan_id: string }>,
+        );
       }
     };
     void loadKecamatan();
@@ -316,8 +424,14 @@ const ReportForm = () => {
 
   // When kecamatan list is loaded, if draft contains kecamatan name, preselect it
   useEffect(() => {
-    if (formData.kecamatan && kecamatanList.length > 0 && !selectedKecamatanId) {
-      const match = kecamatanList.find(k => k.name.toLowerCase() === formData.kecamatan.toLowerCase());
+    if (
+      formData.kecamatan &&
+      kecamatanList.length > 0 &&
+      !selectedKecamatanId
+    ) {
+      const match = kecamatanList.find(
+        (k) => k.name.toLowerCase() === formData.kecamatan.toLowerCase(),
+      );
       if (match) setSelectedKecamatanId(match.id);
     }
   }, [kecamatanList, formData.kecamatan, selectedKecamatanId]);
@@ -325,14 +439,19 @@ const ReportForm = () => {
   // Load desa when kecamatan changes
   useEffect(() => {
     const loadDesa = async () => {
-      if (!isSupabaseConfigured || !selectedKecamatanId) { setDesaList([]); return; }
+      if (!isSupabaseConfigured || !selectedKecamatanId) {
+        setDesaList([]);
+        return;
+      }
       const { data, error } = await supabase
-        .from('desa')
-        .select('id,name,kecamatan_id')
-        .eq('kecamatan_id', selectedKecamatanId)
-        .order('name');
+        .from("desa")
+        .select("id,name,kecamatan_id")
+        .eq("kecamatan_id", selectedKecamatanId)
+        .order("name");
       if (!error && data) {
-        setDesaList(data as Array<{ id: string; name: string; kecamatan_id: string }>);
+        setDesaList(
+          data as Array<{ id: string; name: string; kecamatan_id: string }>,
+        );
       }
     };
     void loadDesa();
@@ -341,23 +460,41 @@ const ReportForm = () => {
   // When allDesaList is available, if draft contains desa name, preselect and sync kecamatan
   useEffect(() => {
     if (formData.desa && allDesaList.length > 0 && !selectedDesaId) {
-      const match = allDesaList.find(d => d.name.toLowerCase() === formData.desa.toLowerCase());
+      const match = allDesaList.find(
+        (d) => d.name.toLowerCase() === formData.desa.toLowerCase(),
+      );
       if (match) {
         setSelectedDesaId(match.id);
         if (!selectedKecamatanId) {
           setSelectedKecamatanId(match.kecamatan_id);
-          const kec = kecamatanList.find(k => k.id === match.kecamatan_id);
+          const kec = kecamatanList.find((k) => k.id === match.kecamatan_id);
           if (kec) setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
         }
       }
     }
-  }, [allDesaList, formData.desa, selectedDesaId, selectedKecamatanId, kecamatanList]);
+  }, [
+    allDesaList,
+    formData.desa,
+    selectedDesaId,
+    selectedKecamatanId,
+    kecamatanList,
+  ]);
 
   // Realtime validation
   useEffect(() => {
     const parsed = reportSchema.safeParse(formData);
     if (parsed.success) {
-      setErrors((prev) => ({ ...prev, title: undefined, description: undefined, category: undefined, severity: undefined, reporterName: undefined, phone: undefined, kecamatan: undefined, desa: undefined }));
+      setErrors((prev) => ({
+        ...prev,
+        title: undefined,
+        description: undefined,
+        category: undefined,
+        severity: undefined,
+        reporterName: undefined,
+        phone: undefined,
+        kecamatan: undefined,
+        desa: undefined,
+      }));
     } else {
       const next: Partial<Record<keyof ReportFormData, string>> = {};
       for (const issue of parsed.error.issues) {
@@ -374,9 +511,9 @@ const ReportForm = () => {
     try {
       const results = await geocodeAddress(searchQuery);
       setSearchResults(results);
-      if (results.length === 0) toast.error('Lokasi tidak ditemukan');
+      if (results.length === 0) toast.error("Lokasi tidak ditemukan");
     } catch (error) {
-      toast.error('Gagal mencari lokasi');
+      toast.error("Gagal mencari lokasi");
     } finally {
       setSearchLoading(false);
     }
@@ -394,11 +531,11 @@ const ReportForm = () => {
 
   const analyzeReportPhoto = async (file: File) => {
     // Mocking AI Vision API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     return {
-      category: 'irigasi',
-      severity: 'berat' as const,
-      confidence: 0.89
+      category: "irigasi",
+      severity: "berat" as const,
+      confidence: 0.89,
     };
   };
   const runAIAnalysis = useCallback(async (file: File) => {
@@ -416,7 +553,7 @@ const ReportForm = () => {
         });
       }
     } catch (err) {
-      logger.error('AI analysis error:', err);
+      logger.error("AI analysis error:", err);
     } finally {
       setIsAnalyzing(false);
     }
@@ -424,16 +561,24 @@ const ReportForm = () => {
 
   const handleCameraCapture = async (file: File) => {
     try {
-      const opts = { maxSizeMB: 1.5, maxWidthOrHeight: 1600, useWebWorker: true, initialQuality: 0.7 } as const;
+      const opts = {
+        maxSizeMB: 1.5,
+        maxWidthOrHeight: 1600,
+        useWebWorker: true,
+        initialQuality: 0.7,
+      } as const;
       const compressed = await imageCompression(file, opts);
       const preview = await imageCompression.getDataUrlFromFile(compressed);
 
-      setPhotoFiles((prev) => [...prev, new File([compressed], file.name, { type: 'image/jpeg' })]);
+      setPhotoFiles((prev) => [
+        ...prev,
+        new File([compressed], file.name, { type: "image/jpeg" }),
+      ]);
       setPhotoPreviews((prev) => [...prev, preview]);
-      toast.success('Foto berhasil ditambahkan');
+      toast.success("Foto berhasil ditambahkan");
       void runAIAnalysis(compressed);
     } catch (err) {
-      toast.error('Gagal memproses foto');
+      toast.error("Gagal memproses foto");
     }
   };
 
@@ -442,7 +587,12 @@ const ReportForm = () => {
     if (!files.length) return;
     const selected = files.slice(0, 10);
     // compress each image to <= 1600px max, ~0.7 quality; cap 1.5MB if possible
-    const opts = { maxSizeMB: 1.0, maxWidthOrHeight: 1200, useWebWorker: true, initialQuality: 0.7 } as const;
+    const opts = {
+      maxSizeMB: 1.0,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      initialQuality: 0.7,
+    } as const;
     try {
       const compressed: File[] = [];
       const previews: string[] = [];
@@ -450,29 +600,35 @@ const ReportForm = () => {
         const f = selected[i];
         try {
           const cf = await imageCompression(f, opts);
-          compressed.push(new File([cf], f.name.replace(/\.(jpg|jpeg|png|webp)$/i, '.jpg'), { type: 'image/jpeg' }));
+          compressed.push(
+            new File([cf], f.name.replace(/\.(jpg|jpeg|png|webp)$/i, ".jpg"), {
+              type: "image/jpeg",
+            }),
+          );
           previews.push(await imageCompression.getDataUrlFromFile(cf));
         } catch {
           // if compression fails, fallback to original
           compressed.push(f);
-          previews.push(await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(f);
-          }));
+          previews.push(
+            await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(f);
+            }),
+          );
         }
       }
       setPhotoFiles(compressed);
       setPhotoPreviews(previews);
       toast.success(`Foto siap diunggah (${compressed.length})`, {
-        description: 'Foto telah dikompres untuk menghemat data',
+        description: "Foto telah dikompres untuk menghemat data",
       });
       if (compressed.length > 0) {
         void runAIAnalysis(compressed[0]);
       }
     } catch (err) {
-      logger.error('Compression failed', err);
-      toast.error('Gagal memproses foto');
+      logger.error("Compression failed", err);
+      toast.error("Gagal memproses foto");
     }
   };
 
@@ -480,13 +636,15 @@ const ReportForm = () => {
     e.preventDefault();
 
     if (!location) {
-      toast.error('Lokasi belum dipilih');
-      setErrors((prev) => ({ ...prev, location: 'Lokasi wajib dipilih' }));
+      toast.error("Lokasi belum dipilih");
+      setErrors((prev) => ({ ...prev, location: "Lokasi wajib dipilih" }));
       return;
     }
 
     if (!isSupabaseConfigured) {
-      toast.error('Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY di .env.local');
+      toast.error(
+        "Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY di .env.local",
+      );
       return;
     }
 
@@ -502,7 +660,10 @@ const ReportForm = () => {
         // surface first error
         const first = validation.error.errors[0];
         if (first && first.path[0]) {
-          setErrors((prev) => ({ ...prev, [first.path[0] as keyof ReportFormData]: first.message }));
+          setErrors((prev) => ({
+            ...prev,
+            [first.path[0] as keyof ReportFormData]: first.message,
+          }));
         }
         return;
       }
@@ -512,7 +673,9 @@ const ReportForm = () => {
         const k = `dup_${formData.title}_${Math.round(location.latitude * 1000)}_${Math.round(location.longitude * 1000)}`;
         const last = sessionStorage.getItem(k);
         if (last && Date.now() - Number(last) < 2 * 60 * 1000) {
-          toast.error('Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.');
+          toast.error(
+            "Laporan serupa baru saja dikirim. Coba ubah detail atau tunggu sebentar.",
+          );
           setLoading(false);
           return;
         }
@@ -526,24 +689,42 @@ const ReportForm = () => {
 
       // If offline, queue to outbox and exit early
       if (!navigator.onLine) {
-        await enqueueReportForSync({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category as unknown as import('@/services/types').Database['public']['Enums']['report_category'],
-          severity: formData.severity,
-          incidentDate: formData.incidentDate,
-          reporterName: formData.reporterName,
-          phone: formData.phone,
-          kecamatan: formData.kecamatan,
-          desa: formData.desa,
-          priority_score: calculatePriorityScore(formData.category, formData.severity),
-          location: { latitude: location.latitude, longitude: location.longitude, name: location.name ?? null },
-        }, photoFiles);
-        toast.message('Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.', {
-          description: 'Anda dapat melihat status di halaman Laporan Saya',
-        });
-        try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-        navigate('/report/success');
+        await enqueueReportForSync(
+          {
+            title: formData.title,
+            description: formData.description,
+            category:
+              formData.category as unknown as import("@/services/types").Database["public"]["Enums"]["report_category"],
+            severity: formData.severity,
+            incidentDate: formData.incidentDate,
+            reporterName: formData.reporterName,
+            phone: formData.phone,
+            kecamatan: formData.kecamatan,
+            desa: formData.desa,
+            priority_score: calculatePriorityScore(
+              formData.category,
+              formData.severity,
+            ),
+            location: {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              name: location.name ?? null,
+            },
+          },
+          photoFiles,
+        );
+        toast.message(
+          "Tidak ada koneksi. Laporan disimpan dan akan dikirim otomatis saat online.",
+          {
+            description: "Anda dapat melihat status di halaman Laporan Saya",
+          },
+        );
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          /* ignore */
+        }
+        navigate("/report/success");
         return;
       }
 
@@ -551,23 +732,31 @@ const ReportForm = () => {
         setUploadPercent(10);
         for (let i = 0; i < photoFiles.length; i++) {
           const file = photoFiles[i];
-          const ext = file.name.split('.').pop();
+          const ext = file.name.split(".").pop();
           const fileName = `${user!.id}/${Date.now()}_${i}.${ext}`;
           const { error: uploadError } = await supabase.storage
-            .from('report-photos')
+            .from("report-photos")
             .upload(fileName, file, { contentType: file.type, upsert: false });
           if (uploadError) {
-            const msg = (uploadError as unknown as { message?: string })?.message?.toLowerCase() ?? '';
-            if (msg.includes('bucket') && msg.includes('not')) {
-              toast.warning('Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".', {
-                description: 'Laporan tetap akan tersimpan',
-              });
+            const msg =
+              (
+                uploadError as unknown as { message?: string }
+              )?.message?.toLowerCase() ?? "";
+            if (msg.includes("bucket") && msg.includes("not")) {
+              toast.warning(
+                'Bucket penyimpanan foto tidak ditemukan. Laporan akan dikirim tanpa foto. Hubungi admin untuk membuat bucket "report-photos".',
+                {
+                  description: "Laporan tetap akan tersimpan",
+                },
+              );
               break;
             } else {
               throw uploadError;
             }
           } else {
-            const { data: publicUrlData } = supabase.storage.from('report-photos').getPublicUrl(fileName);
+            const { data: publicUrlData } = supabase.storage
+              .from("report-photos")
+              .getPublicUrl(fileName);
             photoUrls.push(publicUrlData.publicUrl);
           }
           const prog = 10 + Math.round(((i + 1) / photoFiles.length) * 50);
@@ -581,8 +770,9 @@ const ReportForm = () => {
         user_id: user!.id,
         title: formData.title,
         description: formData.description,
-        category: formData.category as Database['public']['Enums']['report_category'],
-        status: 'baru' as ReportStatus,
+        category:
+          formData.category as Database["public"]["Enums"]["report_category"],
+        status: "baru" as ReportStatus,
         latitude: location.latitude,
         longitude: location.longitude,
         photo_url: photoUrl,
@@ -594,88 +784,142 @@ const ReportForm = () => {
         phone: formData.phone,
         kecamatan: formData.kecamatan,
         desa: formData.desa,
-        priority_score: calculatePriorityScore(formData.category, formData.severity),
+        priority_score: calculatePriorityScore(
+          formData.category,
+          formData.severity,
+        ),
       };
-      const fullPayload = { ...basePayload, location_name: location.name || null } as typeof basePayload & { location_name?: string | null };
-      let { data: inserted, error: insertError } = await supabase.from('reports').insert(fullPayload).select('id').single();
+      const fullPayload = {
+        ...basePayload,
+        location_name: location.name || null,
+      } as typeof basePayload & { location_name?: string | null };
+      let { data: inserted, error: insertError } = await supabase
+        .from("reports")
+        .insert(fullPayload)
+        .select("id")
+        .single();
       if (
         insertError &&
-        typeof insertError.message === 'string' &&
-        (
-          insertError.message.toLowerCase().includes('column') && insertError.message.toLowerCase().includes('does not exist') ||
-          insertError.message.toLowerCase().includes('schema cache') ||
-          insertError.message.toLowerCase().includes('could not find')
-        )
+        typeof insertError.message === "string" &&
+        ((insertError.message.toLowerCase().includes("column") &&
+          insertError.message.toLowerCase().includes("does not exist")) ||
+          insertError.message.toLowerCase().includes("schema cache") ||
+          insertError.message.toLowerCase().includes("could not find"))
       ) {
         // Retry without optional columns that may not exist in some environments
         const minimal = { ...basePayload };
-        const retry = await supabase.from('reports').insert(minimal).select('id').single();
+        const retry = await supabase
+          .from("reports")
+          .insert(minimal)
+          .select("id")
+          .single();
         inserted = retry.data;
-        insertError = (retry.error as unknown) as typeof insertError;
+        insertError = retry.error as unknown as typeof insertError;
       }
-
 
       if (insertError) throw insertError;
 
-      toast.success('Laporan berhasil dikirim!', {
-        description: 'Tim kami akan segera meninjau laporan Anda',
+      toast.success("Laporan berhasil dikirim!", {
+        description: "Tim kami akan segera meninjau laporan Anda",
       });
-      try { localStorage.removeItem(DRAFT_KEY); } catch {
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
         // ignore removeItem failures
       }
       setUploadPercent(100);
+
+      // Trigger Confetti Celebration!
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ["#0ea5e9", "#14b8a6", "#f59e0b", "#eab308"],
+      });
+
       const id = inserted?.id as string | number | undefined;
-      navigate(id ? `/report/success?id=${id}` : '/report/success');
+
+      // Delay redirect slightly so user sees confetti
+      setTimeout(() => {
+        navigate(id ? `/report/success?id=${id}` : "/report/success");
+      }, 1500);
     } catch (error) {
-      logger.error('Error submitting report:', sanitizeForLog(error));
+      logger.error("Error submitting report:", sanitizeForLog(error));
       // Tampilkan pesan error yang lebih informatif untuk kasus umum Supabase
-      let message = 'Gagal mengirim laporan. Silakan coba lagi.';
+      let message = "Gagal mengirim laporan. Silakan coba lagi.";
       const errAny = error as unknown as { message?: string };
-      const text = typeof errAny?.message === 'string' ? errAny.message : '';
-      const isNetwork = text.toLowerCase().includes('failed to fetch') || text.toLowerCase().includes('network');
+      const text = typeof errAny?.message === "string" ? errAny.message : "";
+      const isNetwork =
+        text.toLowerCase().includes("failed to fetch") ||
+        text.toLowerCase().includes("network");
       if (isNetwork) {
         try {
-          await enqueueReportForSync({
-            title: formData.title,
-            description: formData.description,
-            category: formData.category as unknown as import('@/services/types').Database['public']['Enums']['report_category'],
-            severity: formData.severity,
-            incidentDate: formData.incidentDate,
-            reporterName: formData.reporterName,
-            phone: formData.phone,
-            kecamatan: formData.kecamatan,
-            desa: formData.desa,
-            priority_score: calculatePriorityScore(formData.category, formData.severity),
-            location: { latitude: location!.latitude, longitude: location!.longitude, name: location!.name ?? null },
-          }, photoFiles);
-          toast.message('Koneksi terputus. Laporan disimpan offline dan akan dikirim otomatis.', {
-            description: 'Periksa status di Laporan Saya setelah online',
-          });
-          try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-          navigate('/report/success');
+          await enqueueReportForSync(
+            {
+              title: formData.title,
+              description: formData.description,
+              category:
+                formData.category as unknown as import("@/services/types").Database["public"]["Enums"]["report_category"],
+              severity: formData.severity,
+              incidentDate: formData.incidentDate,
+              reporterName: formData.reporterName,
+              phone: formData.phone,
+              kecamatan: formData.kecamatan,
+              desa: formData.desa,
+              priority_score: calculatePriorityScore(
+                formData.category,
+                formData.severity,
+              ),
+              location: {
+                latitude: location!.latitude,
+                longitude: location!.longitude,
+                name: location!.name ?? null,
+              },
+            },
+            photoFiles,
+          );
+          toast.message(
+            "Koneksi terputus. Laporan disimpan offline dan akan dikirim otomatis.",
+            {
+              description: "Periksa status di Laporan Saya setelah online",
+            },
+          );
+          try {
+            localStorage.removeItem(DRAFT_KEY);
+          } catch {
+            /* ignore */
+          }
+          navigate("/report/success");
           return;
         } catch {
           // fallthrough to normal error toast
         }
       }
-      if (error && typeof error === 'object') {
+      if (error && typeof error === "object") {
         const errObj = error as Record<string, unknown>;
-        const msg = typeof errObj.message === 'string' ? errObj.message : undefined;
-        const details = typeof errObj.details === 'string' ? errObj.details : undefined;
-        const hint = typeof errObj.hint === 'string' ? errObj.hint : undefined;
-        const combined = [msg, details, hint].filter(Boolean).join(' | ');
+        const msg =
+          typeof errObj.message === "string" ? errObj.message : undefined;
+        const details =
+          typeof errObj.details === "string" ? errObj.details : undefined;
+        const hint = typeof errObj.hint === "string" ? errObj.hint : undefined;
+        const combined = [msg, details, hint].filter(Boolean).join(" | ");
 
         if (combined) {
           message = combined;
         }
 
         const lower = combined.toLowerCase();
-        if (lower.includes('row-level security') || lower.includes('permission denied')) {
-          message = 'Izin ditolak saat menyimpan laporan. Pastikan Anda login dan memiliki akses.';
-        } else if (lower.includes('report_category')) {
-          message = 'Kategori tidak valid. Silakan pilih salah satu kategori yang tersedia.';
-        } else if (lower.includes('bucket') && lower.includes('not')) {
-          message = 'Bucket foto tidak ditemukan. Laporan dikirim tanpa foto.';
+        if (
+          lower.includes("row-level security") ||
+          lower.includes("permission denied")
+        ) {
+          message =
+            "Izin ditolak saat menyimpan laporan. Pastikan Anda login dan memiliki akses.";
+        } else if (lower.includes("report_category")) {
+          message =
+            "Kategori tidak valid. Silakan pilih salah satu kategori yang tersedia.";
+        } else if (lower.includes("bucket") && lower.includes("not")) {
+          message = "Bucket foto tidak ditemukan. Laporan dikirim tanpa foto.";
         }
       }
       toast.error(message);
@@ -691,27 +935,35 @@ const ReportForm = () => {
     <>
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 md:py-8 fade-in">
         <div className="container max-w-4xl px-2 md:px-4 slide-up">
-          <Card className="glass-card shadow-2xl rounded-xl md:rounded-2xl border-none transition-all duration-300 scale-in">
+          <Card className="bg-card border-border shadow-sm rounded-2xl p-6 hover:shadow-md transition-all shadow-2xl rounded-xl md:rounded-2xl border-none transition-all duration-300 scale-in">
             <CardHeader className="pb-3 md:pb-4 px-3 md:px-6 fade-in pt-4 md:pt-6">
               <div className="flex flex-col sm:flex-row items-start justify-between gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-xl md:text-2xl font-bold">Buat Laporan Baru</CardTitle>
-                  <CardDescription className="text-sm md:text-base text-muted-foreground">Laporkan masalah infrastruktur Sumber Daya Air</CardDescription>
+                  <CardTitle className="text-xl md:text-2xl font-bold">
+                    Buat Laporan Baru
+                  </CardTitle>
+                  <CardDescription className="text-sm md:text-base text-muted-foreground">
+                    Laporkan masalah infrastruktur Sumber Daya Air
+                  </CardDescription>
                 </div>
                 <div className="flex flex-col items-end gap-1 text-[10px] md:text-xs whitespace-nowrap">
-                  {saveStatus === 'saving' && (
+                  {saveStatus === "saving" && (
                     <>
                       <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                      <span className="text-muted-foreground">Menyimpan...</span>
+                      <span className="text-muted-foreground">
+                        Menyimpan...
+                      </span>
                     </>
                   )}
-                  {saveStatus === 'saved' && (
+                  {saveStatus === "saved" && (
                     <>
                       <div className="w-2 h-2 rounded-full bg-green-600" />
-                      <span className="text-green-600 font-medium">✓ Tersimpan</span>
+                      <span className="text-green-600 font-medium">
+                        ✓ Tersimpan
+                      </span>
                     </>
                   )}
-                  {saveStatus === 'unsaved' && (
+                  {saveStatus === "unsaved" && (
                     <>
                       <div className="w-2 h-2 rounded-full bg-red-500" />
                       <span className="text-red-500">Gagal simpan</span>
@@ -719,22 +971,31 @@ const ReportForm = () => {
                   )}
                 </div>
               </div>
-                  {isAnalyzing && (
-                    <div className="flex items-center gap-2 text-xs text-primary animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      <span>AI sedang menganalisis foto...</span>
-                    </div>
-                  )}
+              {isAnalyzing && (
+                <div className="flex items-center gap-2 text-xs text-primary animate-pulse bg-primary/5 px-3 py-1.5 rounded-full mt-2 w-fit fade-in">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="font-medium">
+                    {AI_LOADING_MESSAGES[aiLoadingMsgIndex]}
+                  </span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="px-3 md:px-6">
-              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 fade-in">
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-4 md:space-y-6 fade-in"
+              >
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-xs md:text-sm">Judul Laporan *</Label>
+                  <Label htmlFor="title" className="text-xs md:text-sm">
+                    Judul Laporan *
+                  </Label>
                   <Input
                     id="title"
                     placeholder="Contoh: Sungai Cileueur meluap"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     required
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm"
                     autoComplete="off"
@@ -756,14 +1017,16 @@ const ReportForm = () => {
                 <div className="grid gap-3 md:gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="category" className="text-xs md:text-sm">Kategori *</Label>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
+                      <Label htmlFor="category" className="text-xs md:text-sm">
+                        Kategori *
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={suggestAIAssistance}
                         disabled={isAnalyzing || photoFiles.length === 0}
-                        className="h-7 text-[10px] font-bold text-primary hover:bg-primary/10 glass-base border-primary/20"
+                        className="h-7 text-[10px] font-bold text-primary hover:bg-primary/10 bg-card border-border shadow-sm border-primary/20"
                       >
                         {isAnalyzing ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -775,15 +1038,25 @@ const ReportForm = () => {
                     </div>
                     <Select
                       value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value as Category })}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          category: value as Category,
+                        })
+                      }
                       required
                     >
-                      <SelectTrigger id="category" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40 text-sm h-9 md:h-10">
+                      <SelectTrigger
+                        id="category"
+                        className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40 text-sm h-9 md:h-10"
+                      >
                         <SelectValue placeholder="Pilih kategori" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -802,9 +1075,19 @@ const ReportForm = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="severity" className="text-xs md:text-sm">Tingkat Keparahan *</Label>
-                    <Select value={formData.severity} onValueChange={(v) => setFormData({ ...formData, severity: v as Severity })}>
-                      <SelectTrigger id="severity" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
+                    <Label htmlFor="severity" className="text-xs md:text-sm">
+                      Tingkat Keparahan *
+                    </Label>
+                    <Select
+                      value={formData.severity}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, severity: v as Severity })
+                      }
+                    >
+                      <SelectTrigger
+                        id="severity"
+                        className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
                         <SelectValue placeholder="Pilih tingkat" />
                       </SelectTrigger>
                       <SelectContent>
@@ -813,7 +1096,11 @@ const ReportForm = () => {
                         <SelectItem value="berat">Berat</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.severity && <p className="text-xs text-red-600 mt-1">{errors.severity}</p>}
+                    {errors.severity && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors.severity}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -825,7 +1112,9 @@ const ReportForm = () => {
                     placeholder="Jelaskan masalah secara detail..."
                     rows={4}
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     required
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                     autoComplete="off"
@@ -851,50 +1140,75 @@ const ReportForm = () => {
                     id="incidentDate"
                     type="date"
                     value={formData.incidentDate}
-                    onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, incidentDate: e.target.value })
+                    }
                     required
                     className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
-                  {errors.incidentDate && <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>}
-                  <p className="text-xs text-muted-foreground">Isi tanggal kejadian jika berbeda dari hari ini.</p>
+                  {errors.incidentDate && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.incidentDate}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Isi tanggal kejadian jika berbeda dari hari ini.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="kecamatan">Kecamatan *</Label>
                     <Select
-                      value={selectedKecamatanId ?? ''}
+                      value={selectedKecamatanId ?? ""}
                       onValueChange={(value) => {
                         setSelectedKecamatanId(value);
-                        const kec = kecamatanList.find(k => k.id === value);
+                        const kec = kecamatanList.find((k) => k.id === value);
                         if (kec) {
-                          setFormData((prev) => ({ ...prev, kecamatan: kec.name }));
-                          const currentDesa = selectedDesaId ? allDesaList.find(d => d.id === selectedDesaId) : undefined;
-                          if (!currentDesa || currentDesa.kecamatan_id !== value) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            kecamatan: kec.name,
+                          }));
+                          const currentDesa = selectedDesaId
+                            ? allDesaList.find((d) => d.id === selectedDesaId)
+                            : undefined;
+                          if (
+                            !currentDesa ||
+                            currentDesa.kecamatan_id !== value
+                          ) {
                             setSelectedDesaId(null);
-                            setFormData((prev) => ({ ...prev, desa: '' }));
+                            setFormData((prev) => ({ ...prev, desa: "" }));
                           }
                         }
                       }}
                     >
-                      <SelectTrigger id="kecamatan" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
+                      <SelectTrigger
+                        id="kecamatan"
+                        className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
                         <SelectValue placeholder="Pilih kecamatan" />
                       </SelectTrigger>
                       <SelectContent>
-                        {kecamatanList.map(k => (
-                          <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>
+                        {kecamatanList.map((k) => (
+                          <SelectItem key={k.id} value={k.id}>
+                            {k.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.kecamatan && <p className="text-xs text-red-600 mt-1">{errors.kecamatan}</p>}
+                    {errors.kecamatan && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors.kecamatan}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="desa">Desa/Kelurahan *</Label>
                     <Select
-                      value={selectedDesaId ?? ''}
+                      value={selectedDesaId ?? ""}
                       onValueChange={(value) => {
-                        const desa = desaList.find(d => d.id === value);
+                        const desa = desaList.find((d) => d.id === value);
                         setSelectedDesaId(value);
                         if (desa) {
                           setFormData((prev) => ({ ...prev, desa: desa.name }));
@@ -902,16 +1216,29 @@ const ReportForm = () => {
                       }}
                       disabled={!selectedKecamatanId}
                     >
-                      <SelectTrigger id="desa" className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40">
-                        <SelectValue placeholder={selectedKecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'} />
+                      <SelectTrigger
+                        id="desa"
+                        className="rounded-lg border border-border shadow-sm focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        <SelectValue
+                          placeholder={
+                            selectedKecamatanId
+                              ? "Pilih desa"
+                              : "Pilih kecamatan dulu"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {desaList.map(d => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        {desaList.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.desa && <p className="text-xs text-red-600 mt-1">{errors.desa}</p>}
+                    {errors.desa && (
+                      <p className="text-xs text-red-600 mt-1">{errors.desa}</p>
+                    )}
                   </div>
                 </div>
 
@@ -921,11 +1248,20 @@ const ReportForm = () => {
                     <Input
                       id="reporterName"
                       value={formData.reporterName}
-                      onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          reporterName: e.target.value,
+                        })
+                      }
                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                       autoComplete="name"
                     />
-                    {errors.reporterName && <p className="text-xs text-red-600 mt-1">{errors.reporterName}</p>}
+                    {errors.reporterName && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors.reporterName}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -934,15 +1270,19 @@ const ReportForm = () => {
                       id="phone"
                       inputMode="tel"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                       className="rounded-lg border border-border shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40"
                       autoComplete="tel"
                     />
-                    {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                    {errors.phone && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
-
-
 
                 <div className="space-y-2">
                   <Label htmlFor="photo">Foto (Opsional)</Label>
@@ -956,22 +1296,47 @@ const ReportForm = () => {
                       <Camera className="icon-sm mr-2" />
                       Ambil Foto
                     </Button>
-                    <Input id="photo" type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
+                    <Input
+                      id="photo"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => document.getElementById('photo')?.click()}
+                      onClick={() => document.getElementById("photo")?.click()}
                       className="btn-haptic"
                     >
                       <Upload className="icon-sm mr-2" />
-                      {photoFiles.length > 0 ? `Ganti (${photoFiles.length})` : 'Upload'}
+                      {photoFiles.length > 0
+                        ? `Ganti (${photoFiles.length})`
+                        : "Upload"}
                     </Button>
-                    {photoFiles.length > 0 && <span className="text-sm text-muted-foreground">{photoFiles.slice(0, 3).map(f => f.name).join(', ')}{photoFiles.length > 3 ? ` +${photoFiles.length - 3} lagi` : ''}</span>}
+                    {photoFiles.length > 0 && (
+                      <span className="text-sm text-muted-foreground">
+                        {photoFiles
+                          .slice(0, 3)
+                          .map((f) => f.name)
+                          .join(", ")}
+                        {photoFiles.length > 3
+                          ? ` +${photoFiles.length - 3} lagi`
+                          : ""}
+                      </span>
+                    )}
                   </div>
                   {photoPreviews.length > 0 && (
                     <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {photoPreviews.map((src, idx) => (
-                        <img key={idx} src={src} alt={`Preview ${idx + 1}`} className="w-full h-28 object-cover rounded border scale-in" />
+                        <img
+                          key={idx}
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          loading="lazy"
+                          className="w-full h-28 object-cover rounded border scale-in"
+                        />
                       ))}
                     </div>
                   )}
@@ -989,19 +1354,29 @@ const ReportForm = () => {
                           onChange={(e) => {
                             const q = e.target.value;
                             setSearchQuery(q);
-                            if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
-                            if (q.trim().length < 3) { setSearchResults([]); return; }
-                            searchTimerRef.current = window.setTimeout(async () => {
-                              try {
-                                const results = await geocodeAddress(q);
-                                setSearchResults(results);
-                              } catch {
-                                setSearchResults([]);
-                              }
-                            }, 400);
+                            if (searchTimerRef.current)
+                              window.clearTimeout(searchTimerRef.current);
+                            if (q.trim().length < 3) {
+                              setSearchResults([]);
+                              return;
+                            }
+                            searchTimerRef.current = window.setTimeout(
+                              async () => {
+                                try {
+                                  const results = await geocodeAddress(q);
+                                  setSearchResults(results);
+                                } catch {
+                                  setSearchResults([]);
+                                }
+                              },
+                              400,
+                            );
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); }
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void handleSearch();
+                            }
                           }}
                           autoComplete="off"
                           aria-label="Cari alamat lokasi laporan"
@@ -1014,10 +1389,15 @@ const ReportForm = () => {
                                 key={`${r.lat}-${r.lon}-${r.display_name}`}
                                 className="block w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground whitespace-normal"
                                 onClick={() => {
-                                  const lat = Number(r.lat); const lon = Number(r.lon);
-                                  setLocation({ latitude: lat, longitude: lon, name: formatAddress(r) });
+                                  const lat = Number(r.lat);
+                                  const lon = Number(r.lon);
+                                  setLocation({
+                                    latitude: lat,
+                                    longitude: lon,
+                                    name: formatAddress(r),
+                                  });
                                   setSearchResults([]);
-                                  toast.success('Lokasi dipilih');
+                                  toast.success("Lokasi dipilih");
                                 }}
                               >
                                 {formatAddress(r)}
@@ -1026,7 +1406,12 @@ const ReportForm = () => {
                           </div>
                         )}
                       </div>
-                      <Button type="button" onClick={handleSearch} disabled={searchLoading} variant="outline">
+                      <Button
+                        type="button"
+                        onClick={handleSearch}
+                        disabled={searchLoading}
+                        variant="outline"
+                      >
                         {searchLoading ? (
                           <Loader2 className="icon-sm animate-spin" />
                         ) : (
@@ -1044,7 +1429,10 @@ const ReportForm = () => {
                           zoomControl={true}
                         >
                           <BasemapSwitcher />
-                          <FlyToLocation center={[location.latitude, location.longitude]} zoom={15} />
+                          <FlyToLocation
+                            center={[location.latitude, location.longitude]}
+                            zoom={15}
+                          />
                           <MapClickHandler onMapClick={handleMapClick} />
                           <DraggableMarker
                             position={[location.latitude, location.longitude]}
@@ -1084,7 +1472,7 @@ const ReportForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate('/map')}
+                    onClick={() => navigate("/map")}
                     className="flex-1"
                     disabled={loading}
                   >
@@ -1094,16 +1482,21 @@ const ReportForm = () => {
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {uploadPercent !== null ? `Mengirim ${uploadPercent}%` : 'Mengirim...'}
+                        {uploadPercent !== null
+                          ? `Mengirim ${uploadPercent}%`
+                          : "Mengirim..."}
                       </>
                     ) : (
-                      'Kirim Laporan'
+                      "Kirim Laporan"
                     )}
                   </Button>
                 </div>
                 {uploadPercent !== null && (
                   <div className="w-full h-2 bg-muted rounded">
-                    <div className="h-2 bg-primary rounded" style={{ width: `${uploadPercent}%` }} />
+                    <div
+                      className="h-2 bg-primary rounded"
+                      style={{ width: `${uploadPercent}%` }}
+                    />
                   </div>
                 )}
               </form>

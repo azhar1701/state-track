@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 
 const items: Array<{ name: string; color: string; desc: string }> = [
   { name: "Baru", color: "bg-amber-500", desc: "Laporan baru dibuat dan menunggu peninjauan." },
@@ -7,8 +8,8 @@ const items: Array<{ name: string; color: string; desc: string }> = [
 
 export default function StatusLegend() {
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-      <h3 className="text-xl font-bold mb-6">Status Laporan</h3>
+    <Card variant="glass" className="rounded-2xl p-6">
+      <h2 className="text-xl font-bold mb-6">Status Laporan</h2>
       <div className="space-y-4">
         {items.map((it) => (
           <div key={it.name} className="flex items-start gap-4">
@@ -20,6 +21,6 @@ export default function StatusLegend() {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

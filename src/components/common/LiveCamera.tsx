@@ -110,7 +110,7 @@ export const LiveCamera = ({ onCapture, onClose }: LiveCameraProps) => {
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      <div className="glass-panel p-4 flex items-center justify-center gap-4">
+      <div className="bg-card border-border shadow-sm p-4 flex items-center justify-center gap-4">
         <Button
           onClick={onClose}
           variant="outline"

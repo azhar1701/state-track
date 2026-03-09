@@ -50,7 +50,7 @@ export const useBackupConfig = () => {
           .limit(1);
 
         if (checkError) {
-          console.warn("System settings table not available yet");
+          logger.warn("System settings table not available yet");
           setLoading(false);
           return;
         }
@@ -70,7 +70,7 @@ export const useBackupConfig = () => {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseConfig));
         }
       } catch (error) {
-        console.warn("Failed to load backup config", error);
+        logger.warn("Failed to load backup config", error);
       } finally {
         setLoading(false);
       }
@@ -82,7 +82,7 @@ export const useBackupConfig = () => {
   const saveConfig = useCallback(async (newConfig: Partial<BackupConfig>) => {
     try {
       const updated = { ...config, ...newConfig };
-      
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setConfig(updated);
 
@@ -92,7 +92,7 @@ export const useBackupConfig = () => {
         .limit(1);
 
       if (checkError) {
-        console.warn("System settings table not available yet");
+        logger.warn("System settings table not available yet");
         return;
       }
 

@@ -95,7 +95,7 @@ export const useSecurityConfig = () => {
           .limit(1);
 
         if (checkError) {
-          console.warn("System settings table not available yet, using defaults");
+          logger.warn("System settings table not available yet, using defaults");
           setLoading(false);
           return;
         }
@@ -116,7 +116,7 @@ export const useSecurityConfig = () => {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseConfig));
         }
       } catch (error) {
-        console.warn("Failed to load security config, using defaults", error);
+        logger.warn("Failed to load security config, using defaults", error);
       } finally {
         setLoading(false);
       }
@@ -128,7 +128,7 @@ export const useSecurityConfig = () => {
   const saveConfig = useCallback(async (newConfig: Partial<SecurityConfig>) => {
     try {
       const updated = { ...config, ...newConfig, updatedAt: new Date().toISOString() };
-      
+
       // Save to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setConfig(updated);
@@ -140,7 +140,7 @@ export const useSecurityConfig = () => {
         .limit(1);
 
       if (checkError) {
-        console.warn("System settings table not available yet, saved to localStorage only");
+        logger.warn("System settings table not available yet, saved to localStorage only");
         toast.success("Pengaturan keamanan tersimpan lokal (database belum tersedia)");
         return;
       }
@@ -168,12 +168,12 @@ export const useSecurityConfig = () => {
 
   const isIPAllowed = useCallback((ip: string): boolean => {
     if (!config.access.ipWhitelist.trim()) return true;
-    
+
     const allowedIPs = config.access.ipWhitelist
       .split(",")
       .map(s => s.trim())
       .filter(Boolean);
-    
+
     return allowedIPs.some(allowed => {
       if (allowed.includes("/")) {
         // CIDR notation - simplified check

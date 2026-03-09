@@ -207,7 +207,7 @@ export const UserManagementSettings = () => {
   };
 
   return (
-    <Card className="glass-floating border-0">
+    <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -227,7 +227,7 @@ export const UserManagementSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto glass-surface rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 h-auto bg-card border-border shadow-sm rounded-xl">
             <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm py-2">
               <UserCog className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Pengguna</span>
@@ -269,19 +269,19 @@ export const UserManagementSettings = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <div className="text-2xl font-bold">{stats.total}</div>
                 <div className="text-xs text-muted-foreground">Total Pengguna</div>
               </div>
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <div className="text-2xl font-bold text-primary">{stats.admins}</div>
                 <div className="text-xs text-muted-foreground">Administrator</div>
               </div>
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <div className="text-2xl font-bold text-green-600">{stats.users}</div>
                 <div className="text-xs text-muted-foreground">User Biasa</div>
               </div>
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <div className="text-2xl font-bold text-orange-600">{stats.activeToday}</div>
                 <div className="text-xs text-muted-foreground">Aktif Hari Ini</div>
               </div>
@@ -430,7 +430,7 @@ export const UserManagementSettings = () => {
               </div>
 
               <div className="space-y-3">
-                <div className="glass-base rounded-lg p-4">
+                <div className="bg-card border-border shadow-sm rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                     <div className="flex-1">
@@ -446,7 +446,7 @@ export const UserManagementSettings = () => {
                   </div>
                 </div>
 
-                <div className="glass-base rounded-lg p-4">
+                <div className="bg-card border-border shadow-sm rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <Ban className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div className="flex-1">

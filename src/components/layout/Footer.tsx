@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   const year = new Date().getFullYear();
   return (
-    <footer className="glass-surface border-t border-white/10 rounded-t-3xl pb-24 md:pb-6 mt-auto">
+    <footer className="bg-card border-border shadow-sm border-t border-white/10 rounded-t-3xl pb-24 md:pb-6 mt-auto">
       <div className="container py-12 px-4 md:px-6">
         <div className="grid gap-10 md:grid-cols-3">
           <div>
@@ -24,10 +24,10 @@ const Footer = () => {
             </div>
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-4">Bantuan</div>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Panduan</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Kebijakan Privasi</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Syarat Layanan</a></li>
+              <ul className="space-y-3 text-sm text-muted-foreground flex flex-col items-start">
+                <li><button type="button" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm text-left">Panduan</button></li>
+                <li><button type="button" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm text-left">Kebijakan Privasi</button></li>
+                <li><button type="button" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm text-left">Syarat Layanan</button></li>
               </ul>
             </div>
           </div>
@@ -35,9 +35,9 @@ const Footer = () => {
             <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-4">Kontak</div>
             <p className="text-sm text-muted-foreground">Email: psdaciamis2025@gmail.com</p>
             <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Instagram</a>
-              <span className="text-white/20">·</span>
-              <a href="#" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">GitHub</a>
+              <button type="button" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">Instagram</button>
+              <span className="text-muted-foreground/20">·</span>
+              <button type="button" className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">GitHub</button>
             </div>
           </div>
         </div>

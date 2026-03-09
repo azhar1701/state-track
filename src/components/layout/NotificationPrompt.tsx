@@ -43,7 +43,7 @@ const NotificationPrompt = () => {
   if (!show || permission !== 'default') return null;
 
   return (
-    <Card className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 glass-panel p-4 shadow-lifted animate-in slide-in-from-bottom-4">
+    <Card className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 bg-card border-border shadow-sm p-4 shadow-lifted animate-in slide-in-from-bottom-4">
       <button
         onClick={dismiss}
         className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"

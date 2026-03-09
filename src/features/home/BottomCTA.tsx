@@ -9,9 +9,9 @@ export default function BottomCTA() {
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-white/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 md:w-64 md:h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10">
-          <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">Siap berkontribusi?</h3>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">Siap berkontribusi?</h2>
           <p className="text-base md:text-lg lg:text-xl text-white/90 mt-3 md:mt-4 max-w-2xl mx-auto leading-relaxed">
             Laporkan masalah infrastruktur di sekitar Anda atau lihat peta untuk memantau progres perbaikan.
           </p>

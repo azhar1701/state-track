@@ -99,7 +99,7 @@ export const BackupSettings = () => {
           p_status: "success",
         });
       } catch (logError) {
-        console.warn("Failed to log backup to database", logError);
+        logger.warn("Failed to log backup to database", logError);
       }
 
       // Update last backup time
@@ -108,7 +108,7 @@ export const BackupSettings = () => {
       toast.success("Backup database berhasil dibuat");
     } catch (error) {
       logger.error("Failed to backup database", error);
-      
+
       // Log failed backup
       try {
         await supabase.rpc("log_backup", {
@@ -118,7 +118,7 @@ export const BackupSettings = () => {
           p_error_message: error instanceof Error ? error.message : "Unknown error",
         });
       } catch (logError) {
-        console.warn("Failed to log backup error", logError);
+        logger.warn("Failed to log backup error", logError);
       }
 
       toast.error(handleApiError(error, "Gagal membuat backup database"));
@@ -163,7 +163,7 @@ export const BackupSettings = () => {
           p_status: "success",
         });
       } catch (logError) {
-        console.warn("Failed to log backup", logError);
+        logger.warn("Failed to log backup", logError);
       }
 
       await saveConfig({ lastBackup: new Date().toISOString() });
@@ -171,7 +171,7 @@ export const BackupSettings = () => {
       toast.success("Backup geo layer berhasil");
     } catch (error) {
       logger.error("Failed to backup geo layers", error);
-      
+
       try {
         await supabase.rpc("log_backup", {
           p_backup_type: "geo_layers",
@@ -180,7 +180,7 @@ export const BackupSettings = () => {
           p_error_message: error instanceof Error ? error.message : "Unknown error",
         });
       } catch (logError) {
-        console.warn("Failed to log backup error", logError);
+        logger.warn("Failed to log backup error", logError);
       }
 
       toast.error(handleApiError(error, "Gagal backup geo layer"));
@@ -226,7 +226,7 @@ export const BackupSettings = () => {
           p_status: "success",
         });
       } catch (logError) {
-        console.warn("Failed to log backup", logError);
+        logger.warn("Failed to log backup", logError);
       }
 
       await saveConfig({ lastBackup: new Date().toISOString() });
@@ -234,7 +234,7 @@ export const BackupSettings = () => {
       toast.success(`Backup ${data.length} laporan berhasil`);
     } catch (error) {
       logger.error("Failed to backup reports", error);
-      
+
       try {
         await supabase.rpc("log_backup", {
           p_backup_type: "reports",
@@ -243,7 +243,7 @@ export const BackupSettings = () => {
           p_error_message: error instanceof Error ? error.message : "Unknown error",
         });
       } catch (logError) {
-        console.warn("Failed to log backup error", logError);
+        logger.warn("Failed to log backup error", logError);
       }
 
       toast.error(handleApiError(error, "Gagal backup laporan"));
@@ -322,7 +322,7 @@ export const BackupSettings = () => {
   }
 
   return (
-    <Card className="glass-floating border-0">
+    <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -342,7 +342,7 @@ export const BackupSettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="backup" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto glass-surface rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 h-auto bg-card border-border shadow-sm rounded-xl">
             <TabsTrigger value="backup" className="gap-1.5 text-xs sm:text-sm py-2">
               <DownloadCloud className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Backup</span>
@@ -501,7 +501,7 @@ export const BackupSettings = () => {
                 <h4 className="text-sm font-semibold">Backup Otomatis</h4>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Aktifkan backup otomatis</div>
@@ -575,7 +575,7 @@ export const BackupSettings = () => {
                 </Label>
 
                 <div className="space-y-2">
-                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
+                  <div className="bg-card border-border shadow-sm rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Laporan</span>
                     <Switch
                       checked={backupSettings.includeReports}
@@ -586,7 +586,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
+                  <div className="bg-card border-border shadow-sm rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Geo Layers</span>
                     <Switch
                       checked={backupSettings.includeGeoLayers}
@@ -597,7 +597,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
+                  <div className="bg-card border-border shadow-sm rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Pengaturan Sistem</span>
                     <Switch
                       checked={backupSettings.includeSettings}
@@ -608,7 +608,7 @@ export const BackupSettings = () => {
                     />
                   </div>
 
-                  <div className="glass-base rounded-lg p-2 flex items-center justify-between">
+                  <div className="bg-card border-border shadow-sm rounded-lg p-2 flex items-center justify-between">
                     <span className="text-sm">Data Pengguna</span>
                     <Switch
                       checked={backupSettings.includeUsers}

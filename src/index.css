@@ -1,4 +1,4 @@
-@import 'leaflet/dist/leaflet.css';
+@import "leaflet/dist/leaflet.css";
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +9,6 @@ All colors MUST be HSL.
 */
 
 @layer utilities {
-
   /* Fluid Padding */
   .p-fluid {
     padding: clamp(1rem, 2vw, 2rem);
@@ -45,7 +44,10 @@ All colors MUST be HSL.
 
   /* Radial Gradient Background */
   .bg-gradient-radial {
-    background-image: radial-gradient(circle at top center, var(--tw-gradient-stops));
+    background-image: radial-gradient(
+      circle at top center,
+      var(--tw-gradient-stops)
+    );
   }
 }
 
@@ -81,42 +83,67 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 45 100% 50%;
 
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
+    --success-muted: 142 71% 95%;
+    --success-muted-foreground: 142 71% 30%;
+
     --warning: 38 92% 50%;
     --warning-foreground: 210 40% 98%;
+    --warning-muted: 38 92% 95%;
+    --warning-muted-foreground: 38 92% 30%;
+
     --info: 199 89% 48%;
     --info-foreground: 210 40% 98%;
+    --info-muted: 199 89% 95%;
+    --info-muted-foreground: 199 89% 30%;
 
-    --radius: 0.75rem;
-    --ring: 45 100% 50%;
-    /* Gold ring for focus */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --destructive-muted: 0 84.2% 95%;
+    --destructive-muted-foreground: 0 84.2% 30%;
 
     --radius: 0.5rem;
     /* Strict institutional radius */
+    --ring: 45 100% 50%;
+    /* Gold ring for focus */
 
-    --gradient-hero: linear-gradient(135deg, hsl(216 100% 35%), hsl(216 100% 45%));
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(216 100% 35%),
+      hsl(216 100% 45%)
+    );
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 4px 16px -4px rgba(0, 0, 0, 0.03);
-    --shadow-float: 0 4px 16px -2px rgba(0, 0, 0, 0.08), 0 8px 32px -4px rgba(0, 0, 0, 0.06);
-    --shadow-lifted: 0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 16px 48px -8px rgba(0, 0, 0, 0.08);
+    --shadow-md:
+      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl:
+      0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-soft:
+      0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 4px 16px -4px rgba(0, 0, 0, 0.03);
+    --shadow-float:
+      0 4px 16px -2px rgba(0, 0, 0, 0.08), 0 8px 32px -4px rgba(0, 0, 0, 0.06);
+    --shadow-lifted:
+      0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 16px 48px -8px rgba(0, 0, 0, 0.08);
 
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Premium Animation Easing Curves */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+    --transition-smooth: all 0.3s var(--ease-out-quart);
 
     /* Typography scale */
-    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    --font-sans:
+      Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial,
+      "Apple Color Emoji", "Segoe UI Emoji";
     --text-xs: 0.75rem;
     /* 12px */
     --text-sm: 0.875rem;
@@ -155,20 +182,19 @@ All colors MUST be HSL.
     --space-12: 3rem;
     /* 48 */
 
-    /* Solid Professional Background */
-    --background: 210 40% 98%;
-    --glass-bg: none;
+    /* Warm Alabaster Background */
+    --background: 30 15% 98%;
     --dot-pattern: none;
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 224 71% 4%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 11%;
+    --card: 224 71% 7%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 11%;
+    --popover: 224 71% 7%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 216 100% 45%;
@@ -188,29 +214,44 @@ All colors MUST be HSL.
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    --success-muted: 142 71% 15%;
+    --success-muted-foreground: 142 71% 80%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+    --warning-muted: 38 92% 15%;
+    --warning-muted-foreground: 38 92% 80%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 210 40% 98%;
+    --info-muted: 199 89% 15%;
+    --info-muted-foreground: 199 89% 80%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+    --destructive-muted: 0 62.8% 15%;
+    --destructive-muted-foreground: 0 62.8% 80%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 45 100% 50%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 210 40% 98%;
-    --info: 199 89% 48%;
-    --info-foreground: 210 40% 98%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 45 100% 50%;
     /* Gold ring */
 
-    --gradient-hero: linear-gradient(135deg, hsl(216 100% 45%), hsl(216 100% 55%));
-    --gradient-card: linear-gradient(180deg, hsl(222 47% 11%), hsl(222 47% 13%));
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(216 100% 45%),
+      hsl(216 100% 55%)
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(222 47% 11%),
+      hsl(222 47% 13%)
+    );
 
-    /* Solid Professional Background (Deep Navy/Slate) */
-    --background: 222 47% 11%;
-    --glass-bg: none;
+    /* Premium Deep Navy Background */
+    --background: 224 71% 4%;
     --dot-pattern: none;
   }
 }
@@ -226,6 +267,13 @@ All colors MUST be HSL.
     font-size: var(--text-base);
     line-height: var(--leading-normal);
     background-color: hsl(var(--background));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
   }
 
   h1 {
@@ -258,7 +306,6 @@ All colors MUST be HSL.
 }
 
 @layer components {
-
   /* Icon size utilities ensure consistent icon dimensions */
   .icon-xs {
     width: 0.75rem;
@@ -306,6 +353,13 @@ All colors MUST be HSL.
     }
   }
 
+  .glass-surface {
+    /* @apply bg-card border-border shadow-sm; */
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-sm);
+  }
+
   /* Modern shadow utilities */
   .shadow-soft {
     box-shadow: var(--shadow-soft);
@@ -319,118 +373,17 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-lifted);
   }
 
-  /* 3-Tier Liquid Glass Elevation System */
-  .glass-base {
-    @apply bg-white/5 backdrop-blur-none border border-white/5 shadow-none;
-  }
-  
-  .glass-surface {
-    @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-soft will-change-[backdrop-filter];
-    border-top-color: rgba(255, 255, 255, 0.2);
+  /* Core motion utilities */
+  .fade-in {
+    animation: fade-in 0.3s var(--ease-out-quart) forwards;
   }
 
-  .glass-floating {
-    @apply bg-white/20 backdrop-blur-xl border border-white/30 shadow-float will-change-[backdrop-filter];
-    border-top-color: rgba(255, 255, 255, 0.4);
-    border-left-color: rgba(255, 255, 255, 0.3);
+  .slide-up {
+    animation: slide-up 0.4s var(--ease-out-quart) forwards;
   }
 
-  .glass-overlay {
-    @apply bg-white/30 backdrop-blur-2xl border border-white/40 shadow-lifted will-change-[backdrop-filter] saturate-150;
-    border-top-color: rgba(255, 255, 255, 0.6);
-    border-left-color: rgba(255, 255, 255, 0.4);
-  }
-
-  .dark .glass-base {
-    @apply bg-slate-900/20 border-white/5;
-  }
-
-  .dark .glass-surface {
-    @apply bg-slate-900/40 border-white/10;
-    border-top-color: rgba(255, 255, 255, 0.15);
-  }
-
-  .dark .glass-floating {
-    @apply bg-slate-900/60 border-white/15;
-    border-top-color: rgba(255, 255, 255, 0.25);
-    border-left-color: rgba(255, 255, 255, 0.15);
-  }
-
-  .dark .glass-overlay {
-    @apply bg-slate-900/80 border-white/20 saturate-150;
-    border-top-color: rgba(255, 255, 255, 0.3);
-    border-left-color: rgba(255, 255, 255, 0.2);
-  }
-
-  /* Glassmorphism Foundation */
-  .glass {
-    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-lifted;
-  }
-
-  .dark .glass {
-    @apply bg-slate-900/30 border-white/10;
-  }
-
-  .glass-strong {
-    @apply bg-white/20 backdrop-blur-xl border border-white/30 shadow-lifted;
-  }
-
-  .dark .glass-strong {
-    @apply bg-slate-900/50 border-white/15;
-  }
-
-  .glass-subtle {
-    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-float;
-  }
-
-  .dark .glass-subtle {
-    @apply bg-slate-900/20 border-white/5;
-  }
-
-  /* Glass Card - Primary Container */
-  .glass-card {
-    @apply glass rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl;
-  }
-
-  /* Glass Modal/Overlay */
-  .glass-modal {
-    @apply glass-strong rounded-3xl p-8 max-w-2xl w-full;
-  }
-
-  /* Glass Input */
-  .glass-input {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2.5 text-foreground placeholder:text-white/50 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all;
-  }
-
-  .dark .glass-input {
-    @apply bg-slate-900/30 border-white/10 focus:border-white/20;
-  }
-
-  /* Glass Button */
-  .glass-btn {
-    @apply bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-6 py-2.5 font-medium text-foreground hover:bg-white/25 hover:border-white/35 active:scale-95 transition-all shadow-float;
-  }
-
-  .dark .glass-btn {
-    @apply bg-slate-900/40 border-white/15 hover:bg-slate-900/60 hover:border-white/25;
-  }
-
-  .glass-btn-primary {
-    @apply glass-btn bg-gradient-to-br from-primary/80 to-primary/60 border-primary/30 text-white hover:from-primary/90 hover:to-primary/70;
-  }
-
-  /* Glass Sidebar */
-  .glass-sidebar {
-    @apply glass-strong h-full backdrop-blur-2xl;
-  }
-
-  /* Glass Panel - For toolbars and bottom navigation */
-  .glass-panel {
-    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-lifted;
-  }
-
-  .dark .glass-panel {
-    @apply bg-slate-900/80 border-white/20;
+  .animate-in-fade {
+    animation: fade-in 0.3s var(--ease-out-quart) forwards;
   }
 
   /* Button haptic feedback */
@@ -538,8 +491,6 @@ All colors MUST be HSL.
   /* tighter separation for minimal look */
 }
 
-
-
 .leaflet-popup-content-wrapper {
   background: rgba(255, 255, 255, 0.2) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
@@ -587,26 +538,38 @@ All colors MUST be HSL.
 /* Custom scrollbar for Windows and modern browsers */
 ::-webkit-scrollbar {
   width: 8px;
-  background: #f1f5f9;
+  background: hsl(var(--muted));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: hsl(var(--border));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: hsl(var(--muted-foreground));
 }
 
 .dark::-webkit-scrollbar {
-  background: #1e293b;
+  background: hsl(var(--muted));
 }
 
 .dark::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: hsl(var(--border));
 }
 
 .dark::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: hsl(var(--muted-foreground));
+}
+
+/* Reduced-motion support: disable animations and transitions for motion-sensitive users */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

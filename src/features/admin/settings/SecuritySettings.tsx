@@ -111,7 +111,7 @@ export const SecuritySettings = () => {
   }
 
   return (
-    <Card className="glass-floating border-0">
+    <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -131,7 +131,7 @@ export const SecuritySettings = () => {
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <Tabs defaultValue="auth" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-auto glass-surface rounded-xl">
+          <TabsList className="grid w-full grid-cols-4 h-auto bg-card border-border shadow-sm rounded-xl">
             <TabsTrigger value="auth" className="gap-1.5 text-xs sm:text-sm py-2">
               <Lock className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Autentikasi</span>
@@ -157,7 +157,7 @@ export const SecuritySettings = () => {
                 <h4 className="text-sm font-semibold">Kebijakan Autentikasi</h4>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Multi-Factor Authentication (MFA)</div>
@@ -172,7 +172,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Password kuat wajib</div>
@@ -187,7 +187,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Izinkan laporan anonim</div>
@@ -269,7 +269,7 @@ export const SecuritySettings = () => {
                 <h4 className="text-sm font-semibold">Kontrol Akses</h4>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Rate limiting</div>
@@ -284,7 +284,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">CORS protection</div>
@@ -299,7 +299,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Verifikasi email wajib</div>
@@ -369,7 +369,7 @@ export const SecuritySettings = () => {
                 <h4 className="text-sm font-semibold">Audit & Monitoring</h4>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Aktifkan audit log</div>
@@ -384,7 +384,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Log event autentikasi</div>
@@ -400,7 +400,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Log perubahan data</div>
@@ -416,7 +416,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Log akses API</div>
@@ -432,7 +432,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Alert aktivitas mencurigakan</div>
@@ -484,7 +484,7 @@ export const SecuritySettings = () => {
                 <h4 className="text-sm font-semibold">Enkripsi Data</h4>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Enkripsi data sensitif</div>
@@ -499,7 +499,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Enkripsi foto laporan</div>
@@ -514,7 +514,7 @@ export const SecuritySettings = () => {
                 </label>
               </div>
 
-              <div className="glass-base rounded-lg p-3">
+              <div className="bg-card border-border shadow-sm rounded-lg p-3">
                 <label className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Enkripsi file backup</div>

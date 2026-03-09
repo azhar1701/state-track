@@ -1,5 +1,6 @@
 import { Component, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 type Props = { children: ReactNode };
 type State = { hasError: boolean };
@@ -11,6 +12,10 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    logger.error("[ErrorBoundary] Uncaught error:", { error, componentStack: info.componentStack });
+  }
+
   handleRetry = () => {
     this.setState({ hasError: false });
     // try reloading route as a simple recovery strategy
@@ -20,7 +25,7 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="container mx-auto px-4 py-16 text-center">
+        <div className="container mx-auto px-4 py-16 text-center" role="alert">
           <h2 className="text-xl font-semibold mb-2">Terjadi kesalahan</h2>
           <p className="text-muted-foreground mb-6">Maaf, ada masalah saat memuat halaman ini.</p>
           <Button onClick={this.handleRetry}>Muat ulang</Button>
