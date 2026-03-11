@@ -1,16 +1,7 @@
-/**
- * Spatial Analysis Module
- * Provides buffer, proximity, density, and statistical analysis
- */
-
-import { point, buffer, featureCollection, distance, bearing, hexGrid, booleanPointInPolygon, centroid, polygon } from '@turf/turf';
-import type { Feature, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
-
-export interface BufferOptions {
-  radius: number; // in kilometers
-  units?: 'kilometers' | 'meters' | 'miles';
-  steps?: number;
-}
+import { supabase } from '@/services/client';
+import { useQuery } from '@tanstack/react-query';
+import { point, featureCollection, distance, bearing, hexGrid, polygon } from '@turf/turf';
+import type { Polygon, FeatureCollection } from 'geojson';
 
 export interface ProximityResult {
   id: string;
@@ -29,237 +20,87 @@ export interface SpatialStats {
   nearestNeighborIndex: number;
   meanDistance: number;
   standardDeviation: number;
-  clustered: boolean; // true if NNI < 1
+  clustered: boolean;
 }
 
 /**
- * Create buffer zone around point(s)
+ * RPC: Find points within radius using PostGIS
  */
-export function createBuffer(
-  coords: [number, number] | [number, number][],
-  options: BufferOptions
-): FeatureCollection {
-  const { radius, units = 'kilometers', steps = 64 } = options;
-
-  if (Array.isArray(coords[0])) {
-    // Multiple points
-    const features = (coords as [number, number][]).map((pt, idx) => {
-      const p = point(pt);
-      const buffered = buffer(p, radius, { units, steps });
-      if (!buffered) return null;
-      return { ...buffered, id: `buffer-${idx}` } as Feature<Polygon | MultiPolygon>;
-    }).filter((f): f is Feature<Polygon | MultiPolygon> => f !== null);
-    return featureCollection(features);
-  }
-
-  // Single point
-  const p = point(coords as [number, number]);
-  const buffered = buffer(p, radius, { units, steps });
-  if (!buffered) return featureCollection([]);
-  return featureCollection([buffered as Feature<Polygon | MultiPolygon>]);
-}
-
-/**
- * Find points within radius of target
- */
-export function findWithinRadius(
-  target: [number, number],
-  points: Array<{ id: string; coords: [number, number] }>,
-  radius: number,
-  units: 'kilometers' | 'meters' = 'kilometers'
-): ProximityResult[] {
-  const from = point(target);
-
-  return points
-    .map(({ id, coords }) => {
-      const to = point(coords);
-      const dist = distance(from, to, { units });
-      const brng = bearing(from, to);
-      return { id, distance: dist, bearing: brng };
-    })
-    .filter(r => r.distance <= radius)
-    .sort((a, b) => a.distance - b.distance);
-}
-
-/**
- * Calculate nearest neighbor for each point
- */
-export function calculateNearestNeighbors(
-  points: Array<{ id: string; coords: [number, number] }>
-): Array<{ id: string; nearestId: string; distance: number }> {
-  return points.map(({ id, coords }) => {
-    const from = point(coords);
-    let minDist = Infinity;
-    let nearestId = '';
-
-    points.forEach(other => {
-      if (other.id === id) return;
-      const to = point(other.coords);
-      const dist = distance(from, to, { units: 'kilometers' });
-      if (dist < minDist) {
-        minDist = dist;
-        nearestId = other.id;
-      }
-    });
-
-    return { id, nearestId, distance: minDist };
+export const useProximityQuery = (center: [number, number] | null, radiusKm: number) => {
+  return useQuery({
+    queryKey: ['spatial', 'proximity', center, radiusKm],
+    queryFn: async () => {
+      if (!center) return [];
+      const { data, error } = await supabase.rpc('get_reports_in_radius', {
+        lng: center[0],
+        lat: center[1],
+        radius_m: radiusKm * 1000
+      });
+      if (error) throw error;
+      
+      const from = point(center);
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        distance: r.dist / 1000,
+        bearing: bearing(from, point([r.longitude, r.latitude]))
+      })) as ProximityResult[];
+    },
+    enabled: !!center,
   });
-}
+};
 
 /**
- * Hexagonal binning for density analysis
+ * RPC: Calculate density grid using PostGIS
  */
-export function createHexGrid(
-  bbox: [number, number, number, number],
-  cellSize: number,
-  units: 'kilometers' | 'meters' = 'kilometers'
-): FeatureCollection {
-  return hexGrid(bbox, cellSize, { units });
-}
+export const useDensityQuery = (bbox: [number, number, number, number] | null, cellSizeKm: number) => {
+  return useQuery({
+    queryKey: ['spatial', 'density', bbox, cellSizeKm],
+    queryFn: async () => {
+      if (!bbox) return [];
+      const { data, error } = await supabase.rpc('get_reports_hex_density', {
+        min_lng: bbox[0],
+        min_lat: bbox[1],
+        max_lng: bbox[2],
+        max_lat: bbox[3],
+        cell_size_m: cellSizeKm * 1000
+      });
+      if (error) throw error;
 
-/**
- * Count points in each grid cell
- */
-export function calculateDensity(
-  points: [number, number][],
-  grid: FeatureCollection
-): DensityCell[] {
-  const cells: DensityCell[] = [];
-
-  grid.features.forEach((cell, idx) => {
-    let count = 0;
-    points.forEach(pt => {
-      const p = point(pt);
-      if (booleanPointInPolygon(p, cell as Feature<Polygon>)) {
-        count++;
-      }
-    });
-
-    const center = centroid(cell);
-    cells.push({
-      id: `cell-${idx}`,
-      count,
-      geometry: cell.geometry as Polygon,
-      center: center.geometry.coordinates as [number, number],
-    });
+      return (data || []).map((cell: any, idx: number) => ({
+        id: `hex-${idx}`,
+        count: cell.count,
+        geometry: cell.geom, // PostGIS returns GeoJSON
+        center: cell.center
+      })) as DensityCell[];
+    },
+    enabled: !!bbox,
   });
-
-  return cells.filter(c => c.count > 0);
-}
+};
 
 /**
- * Nearest Neighbor Index (NNI) - measures clustering
- * NNI < 1: clustered, NNI = 1: random, NNI > 1: dispersed
+ * RPC: NNI Calculation
  */
-export function calculateNearestNeighborIndex(
-  points: [number, number][],
-  studyAreaKm2: number
-): SpatialStats {
-  if (points.length < 2) {
-    return {
-      nearestNeighborIndex: 0,
-      meanDistance: 0,
-      standardDeviation: 0,
-      clustered: false,
-    };
-  }
-
-  // Calculate observed mean nearest neighbor distance
-  const neighbors = calculateNearestNeighbors(
-    points.map((coords, i) => ({ id: `${i}`, coords }))
-  );
-
-  const distances = neighbors.map(n => n.distance);
-  const observedMean = distances.reduce((a, b) => a + b, 0) / distances.length;
-
-  // Calculate expected mean distance for random distribution
-  const density = points.length / studyAreaKm2;
-  const expectedMean = 0.5 / Math.sqrt(density);
-
-  // Calculate NNI
-  const nni = observedMean / expectedMean;
-
-  // Standard deviation
-  const variance = distances.reduce((sum, d) => sum + Math.pow(d - observedMean, 2), 0) / distances.length;
-  const stdDev = Math.sqrt(variance);
-
-  return {
-    nearestNeighborIndex: nni,
-    meanDistance: observedMean,
-    standardDeviation: stdDev,
-    clustered: nni < 1,
-  };
-}
+export const useNNIQuery = (enabled: boolean) => {
+  return useQuery({
+    queryKey: ['spatial', 'nni'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_nearest_neighbor_stats');
+      if (error) throw error;
+      return data as SpatialStats;
+    },
+    enabled,
+  });
+};
 
 /**
- * Calculate bounding box from points
+ * Legacy Turf-based helpers (keeping for fallback/immediate UI feedback)
  */
 export function calculateBBox(points: [number, number][]): [number, number, number, number] {
   if (points.length === 0) return [0, 0, 0, 0];
-
-  let minLng = Infinity, minLat = Infinity;
-  let maxLng = -Infinity, maxLat = -Infinity;
-
+  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
   points.forEach(([lng, lat]) => {
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
   });
-
   return [minLng, minLat, maxLng, maxLat];
-}
-
-/**
- * Kernel Density Estimation
- */
-export function kernelDensity(
-  points: [number, number][],
-  bandwidth: number,
-  gridSize: number = 50
-): DensityCell[] {
-  if (points.length === 0) return [];
-
-  const bbox = calculateBBox(points);
-  const [minLng, minLat, maxLng, maxLat] = bbox;
-
-  const lngStep = (maxLng - minLng) / gridSize;
-  const latStep = (maxLat - minLat) / gridSize;
-
-  const cells: DensityCell[] = [];
-
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      const lng = minLng + i * lngStep;
-      const lat = minLat + j * latStep;
-      const center: [number, number] = [lng + lngStep / 2, lat + latStep / 2];
-
-      // Calculate density at this cell
-      let density = 0;
-      points.forEach(pt => {
-        const dist = distance(point(center), point(pt), { units: 'kilometers' });
-        // Gaussian kernel
-        density += Math.exp(-0.5 * Math.pow(dist / bandwidth, 2));
-      });
-
-      if (density > 0.01) {
-        const poly = polygon([[
-          [lng, lat],
-          [lng + lngStep, lat],
-          [lng + lngStep, lat + latStep],
-          [lng, lat + latStep],
-          [lng, lat],
-        ]]);
-
-        cells.push({
-          id: `kde-${i}-${j}`,
-          count: Math.round(density * 100),
-          geometry: poly.geometry as Polygon,
-          center,
-        });
-      }
-    }
-  }
-
-  return cells;
 }

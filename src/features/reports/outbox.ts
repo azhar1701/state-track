@@ -21,6 +21,10 @@ export type OutboxReport = {
   createdAt: number;
   payload: ReportOutboxPayload;
   photos: Array<{ name: string; type: string; data: Blob }>; // photo blobs
+  // New fields for robust sync
+  retryCount: number;
+  lastError?: string;
+  photoUrls: string[]; // Successfully uploaded photo URLs
 };
 
 interface OutboxDB extends DBSchema {
@@ -37,20 +41,35 @@ function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<OutboxDB>('state-track-outbox', 1, {
       upgrade(db) {
-        const store = db.createObjectStore('reports', { keyPath: 'id' });
-        store.createIndex('by-createdAt', 'createdAt');
+        if (!db.objectStoreNames.contains('reports')) {
+          const store = db.createObjectStore('reports', { keyPath: 'id' });
+          store.createIndex('by-createdAt', 'createdAt');
+        }
       },
     });
   }
   return dbPromise;
 }
 
-export async function addReportToOutbox(item: Omit<OutboxReport, 'id' | 'createdAt'> & { id?: string }) {
+export async function addReportToOutbox(item: { payload: ReportOutboxPayload, photos: OutboxReport['photos'], id?: string }) {
   const db = await getDB();
   const id = item.id ?? (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const createdAt = Date.now();
-  await db.put('reports', { id, createdAt, payload: item.payload, photos: item.photos });
+  const outboxItem: OutboxReport = { 
+    id, 
+    createdAt, 
+    payload: item.payload, 
+    photos: item.photos,
+    retryCount: 0,
+    photoUrls: []
+  };
+  await db.put('reports', outboxItem);
   return id;
+}
+
+export async function updateOutboxReport(item: OutboxReport) {
+  const db = await getDB();
+  await db.put('reports', item);
 }
 
 export async function listOutboxReports() {
@@ -84,7 +103,3 @@ export async function registerBackgroundSync(tag = 'submit-reports') {
   }
   return false;
 }
-
-// Manually trigger outbox sync from UI: try to register background sync and
-// then dispatch an 'online' event which our hook listens to.
-// triggerOutboxSync removed: manual sync button no longer present
