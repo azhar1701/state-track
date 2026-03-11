@@ -17,6 +17,9 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { KeyboardShortcuts } from "@/components/layout/KeyboardShortcuts";
 import { NotificationPrompt } from "@/components/layout/NotificationPrompt";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "@/lib/query";
 const Home = lazy(() => import("@/features/home/Home"));
 const Auth = lazy(() => import("@/features/auth/Auth"));
 const MapView = lazy(() => import("@/features/map/MapView"));
@@ -27,7 +30,7 @@ const ReportSuccess = lazy(() => import("@/features/reports/ReportSuccess"));
 const MyReports = lazy(() => import("@/features/reports/MyReports"));
 const HelpCenter = lazy(() => import("@/views/HelpCenter"));
 
-// TanStack Query removed
+// TanStack Query re-integrated
 
 const AppInner = memo(() => {
   const { user } = useAuth();
@@ -86,14 +89,20 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
         <Sonner />
-        <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <AppInner />
-          </AuthProvider>
-        </BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AuthProvider>
+              <AppInner />
+            </AuthProvider>
+          </BrowserRouter>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
       </TooltipProvider>
     </ThemeProvider>
   </>
 );
+
+export default App;
+
 
 export default App;
