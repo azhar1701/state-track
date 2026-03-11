@@ -1,8 +1,8 @@
 import { MapContainer, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import { BasemapSwitcher } from '../BasemapSwitcher';
 import { BasemapType } from '../basemap-config';
-import { useEffect } from 'react';
+import { useEffect, forwardRef } from 'react';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface MapCanvasProps {
@@ -22,7 +22,7 @@ const MapController = ({ basemap }: { basemap: BasemapType }) => {
   return null;
 };
 
-export const MapCanvas = ({ children, basemap, center, zoom }: MapCanvasProps) => {
+export const MapCanvas = forwardRef<L.Map, MapCanvasProps>(({ children, basemap, center, zoom }, ref) => {
   return (
     <div className="relative w-full h-full overflow-hidden">
       <MapContainer
@@ -31,11 +31,14 @@ export const MapCanvas = ({ children, basemap, center, zoom }: MapCanvasProps) =
         className="w-full h-full z-0"
         zoomControl={false}
         attributionControl={false}
+        ref={ref}
       >
         <MapController basemap={basemap} />
-        <BasemapSwitcher current={basemap} />
+        <BasemapSwitcher initialBasemap={basemap} />
         {children}
       </MapContainer>
     </div>
   );
-};
+});
+
+MapCanvas.displayName = 'MapCanvas';

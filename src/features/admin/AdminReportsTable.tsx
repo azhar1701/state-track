@@ -47,15 +47,6 @@ export const AdminReportsTable = ({
     return <Badge variant={variant}>{sev}</Badge>;
   };
 
-  const renderStatusBadge = (status: ReportStatus) => {
-    const variants = {
-      selesai: 'success',
-      diproses: 'info',
-      baru: 'warning'
-    } as const;
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
-
   const shortLocation = (r: ReportListItem) =>
     formatReportLocation(r.location_name, r.desa, r.kecamatan);
 

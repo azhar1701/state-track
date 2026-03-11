@@ -4,7 +4,7 @@ import { cachedQuery, invalidateCache } from '@/lib/supabase-cache';
 import { createRealtimeBatcher, type RealtimePayload } from '@/lib/realtime-batcher';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MapContainer, Marker, Popup, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from 'react-leaflet';
+import { Marker, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from 'react-leaflet';
 import { supabase } from '@/services/client';
 import { Button } from '@/components/ui/button';
 import { Loader as Loader2, FileText, Clock, CheckCircle } from 'lucide-react';
@@ -18,8 +18,9 @@ import 'leaflet/dist/leaflet.css';
 declare module 'leaflet' {
  export function heatLayer(latlngs: Array<[number, number, number]>, options?: Record<string, unknown>): L.Layer;
 }
-import { BasemapSwitcher } from '@/features/map/BasemapSwitcher';
-import type { BasemapType } from '@/features/map/basemap-config';
+import { MapCanvas } from './components/MapCanvas';
+import { ReportLayer } from './components/ReportLayer';
+import type { BasemapType } from './basemap-config';
 import { type LegendOverlayItem } from '@/features/map/Legend';
 import { reverseGeocode } from '@/features/map/geocoding';
 import type { MapFilters } from '@/features/map/FilterPanel';
@@ -1713,15 +1714,8 @@ const MapView = () => {
  </div>
 
  <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile ? 'h-[calc(100dvh-120px)]' : 'h-[calc(100vh-180px)]'} ${activeMapTool ? 'cursor-crosshair' : ''}`}>
- <MapContainer
- center={mapCenter}
- zoom={mapZoom}
- className={`h-full w-full ${activeMapTool ? 'cursor-crosshair' : ''}`}
- zoomControl={false}
- ref={setMapInstance}
- >
+ <MapCanvas basemap={basemap} center={mapCenter} zoom={mapZoom} ref={setMapInstance}>
  <FlyToLocation center={mapCenter} zoom={mapZoom} />
- <BasemapSwitcher onBasemapChange={setBasemap} initialBasemap={basemap} />
 
  {isMobile && (
  <MobileMapControls
@@ -1731,9 +1725,6 @@ const MapView = () => {
  />
  )}
 
- {/* Legend now integrated in ModernMapOverlay */}
- {/* DrawControls removed */}
-
  {/* Administrative boundaries overlay (under markers) */}
  {overlays.adminBoundaries && adminGeoJson && (
  <Pane name="admin-boundaries" style={{ zIndex: 350 }}>
@@ -1741,8 +1732,6 @@ const MapView = () => {
  key="admin-boundaries"
  data={adminGeoJson}
  style={() => ({
- // Indonesia guideline approximation:
- // Desa: tipis abu-abu
  color: '#6b7280',
  weight: 1,
  opacity: 0.8,
@@ -1813,23 +1802,12 @@ const MapView = () => {
  {/* Render any toggled dynamic layers */}
  {renderedLayers}
 
- {/* Render plain markers only when clustering is off */}
- {!overlays.clustering && filteredReports.map((report) => (
- <Marker
- key={report.id}
- position={[report.latitude, report.longitude]}
- icon={createCustomIcon(report.category, report.status, report.severity)}
- eventHandlers={{ click: () => setSelectedReport(report) }}
- >
- <Popup>
- <div className="p-2">
- <h3 className="font-semibold text-sm mb-1">{report.title}</h3>
- <p className="text-xs text-muted-foreground mb-2">{report.category}</p>
- <Button size="sm" onClick={() => setSelectedReport(report)} className="w-full">Lihat Detail</Button>
- </div>
- </Popup>
- </Marker>
- ))}
+ {/* Use our new modular ReportLayer */}
+ <ReportLayer 
+ filters={filters}
+ overlays={overlays}
+ onReportClick={(r) => setSelectedReport(r)}
+ />
 
  {userLocation && (
  <Marker
@@ -1874,7 +1852,7 @@ const MapView = () => {
  }}
  onDrawModeChange={setGeomanDrawMode}
  />
- </MapContainer>
+ </MapCanvas>
 
  <ModernMapOverlay
  showSearch={showSearchPanel}

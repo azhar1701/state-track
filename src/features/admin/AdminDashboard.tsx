@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, Suspense, lazy } from "react";
+import { useMemo, useState, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
 import { useAdminReports } from "./useAdminReports";
@@ -20,12 +20,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Loader2, Sparkles, Navigation, Clock } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { handleApiError } from "@/lib/api-errors";
 
 // Lazy components
 const GeoDataManagerLazy = lazy(() => import("@/features/geodata/GeoDataManager"));
@@ -67,8 +66,7 @@ const AdminDashboard = () => {
     categories,
     updateStatus, 
     bulkUpdate, 
-    deleteReport,
-    isUpdating 
+    deleteReport
   } = useAdminReports({
     statusFilter,
     severityFilter,

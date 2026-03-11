@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 
 export interface MapOverlays {
  adminBoundaries: boolean;
+ reports?: boolean;
+ infrastructure?: boolean;
+ assets?: boolean;
  clustering?: boolean;
  heatmap?: boolean;
  dynamic?: Record<string, boolean>;

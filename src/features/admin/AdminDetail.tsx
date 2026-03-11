@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useReportDetail } from "./useReportDetail";
-import { ReportListItem, ReportStatus, ReportSeverity, ReportLogEntry, REPORT_SEVERITIES } from "./types";
+import { ReportListItem, ReportStatus, ReportSeverity, ReportLogEntry } from "./types";
 import { DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { formatDateTime, formatReportLocation, getOptimizedImageUrl } from "@/lib/formatters";
 import { useAuth } from "@/features/auth/useAuth";
 import { Loader2 } from "lucide-react";

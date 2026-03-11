@@ -36,33 +36,21 @@ export const useMapReports = (filters: MapFilters) => {
       let filtered = (data || []) as Report[];
 
       // Apply Filters
-      if (filters.category !== 'semua') {
+      if (filters.category && filters.category !== 'semua') {
         filtered = filtered.filter(r => r.category === filters.category);
       }
-      if (filters.status !== 'semua') {
+      if (filters.status && filters.status !== 'semua') {
         filtered = filtered.filter(r => r.status === filters.status);
       }
-      if (filters.severity !== 'semua') {
-        filtered = filtered.filter(r => r.severity === filters.severity);
-      }
       
-      // Date filtering
-      const now = startOfDay(new Date());
-      if (filters.dateRange === 'today') {
-        filtered = filtered.filter(r => isAfter(new Date(r.created_at), now));
-      } else if (filters.dateRange === 'week') {
-        const weekAgo = addDays(now, -7);
-        filtered = filtered.filter(r => isAfter(new Date(r.created_at), weekAgo));
-      } else if (filters.dateRange === 'month') {
-        const monthAgo = addDays(now, -30);
-        filtered = filtered.filter(r => isAfter(new Date(r.created_at), monthAgo));
-      } else if (filters.dateRange === 'custom' && filters.customDateRange?.from) {
-        const from = startOfDay(filters.customDateRange.from);
-        const to = filters.customDateRange.to ? addDays(startOfDay(filters.customDateRange.to), 1) : addDays(from, 1);
-        filtered = filtered.filter(r => {
-          const d = new Date(r.created_at);
-          return isAfter(d, from) && isBefore(d, to);
-        });
+      // Date filtering using dateFrom/dateTo
+      if (filters.dateFrom) {
+        const from = startOfDay(new Date(filters.dateFrom));
+        filtered = filtered.filter(r => isAfter(new Date(r.created_at), from));
+      }
+      if (filters.dateTo) {
+        const to = addDays(startOfDay(new Date(filters.dateTo)), 1);
+        filtered = filtered.filter(r => isBefore(new Date(r.created_at), to));
       }
 
       return filtered;

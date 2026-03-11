@@ -7,7 +7,7 @@ export type ReportCategory = Database["public"]["Enums"]["report_category"];
 
 export type ReportListItem = Pick<
   ReportRow,
-  "id" | "title" | "category" | "status" | "created_at" | "location_name" | "severity" | "kecamatan" | "desa" | "resolution"
+  "id" | "title" | "category" | "status" | "created_at" | "updated_at" | "location_name" | "severity" | "kecamatan" | "desa" | "resolution"
 >;
 
 export type ReportDetail = Pick<
@@ -22,7 +22,7 @@ export type SeverityFilter = "semua" | ReportSeverity;
 export type CategoryFilter = "semua" | ReportCategory;
 export type SortOption = "created_at_desc" | "severity_desc" | "category_asc";
 
-export const REPORT_LIST_COLUMNS = "id,title,category,status,created_at,severity,kecamatan,desa,resolution";
+export const REPORT_LIST_COLUMNS = "id,title,category,status,created_at,updated_at,severity,kecamatan,desa,resolution";
 export const REPORT_DETAIL_COLUMNS = "description,reporter_name,phone,latitude,longitude,photo_url,photo_urls";
 export const SEVERITY_WEIGHT: Record<ReportSeverity, number> = {
   ringan: 1,

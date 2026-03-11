@@ -7,7 +7,7 @@ import { MapFilters } from '../FilterPanel';
 import { MapOverlays } from '../OverlayToggle';
 import { formatReportLocation } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
-import { Clock, FileText, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ReportLayerProps {
   filters: MapFilters;

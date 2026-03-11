@@ -21,6 +21,7 @@ import {
  kernelDensity,
  type BufferOptions,
  type DensityCell,
+ type SpatialStats,
 } from '@/features/map/spatialAnalysis';
 import type { FeatureCollection } from 'geojson';
 
@@ -28,7 +29,7 @@ interface SpatialAnalysisPanelProps {
  reports: Array<{ id: string; coords: [number, number]; category: string; status: string }>;
  onBufferCreated?: (buffer: FeatureCollection) => void;
  onDensityCalculated?: (cells: DensityCell[]) => void;
- onStatsCalculated?: (stats: { nni: number; mean: number; stdDev: number; clustered: boolean }) => void;
+ onStatsCalculated?: (stats: SpatialStats) => void;
  onClose: () => void;
 }
 
@@ -105,12 +106,7 @@ export function SpatialAnalysisPanel({
 
  const stats = calculateNearestNeighborIndex(points, areaKm2);
 
- onStatsCalculated?.({
- nni: stats.nearestNeighborIndex,
- mean: stats.meanDistance,
- stdDev: stats.standardDeviation,
- clustered: stats.clustered,
- });
+ onStatsCalculated?.(stats);
 
  toast.success('Analisis statistik selesai', {
  description: stats.clustered ? 'Pola: Mengelompok (Clustered)' : 'Pola: Tersebar (Dispersed)',
