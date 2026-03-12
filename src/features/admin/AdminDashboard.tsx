@@ -5,13 +5,13 @@ import { useAdminReports } from "./useAdminReports";
 import { AdminStatsCards } from "./AdminStatsCards";
 import { AdminFilters } from "./AdminFilters";
 import { AdminReportsTable } from "./AdminReportsTable";
-import { 
-  AdminTab, 
-  ADMIN_TABS, 
-  ReportListItem, 
-  StatusFilter, 
-  SeverityFilter, 
-  CategoryFilter, 
+import {
+  AdminTab,
+  ADMIN_TABS,
+  ReportListItem,
+  StatusFilter,
+  SeverityFilter,
+  CategoryFilter,
   SortOption,
   ReportStatus
 } from "./types";
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -40,7 +40,7 @@ const AdminDashboard = () => {
   // State management
   const initialTab = (searchParams.get('tab') as AdminTab) || 'reports';
   const [activeTab, setActiveTab] = useState<AdminTab>(ADMIN_TABS.includes(initialTab) ? initialTab : 'reports');
-  
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('semua');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('semua');
@@ -48,24 +48,24 @@ const AdminDashboard = () => {
   const [sortBy, setSortBy] = useState<SortOption>('created_at_desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<ReportStatus | ''>('');
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
-  
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportListItem | null>(null);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Use our new hook
-  const { 
-    reports, 
-    totalFiltered, 
-    stats, 
+  const {
+    reports,
+    totalFiltered,
+    stats,
     categories,
-    updateStatus, 
-    bulkUpdate, 
+    updateStatus,
+    bulkUpdate,
     deleteReport
   } = useAdminReports({
     statusFilter,
@@ -109,8 +109,8 @@ const AdminDashboard = () => {
   const handleBulkUpdate = async () => {
     if (!bulkStatus || selectedIds.size === 0) return;
     try {
-      await bulkUpdate({ 
-        ids: Array.from(selectedIds), 
+      await bulkUpdate({
+        ids: Array.from(selectedIds),
         status: bulkStatus as ReportStatus,
         userId: user?.id,
         userEmail: user?.email
@@ -162,8 +162,8 @@ const AdminDashboard = () => {
 
           <TabsContent value="reports" className="mt-0">
             <AdminStatsCards stats={stats} />
-            
-            <AdminFilters 
+
+            <AdminFilters
               statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               severityFilter={severityFilter} setSeverityFilter={setSeverityFilter}
               categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
@@ -200,7 +200,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <AdminReportsTable 
+                <AdminReportsTable
                   reports={reports}
                   selectedIds={selectedIds}
                   onToggleSelect={handleToggleSelect}
@@ -253,7 +253,12 @@ const AdminDashboard = () => {
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Hapus Laporan?</AlertDialogTitle></AlertDialogHeader>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Laporan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Laporan akan dihapus secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={async () => { if (reportToDelete) { await deleteReport(reportToDelete); setDeleteDialogOpen(false); } }}>Hapus</AlertDialogAction>
@@ -263,8 +268,14 @@ const AdminDashboard = () => {
 
       <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
         <DrawerContent className="h-[85vh]">
-          <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>}>
-            <AdminDetail 
+          <Suspense fallback={
+            <div className="p-8 text-center">
+              <DrawerTitle className="sr-only">Memuat...</DrawerTitle>
+              <DrawerDescription className="sr-only">Sedang memuat detail laporan</DrawerDescription>
+              <Loader2 className="animate-spin mx-auto" />
+            </div>
+          }>
+            <AdminDetail
               selectedReport={selectedReport}
               onClose={() => setDetailOpen(false)}
             />

@@ -51,8 +51,7 @@ const fetchPhoton = async (query: string): Promise<GeocodingResult[]> => {
       `${PHOTON_BASE_URL}/api/?` +
       `q=${encodeURIComponent(query)}&` +
       `limit=10&` +
-      `lat=-7.325&lon=108.353&` + // Ciamis center for local bias
-      `lang=id`,
+      `lat=-7.325&lon=108.353`, // Ciamis center for local bias
       { headers: { 'Accept': 'application/json' } }
     );
     if (!response.ok) return [];

@@ -9,6 +9,12 @@ import {
   Clock,
   ArrowRight,
   Activity,
+  Droplets,
+  Shield,
+  BarChart3,
+  Zap,
+  Eye,
+  Send,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState, useCallback } from "react";
@@ -33,38 +39,191 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
-  ResponsiveContainer,
 } from "recharts";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import Footer from "@/components/layout/Footer";
 import LoadingOverlay from "@/components/common/LoadingOverlay";
-import StatusLegend from "@/features/home/StatusLegend";
-import CategoryLegend from "@/features/home/CategoryLegend";
-import RecentReports from "@/features/home/RecentReports";
 import FAQ from "@/features/home/FAQ";
 import BottomCTA from "@/features/home/BottomCTA";
+import RecentReports from "@/features/home/RecentReports";
 import { motion, Variants, useReducedMotion } from "framer-motion";
 import { logger } from "@/lib/logger";
+
+/* ------------------------------------------------------------------ */
+/*  Animation Variants                                                 */
+/* ------------------------------------------------------------------ */
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.12, delayChildren: 0.08 },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
+    transition: { type: "spring", stiffness: 260, damping: 20 },
   },
 };
+
+
+
+/* ------------------------------------------------------------------ */
+/*  Marquee Component (Live Feed)                                      */
+/* ------------------------------------------------------------------ */
+
+function LiveMarquee({ items }: { items: string[] }) {
+  const prefersReducedMotion = useReducedMotion();
+  if (items.length === 0) return null;
+
+  const doubled = [...items, ...items];
+
+  return (
+    <div className="relative overflow-hidden py-4" aria-hidden="true">
+      <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background to-transparent z-10" />
+      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background to-transparent z-10" />
+      <motion.div
+        className="flex gap-6 whitespace-nowrap"
+        animate={prefersReducedMotion ? {} : { x: ["0%", "-50%"] }}
+        transition={{
+          duration: 30,
+          ease: "linear",
+          repeat: Infinity,
+        }}
+      >
+        {doubled.map((text, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-card border border-border text-sm text-muted-foreground shadow-soft"
+          >
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            {text}
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hero Visual Element — Abstract Water/Data Visualization            */
+/* ------------------------------------------------------------------ */
+
+function HeroVisual() {
+  const prefersReducedMotion = useReducedMotion();
+  return (
+    <div className="relative w-full h-full min-h-[340px] md:min-h-[420px] flex items-center justify-center">
+      {/* Glowing orbs */}
+      <motion.div
+        animate={
+          prefersReducedMotion
+            ? {}
+            : { scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }
+        }
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-64 h-64 md:w-80 md:h-80 bg-primary/20 rounded-full blur-[80px]"
+      />
+      <motion.div
+        animate={
+          prefersReducedMotion
+            ? {}
+            : { scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }
+        }
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1.5,
+        }}
+        className="absolute w-52 h-52 md:w-72 md:h-72 bg-accent/15 rounded-full blur-[60px] translate-x-8 -translate-y-8"
+      />
+
+      {/* Floating dashboard mockup card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, rotateX: 12 }}
+        animate={{ opacity: 1, y: 0, rotateX: 0 }}
+        transition={{ duration: 1, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-[280px] md:w-[340px]"
+      >
+        <div className="rounded-2xl bg-card/80 backdrop-blur-xl border border-border shadow-lifted p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Dashboard</div>
+              <div className="text-sm font-semibold">Monitoring SDA</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Baru", value: "12", color: "text-amber-500" },
+              { label: "Proses", value: "8", color: "text-primary" },
+              { label: "Selesai", value: "45", color: "text-green-500" },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl bg-muted/50 border border-border p-2.5 text-center"
+              >
+                <div className={`text-lg font-bold ${s.color}`}>{s.value}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Mini chart bars */}
+          <div className="flex items-end gap-1 h-12 pt-1">
+            {[40, 65, 35, 80, 55, 90, 70, 50, 85, 60, 95, 45].map((h, i) => (
+              <motion.div
+                key={i}
+                initial={{ height: 0 }}
+                animate={{ height: `${h}%` }}
+                transition={{ duration: 0.5, delay: 0.8 + i * 0.05 }}
+                className="flex-1 rounded-sm bg-primary/30"
+                style={{ minHeight: 4 }}
+              />
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Floating notification badge */}
+      <motion.div
+        initial={{ opacity: 0, x: 30, scale: 0.8 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ duration: 0.6, delay: 1.2 }}
+        className="absolute top-8 md:top-12 right-4 md:-right-4 z-20"
+      >
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500/15 border border-green-500/30 text-green-600 dark:text-green-400 text-xs font-medium shadow-float backdrop-blur-sm">
+          <CheckCircle className="w-3.5 h-3.5" />
+          Laporan selesai!
+        </div>
+      </motion.div>
+
+      {/* Floating map pin badge */}
+      <motion.div
+        initial={{ opacity: 0, x: -30, scale: 0.8 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ duration: 0.6, delay: 1.5 }}
+        className="absolute bottom-12 md:bottom-16 left-0 md:-left-6 z-20"
+      >
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/15 border border-primary/30 text-primary text-xs font-medium shadow-float backdrop-blur-sm">
+          <MapIcon className="w-3.5 h-3.5" />
+          Lokasi tercatat
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Home Component                                                */
+/* ------------------------------------------------------------------ */
 
 const Home = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -83,6 +242,9 @@ const Home = () => {
     Array<{ name: string; count: number }>
   >([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [marqueeItems, setMarqueeItems] = useState<string[]>([]);
+
+  /* ---------- Data fetching ---------- */
 
   const fetchChartData = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -130,7 +292,7 @@ const Home = () => {
       }
       setChartDaily(days.map((x) => ({ date: x.label, count: x.count })));
 
-      // build category counts (top 6)
+      // build category counts
       const catCount = new Map<string, number>();
       for (const it of items) {
         const name = it.category || "Lainnya";
@@ -141,7 +303,6 @@ const Home = () => {
         .sort((a, b) => b.count - a.count);
       setChartByCategory(catArr);
     } catch (e) {
-      // fail silently on landing page charts
       logger.warn("Gagal memuat data chart beranda:", e);
     } finally {
       setChartLoading(false);
@@ -174,13 +335,37 @@ const Home = () => {
     });
   }, [isSupabaseConfigured]);
 
+  const fetchMarquee = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data } = await supabase
+        .from("reports")
+        .select("title, category, kecamatan, created_at")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (data && data.length > 0) {
+        setMarqueeItems(
+          (data as Array<{ title: string; category?: string; kecamatan?: string }>).map(
+            (r) => {
+              const loc = r.kecamatan ? ` · ${r.kecamatan}` : "";
+              const cat = r.category ? ` [${r.category}]` : "";
+              return `${r.title}${cat}${loc}`;
+            },
+          ),
+        );
+      }
+    } catch {
+      // fail silently
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
     fetchChartData();
+    fetchMarquee();
 
     if (!isSupabaseConfigured) return;
 
-    // realtime refresh when reports change
     const channel: RealtimeChannel = supabase
       .channel("home-reports-realtime")
       .on(
@@ -189,6 +374,7 @@ const Home = () => {
         () => {
           fetchStats();
           fetchChartData();
+          fetchMarquee();
         },
       )
       .subscribe();
@@ -196,527 +382,505 @@ const Home = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [fetchStats, fetchChartData, isSupabaseConfigured]);
+  }, [fetchStats, fetchChartData, fetchMarquee, isSupabaseConfigured]);
 
   useEffect(() => {
     fetchChartData();
   }, [chartDays, fetchChartData]);
 
-  // moved above
+  /* ---------- Stat card configs ---------- */
+
+  const statCards = [
+    {
+      label: "Total Laporan",
+      value: stats.total,
+      icon: FileText,
+      color: "text-primary",
+      bg: "bg-primary/10",
+    },
+    {
+      label: "Laporan Baru",
+      value: stats.baru,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10",
+    },
+    {
+      label: "Diproses",
+      value: stats.diproses,
+      icon: Users,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+    },
+    {
+      label: "Selesai",
+      value: stats.selesai,
+      icon: CheckCircle,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+    },
+  ];
+
+  const features = [
+    {
+      title: "Laporan Mudah",
+      desc: "Kirim laporan lengkap dengan foto, lokasi GPS, dan AI-assisted severity detection dalam hitungan detik.",
+      icon: Send,
+      color: "text-primary",
+      bg: "bg-primary/10",
+      border: "hover:border-primary/40",
+    },
+    {
+      title: "Peta Interaktif",
+      desc: "Visualisasi real-time semua laporan di peta. Filter, routing, dan analisis spasial langsung di browser.",
+      icon: Eye,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+      border: "hover:border-cyan-500/40",
+    },
+    {
+      title: "Dashboard Admin",
+      desc: "Panel kontrol profesional untuk mengelola, memantau, dan menindaklanjuti semua laporan infrastruktur.",
+      icon: BarChart3,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10",
+      border: "hover:border-amber-500/40",
+    },
+  ];
+
+  const steps = [
+    {
+      step: 1,
+      title: "Daftar & Masuk",
+      desc: "Buat akun gratis untuk mulai melaporkan",
+      icon: Shield,
+      gradient: "from-primary to-blue-600",
+    },
+    {
+      step: 2,
+      title: "Buat Laporan",
+      desc: "Ambil foto, tandai lokasi, kirim laporan",
+      icon: Zap,
+      gradient: "from-teal-500 to-teal-600",
+    },
+    {
+      step: 3,
+      title: "Pantau Progress",
+      desc: "Ikuti status perbaikan di peta real-time",
+      icon: Droplets,
+      gradient: "from-green-500 to-green-600",
+    },
+  ];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Animated Background Mesh */}
+      {/* ============ Background Mesh ============ */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-background to-teal-500/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
         {!prefersReducedMotion && (
           <>
             <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.3, 0.5, 0.3],
-              }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-primary/10 rounded-full blur-[100px]"
+              animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.35, 0.2] }}
+              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[-15%] left-[-10%] w-[50vw] h-[50vw] bg-primary/8 rounded-full blur-[100px]"
             />
             <motion.div
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.2, 0.4, 0.2],
-              }}
+              animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.3, 0.15] }}
               transition={{
-                duration: 10,
+                duration: 12,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: 2,
+                delay: 3,
               }}
-              className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-teal-500/10 rounded-full blur-[120px]"
+              className="absolute bottom-[-15%] right-[-10%] w-[55vw] h-[55vw] bg-accent/8 rounded-full blur-[120px]"
             />
           </>
         )}
       </div>
 
-      {/* Hero Section */}
-      <section className="container pt-24 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 relative z-10">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="max-w-5xl mx-auto text-center space-y-8 md:space-y-10"
-        >
+      {/* ============ HERO — Split Layout ============ */}
+      <section className="container pt-20 pb-8 md:pt-28 md:pb-16 lg:pt-36 lg:pb-20 px-4 relative z-10">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left: Text */}
           <motion.div
-            variants={itemVariants}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border-border shadow-sm border-primary/20 text-primary text-sm font-medium mb-4 shadow-float"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6 md:space-y-8 text-center lg:text-left"
           >
-            <Activity className="w-4 h-4" />
-            <span>Sistem Pemantauan Real-time</span>
-          </motion.div>
+            <motion.div
+              variants={itemVariants}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-primary text-sm font-medium shadow-float"
+            >
+              <Activity className="w-4 h-4" />
+              <span>Sistem Pemantauan Real-time</span>
+            </motion.div>
 
-          <motion.h1
-            variants={itemVariants}
-            className="text-6xl md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] text-foreground leading-[0.85]"
-          >
-            Sistem Informasi <br className="hidden md:block" />
-            <span className="text-primary">Pelaporan SDA</span>
-          </motion.h1>
+            <motion.h1
+              variants={itemVariants}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-[-0.03em] text-foreground leading-[0.9]"
+            >
+              Sistem Informasi{" "}
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Pelaporan SDA
+              </span>
+            </motion.h1>
 
-          <motion.p
-            variants={itemVariants}
-            className="text-lg md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-light"
-          >
-            Platform profesional untuk pelaporan, pemantauan, dan penanganan
-            permasalahan sumber daya air secara real-time.
-          </motion.p>
+            <motion.p
+              variants={itemVariants}
+              className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed"
+            >
+              Platform profesional untuk pelaporan, pemantauan, dan penanganan
+              permasalahan sumber daya air secara real-time.
+            </motion.p>
 
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row gap-4 justify-center pt-8"
-          >
-            {authLoading ? null : !user ? (
-              <Link to="/auth">
-                <Button
-                  size="lg"
-                  className="group gap-3 shadow-xl rounded-2xl py-8 px-10 md:px-12 text-xl font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-[0.98]"
-                >
-                  Masuk / Daftar
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/report">
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start pt-2"
+            >
+              {authLoading ? null : !user ? (
+                <Link to="/auth">
                   <Button
                     size="lg"
-                    className="group gap-3 shadow-xl rounded-2xl py-8 px-10 md:px-12 text-xl font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-[0.98]"
+                    className="group gap-2.5 shadow-xl rounded-2xl py-7 px-8 text-lg font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
                   >
-                    <FileText className="w-6 h-6" />
-                    Buat Laporan
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    Masuk / Daftar
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Link to="/map">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="gap-3 rounded-2xl py-8 px-10 md:px-12 text-xl font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
-                  >
-                    <MapIcon className="w-6 h-6" />
-                    Lihat Peta
-                  </Button>
-                </Link>
-                {isAdmin && (
-                  <Link to="/admin">
+              ) : (
+                <>
+                  <Link to="/report">
+                    <Button
+                      size="lg"
+                      className="group gap-2.5 shadow-xl rounded-2xl py-7 px-8 text-lg font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
+                    >
+                      <FileText className="w-5 h-5" />
+                      Buat Laporan
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                  <Link to="/map">
                     <Button
                       size="lg"
                       variant="outline"
-                      className="gap-3 rounded-2xl py-8 px-10 md:px-12 text-xl font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
+                      className="gap-2.5 rounded-2xl py-7 px-8 text-lg font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
                     >
-                      Dashboard Admin
+                      <MapIcon className="w-5 h-5" />
+                      Lihat Peta
                     </Button>
                   </Link>
-                )}
-              </>
-            )}
+                  {isAdmin && (
+                    <Link to="/admin">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="gap-2.5 rounded-2xl py-7 px-8 text-lg font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
+                      >
+                        Dashboard Admin
+                      </Button>
+                    </Link>
+                  )}
+                </>
+              )}
+            </motion.div>
           </motion.div>
-        </motion.div>
-      </section>
 
-      {/* Stats Section */}
-      <section className="container py-12 relative z-10">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto px-4"
-        >
-          {[
-            {
-              label: "Total Laporan",
-              value: stats.total,
-              icon: FileText,
-              color: "text-primary",
-              bg: "bg-primary/10",
-              border: "hover:border-primary/50",
-              className:
-                "col-span-2 row-span-2 flex flex-col justify-center min-h-[320px]",
-              iconScale: "w-12 h-12",
-              textScale: "text-7xl md:text-8xl lg:text-[8rem]",
-              labelScale: "text-xl md:text-2xl font-semibold",
-            },
-            {
-              label: "Laporan Baru",
-              value: stats.baru,
-              icon: Clock,
-              color: "text-amber-500",
-              bg: "bg-amber-500/10",
-              border: "hover:border-amber-500/50",
-              className: "col-span-2 md:col-span-2",
-              iconScale: "w-8 h-8",
-              textScale: "text-5xl md:text-6xl",
-              labelScale: "text-base md:text-lg font-medium",
-            },
-            {
-              label: "Diproses",
-              value: stats.diproses,
-              icon: Users,
-              color: "text-cyan-500",
-              bg: "bg-cyan-500/10",
-              border: "hover:border-cyan-500/50",
-              className: "col-span-1",
-              iconScale: "w-7 h-7",
-              textScale: "text-4xl md:text-5xl",
-              labelScale: "text-sm md:text-base font-medium",
-            },
-            {
-              label: "Selesai",
-              value: stats.selesai,
-              icon: CheckCircle,
-              color: "text-green-500",
-              bg: "bg-green-500/10",
-              border: "hover:border-green-500/50",
-              className: "col-span-1",
-              iconScale: "w-7 h-7",
-              textScale: "text-4xl md:text-5xl",
-              labelScale: "text-sm md:text-base font-medium",
-            },
-          ].map((stat, i) => (
-            <Card
-              key={i}
-              variant="glass"
-              className={`p-6 md:p-8 rounded-3xl ${stat.border} transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${stat.className}`}
-            >
-              <div className="flex items-center justify-between mb-4 md:mb-6">
-                <div
-                  className={`p-4 ${stat.bg} rounded-2xl group-hover:scale-110 transition-transform duration-500`}
-                >
-                  <stat.icon className={`${stat.iconScale} ${stat.color}`} />
-                </div>
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <div
-                  className={`font-black tracking-tighter ${stat.color} ${stat.textScale} leading-none`}
-                >
-                  {stat.value}
-                </div>
-                <div className={`text-muted-foreground ${stat.labelScale}`}>
-                  {stat.label}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* Charts Section */}
-      <section className="container py-16 md:py-24 relative z-10">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="max-w-6xl mx-auto px-4"
-        >
+          {/* Right: Visual */}
           <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block"
           >
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Insight Laporan
+            <HeroVisual />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ============ Live Marquee Feed ============ */}
+      <section className="container relative z-10 px-4">
+        <div className="max-w-7xl mx-auto">
+          <LiveMarquee items={marqueeItems} />
+        </div>
+      </section>
+
+      {/* ============ Bento Grid — Stats + Charts ============ */}
+      <section className="container py-12 md:py-20 relative z-10">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={containerVariants}
+          className="max-w-7xl mx-auto px-4"
+        >
+          <motion.div variants={itemVariants} className="mb-10 md:mb-14">
+            <h2 className="text-2xl md:text-4xl font-bold tracking-tight">
+              Ringkasan & Insight
             </h2>
-            <Select
-              value={String(chartDays)}
-              onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}
-            >
-              <SelectTrigger className="w-full sm:w-[160px] bg-card border-border shadow-sm border-white/20 rounded-xl h-12 text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 Hari Terakhir</SelectItem>
-                <SelectItem value="30">30 Hari Terakhir</SelectItem>
-              </SelectContent>
-            </Select>
+            <p className="text-muted-foreground mt-2 text-base md:text-lg max-w-2xl">
+              Data laporan infrastruktur secara real-time dari seluruh wilayah.
+            </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <Card
-              variant="glass"
-              className="p-6 md:p-8 rounded-3xl"
-            >
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Tren Laporan
-                </h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Perkembangan jumlah laporan dalam {chartDays} hari terakhir
-                </p>
-              </div>
-              <div className="relative w-full overflow-hidden">
-                {chartDaily.length === 0 ? (
-                  chartLoading ? (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                      Memuat chart...
+          {/* Symmetrical Stats Grid */}
+          <div className="space-y-5">
+            {/* Row 1: 4 equal stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+              {statCards.map((stat, i) => (
+                <motion.div key={i} variants={itemVariants}>
+                  <Card
+                    variant="glass"
+                    className="p-5 md:p-6 rounded-2xl h-full hover:-translate-y-1 hover:shadow-xl transition-all duration-500 group"
+                  >
+                    <div className={`p-3 ${stat.bg} rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-500`}>
+                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
                     </div>
-                  ) : (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                      Tidak ada data
+                    <div className={`text-3xl md:text-4xl font-black tracking-tighter ${stat.color} leading-none`}>
+                      {stat.value}
                     </div>
-                  )
-                ) : (
-                  <div className="h-64 md:h-72 w-full">
-                    <ChartContainer
-                      config={{
-                        count: {
-                          label: "Laporan",
-                          color: "hsl(var(--primary))",
-                        },
-                      }}
-                      className="h-full w-full"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={chartDaily}
-                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient
-                              id="colorReports"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="5%"
-                                stopColor="hsl(var(--primary))"
-                                stopOpacity={0.3}
-                              />
-                              <stop
-                                offset="95%"
-                                stopColor="hsl(var(--primary))"
-                                stopOpacity={0}
-                              />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            strokeOpacity={0.1}
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="date"
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{
-                              fontSize: 12,
-                              fill: "hsl(var(--muted-foreground))",
-                            }}
-                            dy={10}
-                          />
-                          <YAxis
-                            allowDecimals={false}
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{
-                              fontSize: 12,
-                              fill: "hsl(var(--muted-foreground))",
-                            }}
-                          />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            cursor={{
-                              stroke: "hsl(var(--primary))",
-                              strokeWidth: 1,
-                              strokeDasharray: "4 4",
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="count"
-                            name="Laporan"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={4}
-                            dot={false}
-                            activeDot={{
-                              r: 6,
-                              fill: "hsl(var(--primary))",
-                              stroke: "white",
-                              strokeWidth: 2,
-                            }}
-                            fill="url(#colorReports)"
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
-                  </div>
-                )}
-              </div>
-            </Card>
+                    <div className="text-sm text-muted-foreground mt-1 font-medium">
+                      {stat.label}
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
 
-            <Card
-              variant="glass"
-              className="p-6 md:p-8 rounded-3xl"
-            >
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Kategori Terbanyak
-                </h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Distribusi laporan berdasarkan kategori
-                </p>
-              </div>
-              <div className="relative w-full overflow-hidden">
-                {chartByCategory.length === 0 ? (
-                  chartLoading ? (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                      Memuat chart...
+            {/* Row 2: 2 equal charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+
+              {/* Line chart — Tren Laporan */}
+              <motion.div variants={itemVariants}>
+                <Card variant="glass" className="p-5 md:p-6 rounded-2xl h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground">Tren Laporan</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {chartDays} hari terakhir
+                      </p>
                     </div>
-                  ) : (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                      Tidak ada data
-                    </div>
-                  )
-                ) : (
-                  <div className="h-64 md:h-72 w-full">
-                    <ChartContainer
-                      config={{
-                        count: {
-                          label: "Jumlah",
-                          color: "hsl(var(--primary))",
-                        },
-                      }}
-                      className="h-full w-full"
+                    <Select
+                      value={String(chartDays)}
+                      onValueChange={(v) => setChartDays(Number(v) as 7 | 30)}
                     >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={chartByCategory}
-                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            strokeOpacity={0.1}
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="name"
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{
-                              fontSize: 12,
-                              fill: "hsl(var(--muted-foreground))",
-                            }}
-                            dy={10}
-                          />
-                          <YAxis
-                            allowDecimals={false}
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{
-                              fontSize: 12,
-                              fill: "hsl(var(--muted-foreground))",
-                            }}
-                          />
-                          <ChartTooltip
-                            content={<ChartTooltipContent nameKey="name" />}
-                            cursor={{ fill: "hsl(var(--muted)/0.5)" }}
-                          />
-                          <Bar
-                            dataKey="count"
-                            name="Jumlah"
-                            fill="hsl(var(--primary))"
-                            radius={[6, 6, 0, 0]}
-                            maxBarSize={50}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                    <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      <SelectTrigger className="w-[120px] bg-card border-border rounded-lg h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7">7 Hari</SelectItem>
+                        <SelectItem value="30">30 Hari</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </div>
-            </Card>
+                  <div className="relative w-full overflow-hidden">
+                    {chartDaily.length === 0 ? (
+                      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                        {chartLoading ? "Memuat chart..." : "Tidak ada data"}
+                      </div>
+                    ) : (
+                      <div className="h-48 md:h-56 w-full">
+                        <ChartContainer
+                          config={{
+                            count: {
+                              label: "Laporan",
+                              color: "hsl(var(--primary))",
+                            },
+                          }}
+                          className="h-full w-full"
+                        >
+                          <LineChart
+                            data={chartDaily}
+                            margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient
+                                id="colorReports"
+                                x1="0" y1="0" x2="0" y2="1"
+                              >
+                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              strokeOpacity={0.08}
+                              vertical={false}
+                            />
+                            <XAxis
+                              dataKey="date"
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                              dy={8}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                            />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              cursor={{
+                                stroke: "hsl(var(--primary))",
+                                strokeWidth: 1,
+                                strokeDasharray: "4 4",
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="count"
+                              name="Laporan"
+                              stroke="hsl(var(--primary))"
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{
+                                r: 5,
+                                fill: "hsl(var(--primary))",
+                                stroke: "white",
+                                strokeWidth: 2,
+                              }}
+                              fill="url(#colorReports)"
+                            />
+                          </LineChart>
+                        </ChartContainer>
+                        <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </motion.div>
+
+              {/* Bar chart — Kategori */}
+              <motion.div variants={itemVariants}>
+                <Card variant="glass" className="p-5 md:p-6 rounded-2xl h-full">
+                  <div className="mb-4">
+                    <h3 className="text-base font-semibold text-foreground">
+                      Kategori Terbanyak
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Distribusi laporan berdasarkan kategori
+                    </p>
+                  </div>
+                  <div className="relative w-full overflow-hidden">
+                    {chartByCategory.length === 0 ? (
+                      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                        {chartLoading ? "Memuat chart..." : "Tidak ada data"}
+                      </div>
+                    ) : (
+                      <div className="h-48 md:h-56 w-full">
+                        <ChartContainer
+                          config={{
+                            count: {
+                              label: "Jumlah",
+                              color: "hsl(var(--primary))",
+                            },
+                          }}
+                          className="h-full w-full"
+                        >
+                          <BarChart
+                            data={chartByCategory}
+                            margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              strokeOpacity={0.08}
+                              vertical={false}
+                            />
+                            <XAxis
+                              dataKey="name"
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                              dy={8}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                            />
+                            <ChartTooltip
+                              content={<ChartTooltipContent nameKey="name" />}
+                              cursor={{ fill: "hsl(var(--muted)/0.5)" }}
+                            />
+                            <Bar
+                              dataKey="count"
+                              name="Jumlah"
+                              fill="hsl(var(--primary))"
+                              radius={[6, 6, 0, 0]}
+                              maxBarSize={40}
+                            />
+                          </BarChart>
+                        </ChartContainer>
+                        <LoadingOverlay show={chartLoading} text="Memuat data..." />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </motion.div>
+            </div>
           </div>
         </motion.div>
       </section>
 
-      {/* Features Section */}
-      <section className="container py-16 md:py-24 relative z-10">
+      {/* ============ Features Section ============ */}
+      <section className="container py-12 md:py-20 relative z-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           variants={containerVariants}
-          className="max-w-6xl mx-auto px-4"
+          className="max-w-7xl mx-auto px-4"
         >
-          <motion.div variants={itemVariants} className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+          <motion.div variants={itemVariants} className="text-center mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3">
               Fitur Unggulan
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Platform yang dirancang untuk memudahkan pelaporan dan pemantauan
-              infrastruktur secara komprehensif.
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Dirancang untuk memudahkan pelaporan dan pemantauan infrastruktur
+              secara komprehensif.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                title: "Laporan Mudah",
-                desc: "Buat laporan dengan foto, lokasi GPS, dan deskripsi lengkap dalam hitungan detik.",
-                icon: FileText,
-                color: "text-primary",
-                bg: "bg-primary/10",
-              },
-              {
-                title: "Peta Interaktif",
-                desc: "Lihat semua laporan di peta real-time dengan status dan kategori yang jelas.",
-                icon: MapIcon,
-                color: "text-cyan-500",
-                bg: "bg-cyan-500/10",
-              },
-              {
-                title: "Dashboard Admin",
-                desc: "Panel kontrol lengkap untuk mengelola dan memantau semua laporan infrastruktur.",
-                icon: Users,
-                color: "text-amber-500",
-                bg: "bg-amber-500/10",
-              },
-            ].map((feature, i) => (
-              <Card
-                key={i}
-                variant="glass"
-                className="p-8 md:p-10 rounded-3xl hover:border-white/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
-              >
-                <div
-                  className={`p-5 ${feature.bg} rounded-2xl w-fit mb-8 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+          <div className="grid md:grid-cols-3 gap-5 md:gap-6">
+            {features.map((feature, i) => (
+              <motion.div key={i} variants={itemVariants}>
+                <Card
+                  variant="glass"
+                  className={`p-7 md:p-8 rounded-2xl ${feature.border} transition-all duration-500 hover:-translate-y-2 hover:shadow-xl group h-full`}
                 >
-                  <feature.icon className={`w-10 h-10 ${feature.color}`} />
-                </div>
-                <h2 className="text-2xl font-bold mb-4">{feature.title}</h2>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  {feature.desc}
-                </p>
-              </Card>
+                  <div
+                    className={`p-4 ${feature.bg} rounded-xl w-fit mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+                  >
+                    <feature.icon className={`w-8 h-8 ${feature.color}`} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground text-base leading-relaxed">
+                    {feature.desc}
+                  </p>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </motion.div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="container py-16 md:py-24 relative z-10">
+      {/* ============ How It Works — Interactive Steps ============ */}
+      <section className="container py-12 md:py-20 relative z-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           variants={containerVariants}
           className="max-w-5xl mx-auto px-4"
         >
-          <motion.div variants={itemVariants} className="text-center mb-20">
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+          <motion.div variants={itemVariants} className="text-center mb-14 md:mb-18">
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3">
               Cara Kerja
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
               Tiga langkah mudah untuk berpartisipasi dalam pemeliharaan
               infrastruktur.
             </p>
@@ -724,44 +888,25 @@ const Home = () => {
 
           <div className="relative">
             {/* Connection Line */}
-            <div className="hidden md:block absolute top-10 left-[10%] right-[10%] h-1 bg-gradient-to-r from-primary/20 via-teal-500/20 to-green-500/20 rounded-full" />
+            <div className="hidden md:block absolute top-14 left-[15%] right-[15%] h-px bg-gradient-to-r from-primary/30 via-teal-500/30 to-green-500/30" />
 
-            <div className="grid md:grid-cols-3 gap-12 md:gap-8 relative">
-              {[
-                {
-                  step: 1,
-                  title: "Daftar & Masuk",
-                  desc: "Buat akun gratis untuk mulai membuat laporan",
-                  color: "from-primary to-blue-600",
-                  shadow: "shadow-primary/30",
-                },
-                {
-                  step: 2,
-                  title: "Buat Laporan",
-                  desc: "Ambil foto, tandai lokasi, dan kirim laporan",
-                  color: "from-teal-500 to-teal-600",
-                  shadow: "shadow-teal-500/30",
-                },
-                {
-                  step: 3,
-                  title: "Pantau Progress",
-                  desc: "Lihat status perbaikan secara real-time di peta",
-                  color: "from-green-500 to-green-600",
-                  shadow: "shadow-green-500/30",
-                },
-              ].map((item, i) => (
+            <div className="grid md:grid-cols-3 gap-10 md:gap-8 relative">
+              {steps.map((item, i) => (
                 <motion.div
                   key={i}
                   variants={itemVariants}
-                  className="text-center space-y-6 relative group"
+                  className="text-center space-y-5 relative group"
                 >
                   <div
-                    className={`mx-auto flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} text-white text-3xl font-bold shadow-xl ${item.shadow} relative z-10 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500`}
+                    className={`mx-auto flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-lg relative z-10 group-hover:scale-110 group-hover:rotate-[-6deg] transition-all duration-500`}
                   >
-                    {item.step}
+                    <item.icon className="w-7 h-7 md:w-8 md:h-8" />
                   </div>
-                  <h3 className="text-2xl font-bold">{item.title}</h3>
-                  <p className="text-muted-foreground text-lg leading-relaxed max-w-[250px] mx-auto">
+                  <div className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
+                    Langkah {item.step}
+                  </div>
+                  <h3 className="text-xl font-bold">{item.title}</h3>
+                  <p className="text-muted-foreground text-base leading-relaxed max-w-[250px] mx-auto">
                     {item.desc}
                   </p>
                 </motion.div>
@@ -771,24 +916,19 @@ const Home = () => {
         </motion.div>
       </section>
 
-      {/* Information Blocks */}
-      <section className="container py-16 md:py-24 relative z-10">
+      {/* ============ Recent Reports + FAQ ============ */}
+      <section className="container py-12 md:py-20 relative z-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           variants={containerVariants}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto px-4"
+          className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8 max-w-7xl mx-auto px-4"
         >
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-2 flex flex-col gap-8"
-          >
+          <motion.div variants={itemVariants} className="lg:col-span-3">
             <RecentReports />
-            <CategoryLegend />
           </motion.div>
-          <motion.div variants={itemVariants} className="flex flex-col gap-8">
-            <StatusLegend />
+          <motion.div variants={itemVariants} className="lg:col-span-2">
             <FAQ />
           </motion.div>
         </motion.div>

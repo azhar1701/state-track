@@ -69,7 +69,7 @@ export const BackupSettings = () => {
       }
 
       if (backupSettings.includeUsers) {
-        const { data: profiles } = await supabase.from("profiles").select("*").limit(10000);
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, phone, nik_nip, created_at").limit(10000);
         const { data: roles } = await supabase.from("user_roles").select("*").limit(10000);
         backup.profiles = profiles;
         backup.user_roles = roles;

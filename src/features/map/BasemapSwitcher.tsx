@@ -57,6 +57,17 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
     };
   }, [map, currentBasemap]);
 
+  useEffect(() => {
+    const handleGlobalChange = (e: Event) => {
+      const type = (e as CustomEvent).detail?.type as BasemapType;
+      if (type && basemaps[type]) {
+        switchBasemap(type);
+      }
+    };
+    window.addEventListener('basemap-change', handleGlobalChange);
+    return () => window.removeEventListener('basemap-change', handleGlobalChange);
+  }, [map]);
+
   const switchBasemap = (basemap: BasemapType) => {
     setCurrentBasemap(basemap);
     onBasemapChange?.(basemap);

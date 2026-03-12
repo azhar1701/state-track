@@ -139,7 +139,6 @@ const Auth = () => {
             full_name: formData.fullName,
             phone: formData.phone,
             nik_nip: formData.nikNip,
-            email: formData.email,
           }, { onConflict: "id" });
 
         if (profileError) {

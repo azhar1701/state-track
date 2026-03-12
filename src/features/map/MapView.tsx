@@ -18,6 +18,7 @@ import 'leaflet/dist/leaflet.css';
 declare module 'leaflet' {
  export function heatLayer(latlngs: Array<[number, number, number]>, options?: Record<string, unknown>): L.Layer;
 }
+import { useAdminBoundaries } from './hooks/useAdminBoundaries';
 import { MapCanvas } from './components/MapCanvas';
 import { ReportLayer } from './components/ReportLayer';
 import type { BasemapType } from './basemap-config';
@@ -506,10 +507,48 @@ const MapView = () => {
  }
  }, [overlays]);
 
- // Administrative boundaries geojson cache
- const [adminGeoJson, setAdminGeoJson] = useState<FeatureCollection<Geometry> | null>(null);
- const [kecamatanLines, setKecamatanLines] = useState<FeatureCollection<Geometry> | null>(null);
- const [adminLoading, setAdminLoading] = useState(false);
+ // Admin boundaries with dynamic simplification
+ const { data: adminGeoJson, isLoading: adminLoading } = useAdminBoundaries({
+   enabled: overlays.adminBoundaries,
+   zoom: mapZoom
+ });
+
+ // Build kecamatan boundary lines from adminGeoJson
+ const kecamatanLines = useMemo(() => {
+   if (!adminGeoJson) return null;
+   try {
+     const getKecName = (p?: Record<string, unknown>): string | undefined =>
+       (p?.KECAMATAN as string) || (p?.Kecamatan as string) || undefined;
+     const groups = new Map<string, Array<Feature<Polygon | MultiPolygon>>>();
+     for (const f of adminGeoJson.features as Array<Feature<Polygon | MultiPolygon>>) {
+       const name = getKecName(f.properties as Record<string, unknown> | undefined);
+       if (!name) continue;
+       const arr = groups.get(name) || [];
+       arr.push(f);
+       groups.set(name, arr);
+     }
+     const lineFeatures: Array<Feature<LineString | MultiLineString>> = [];
+     groups.forEach((features, name) => {
+       try {
+         for (const poly of features) {
+           const line = turf.polygonToLine(poly as unknown as Feature<Polygon | MultiPolygon>) as Feature<LineString | MultiLineString>;
+           line.properties = { ...(line.properties || {}), KECAMATAN: name };
+           lineFeatures.push(line);
+         }
+       } catch (e) {
+         logger.warn(`Failed to build kecamatan boundary for ${name}`, sanitizeForLog(e));
+       }
+     });
+     return {
+       type: 'FeatureCollection',
+       features: lineFeatures as unknown as Feature<Geometry>[],
+     } as FeatureCollection<Geometry>;
+   } catch (e) {
+     logger.warn('Failed generating kecamatan lines', sanitizeForLog(e));
+     return null;
+   }
+ }, [adminGeoJson]);
+
  // Additional overlays
  // Dynamic overlays from geo_layers
  const [availableLayers, setAvailableLayers] = useState<Array<{ key: string; name: string; geometry_type: string | null }>>([]);
@@ -867,183 +906,22 @@ const MapView = () => {
  };
  }, []);
  useEffect(() => {
- const loadAdminBoundaries = async () => {
- if (!overlays.adminBoundaries) return;
- if (adminGeoJson && kecamatanLines) return; // already loaded
- setAdminLoading(true);
- try {
- // Try from DB first (geo_layers.key = 'admin_boundaries')
- let data: FeatureCollection<Geometry> | null = null;
- let srcCrsFromDb: string | undefined = undefined;
- try {
- const { data: row, error } = await supabase
- .from('geo_layers')
- .select('data')
- .eq('key', 'admin_boundaries')
- .maybeSingle();
- if (!error && row?.data) {
- const raw = row.data as unknown as Record<string, unknown>;
- if (raw && typeof raw === 'object' && 'featureCollection' in raw) {
- const wrapper = raw as { featureCollection?: unknown; crs?: string };
- if (wrapper.featureCollection && (wrapper.featureCollection as { type?: string }).type === 'FeatureCollection') {
- data = wrapper.featureCollection as FeatureCollection<Geometry>;
- srcCrsFromDb = typeof wrapper.crs === 'string' ? wrapper.crs : undefined;
- }
- }
- if (!data) {
- if ((raw as { type?: string }).type === 'FeatureCollection') {
- data = raw as unknown as FeatureCollection<Geometry>;
- } else if (raw && typeof raw === 'object') {
- const vals = Object.values(raw);
- const found = vals.find((v) => !!v && typeof v === 'object' && (v as { type?: string }).type === 'FeatureCollection');
- if (found) data = found as FeatureCollection<Geometry>;
- }
- }
- }
- } catch {
- // ignore
- }
-
- // Fallback to public files
- if (!data) {
- const candidates = ['/data/ciamis_kecamatan.geojson', '/data/adm_ciamis.geojson'];
- for (const url of candidates) {
- try {
- const r = await fetch(url, { cache: 'force-cache' });
- if (r.ok) {
- data = (await r.json()) as FeatureCollection<Geometry>;
- break;
- }
- } catch {
- // try next
- }
- }
- }
-
- if (!data) throw new Error('No admin boundaries found');
-
- // Detect CRS from wrapper/db or embedded GeoJSON, or infer by coordinate magnitude
- const embeddedCrsName = (data as unknown as { crs?: { properties?: { name?: string } } })?.crs?.properties?.name;
- const srcName = (srcCrsFromDb || embeddedCrsName || '').toUpperCase();
- const needsUTM49S = srcName.includes('EPSG:32749') || srcName.includes('32749') || srcName.includes('EPSG::32749');
- const sample = (() => {
- const f = data!.features?.find((f) => f.geometry && 'coordinates' in f.geometry);
- if (!f) return null;
- const g = f.geometry;
- const peek = (coords: unknown): [number, number] | null => {
- if (!Array.isArray(coords)) return null;
- if (coords.length > 0 && typeof coords[0] === 'number' && typeof coords[1] === 'number') return [coords[0] as number, coords[1] as number];
- for (const c of coords as unknown[]) {
- const p = peek(c);
- if (p) return p;
- }
- return null;
- };
- return peek((g as { coordinates: unknown }).coordinates);
- })();
- const looksProjected = sample ? Math.abs(sample[0]) > 1000 || Math.abs(sample[1]) > 1000 : false;
-
- let result = data;
- if (needsUTM49S || looksProjected) {
- proj4.defs('EPSG:32749', '+proj=utm +zone=49 +south +datum=WGS84 +units=m +no_defs +type=crs');
- const transformCoord = (pt: number[]): [number, number] => {
- const x = pt[0];
- const y = pt[1];
- const [lon, lat] = proj4('EPSG:32749', 'EPSG:4326', [x, y]);
- return [lon, lat];
- };
- const reprojectGeometry = (geom: Record<string, unknown> | null | undefined): Record<string, unknown> | null | undefined => {
- if (!geom) return geom;
- const t = geom.type;
- const coords = geom.coordinates;
- const mapCoords = (arr: unknown): unknown => {
- if (!Array.isArray(arr)) return arr;
- if (arr.length > 0 && typeof arr[0] === 'number') return transformCoord(arr as number[]);
- return (arr as unknown[]).map((a) => mapCoords(a));
- };
- if (t === 'GeometryCollection') {
- return { type: 'GeometryCollection', geometries: (geom.geometries as unknown[]).map((g: unknown) => reprojectGeometry(g as Record<string, unknown>)) };
- }
- return { type: t, coordinates: mapCoords(coords) };
- };
- result = {
- type: 'FeatureCollection',
- features: (data.features as unknown[]).map((f) => {
- const feat = f as unknown as { properties: Record<string, unknown>; geometry: Record<string, unknown> };
- return {
- type: 'Feature',
- properties: feat.properties || {},
- geometry: reprojectGeometry(feat.geometry),
- };
- }),
- } as unknown as FeatureCollection;
- }
-
- // Build kecamatan boundary lines
- try {
- const getKecName = (p?: Record<string, unknown>): string | undefined =>
- (p?.KECAMATAN as string) || (p?.Kecamatan as string) || undefined;
- const groups = new Map<string, Array<Feature<Polygon | MultiPolygon>>>();
- for (const f of result.features as Array<Feature<Polygon | MultiPolygon>>) {
- const name = getKecName(f.properties as Record<string, unknown> | undefined);
- if (!name) continue;
- const arr = groups.get(name) || [];
- arr.push(f);
- groups.set(name, arr);
- }
- const lineFeatures: Array<Feature<LineString | MultiLineString>> = [];
- groups.forEach((features, name) => {
- try {
- for (const poly of features) {
- const line = turf.polygonToLine(poly as unknown as Feature<Polygon | MultiPolygon>) as Feature<LineString | MultiLineString>;
- line.properties = { ...(line.properties || {}), KECAMATAN: name };
- lineFeatures.push(line);
- }
- } catch (e) {
- logger.warn(`Failed to build kecamatan boundary for ${name}`, sanitizeForLog(e));
- }
- });
- const kecLinesFC: FeatureCollection<Geometry> = {
- type: 'FeatureCollection',
- features: lineFeatures as unknown as Feature<Geometry>[],
- } as FeatureCollection<Geometry>;
- setKecamatanLines(kecLinesFC);
- } catch (e) {
- logger.warn('Failed generating kecamatan lines', sanitizeForLog(e));
- setKecamatanLines(null);
- }
-
- setAdminGeoJson(result);
- } catch (err) {
- logger.error('Failed to load admin boundaries', sanitizeForLog(err));
- toast.error('Gagal memuat batas administratif', {
- description: 'Pastikan file data tersedia di /public/data/ciamis_kecamatan.geojson atau /public/data/adm_ciamis.geojson',
- });
- } finally {
- setAdminLoading(false);
- }
- };
- void loadAdminBoundaries();
- }, [overlays.adminBoundaries, adminGeoJson, kecamatanLines]);
-
- // When boundaries are first loaded and toggled on, fit the map to their extent for visibility
- useEffect(() => {
- if (!mapInstance) return;
- if (!overlays.adminBoundaries) return;
- if (!adminGeoJson) return;
- try {
- const tmp = L.geoJSON(adminGeoJson);
- const b = tmp.getBounds();
- if (b.isValid()) {
- mapInstance.fitBounds(b.pad(0.05));
- }
- // Clean up temporary layer
- tmp.remove();
- } catch (e) {
- logger.warn('Failed to fit bounds', sanitizeForLog(e));
- }
- // run only on first availability of adminGeoJson while overlay is on
- // eslint-disable-next-line react-hooks/exhaustive-deps
+   if (!mapInstance) return;
+   if (!overlays.adminBoundaries) return;
+   if (!adminGeoJson) return;
+   try {
+     const tmp = L.geoJSON(adminGeoJson);
+     const b = tmp.getBounds();
+     if (b.isValid()) {
+       mapInstance.fitBounds(b.pad(0.05));
+     }
+     // Clean up temporary layer
+     tmp.remove();
+   } catch (e) {
+     logger.warn('Failed to fit bounds', sanitizeForLog(e));
+   }
+   // run only on first availability of adminGeoJson while overlay is on
+   // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [mapInstance, overlays.adminBoundaries, !!adminGeoJson, userLocation]);
 
  // Load list of available geo_layers to display as toggles and apply default visibility

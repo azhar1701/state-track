@@ -5,7 +5,8 @@ import { DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { formatDateTime, formatReportLocation, getOptimizedImageUrl } from "@/lib/formatters";
 import { useAuth } from "@/features/auth/useAuth";
 import { Loader2 } from "lucide-react";
@@ -17,13 +18,13 @@ interface AdminDetailProps {
 
 const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
   const { user } = useAuth();
-  const { 
-    fullReport, 
-    detailLoading, 
-    logs, 
-    logsLoading, 
-    saveEdits, 
-    isSaving 
+  const {
+    fullReport,
+    detailLoading,
+    logs,
+    logsLoading,
+    saveEdits,
+    isSaving
   } = useReportDetail(selectedReport);
 
   const [editTitle, setEditTitle] = useState("");
@@ -212,7 +213,10 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
 
       {/* Lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[90vw] p-0 overflow-hidden bg-black/95">
+        <DialogContent className="max-w-[90vw] p-0 overflow-hidden bg-black/95" aria-describedby={undefined}>
+          <VisuallyHidden.Root>
+            <DialogTitle>Tampilan Foto Layar Penuh</DialogTitle>
+          </VisuallyHidden.Root>
           <div className="relative aspect-video flex items-center justify-center">
             <img src={photos[activePhotoIndex]} className="max-h-full max-w-full object-contain" />
             {photos.length > 1 && (

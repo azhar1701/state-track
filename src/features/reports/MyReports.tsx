@@ -115,7 +115,7 @@ export default function MyReports() {
       let query = supabase
         .from("reports")
         .select(
-          "id,title,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,severity,kecamatan,desa",
+          "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,severity,kecamatan,desa",
           { count: "exact" },
         )
         .eq("user_id", user.id)
@@ -158,7 +158,7 @@ export default function MyReports() {
         } = await supabase
           .from("reports")
           .select(
-            "id,title,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url",
+            "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url",
           )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -423,7 +423,7 @@ export default function MyReports() {
                           {r.title ?? "Tanpa judul"}
                         </div>
                         {r.description && (
-                          <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 hidden sm:block">
+                          <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-2 mt-1">
                             {r.description}
                           </div>
                         )}

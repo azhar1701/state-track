@@ -57,20 +57,34 @@ export const UserManagementSettings = () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      // Test basic query first
+      // Fetch users securely with emails via RPC
       const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, phone, nik_nip, created_at, email")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+        .rpc("get_admin_users" as any); // Type assertion because rpc isn't in types yet
 
-      if (profilesError) {
-        logger.error("Profiles error:", profilesError);
+      let finalProfiles = profiles;
+
+      // Fallback if RPC doesn't exist yet
+      if (profilesError && profilesError.message.includes("function get_admin_users does not exist")) {
+        logger.warn("RPC get_admin_users not found, falling back to profiles table without email");
+        const { data: rawProfiles, error: rawError } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone, nik_nip, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1000);
+
+        if (rawError) {
+          logger.error("Fallback profiles error:", rawError);
+          toast.error(`Error loading profiles: ${rawError.message}`);
+          return;
+        }
+        finalProfiles = rawProfiles;
+      } else if (profilesError) {
+        logger.error("Profiles RPC error:", profilesError);
         toast.error(`Error loading profiles: ${profilesError.message}`);
         return;
       }
 
-      logger.info("Profiles loaded:", profiles);
+      logger.info("Profiles loaded:", finalProfiles);
 
       // Load roles with error handling
       const { data: roles, error: rolesError } = await supabase
@@ -101,14 +115,14 @@ export const UserManagementSettings = () => {
         }
       });
 
-      const userList: UserRow[] = (profiles ?? []).map((profile) => ({
+      const userList: UserRow[] = (finalProfiles ?? []).map((profile: any) => ({
         id: profile.id,
         full_name: profile.full_name,
         phone: profile.phone,
         nik_nip: profile.nik_nip,
         created_at: profile.created_at,
         role: adminIds.has(profile.id) ? "admin" : "user",
-        email: profile.email,
+        email: profile.email || "Email Tersembunyi",
         report_count: reportCounts[profile.id] || 0,
       }));
 
