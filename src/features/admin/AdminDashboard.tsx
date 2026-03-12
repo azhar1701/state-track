@@ -22,9 +22,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { Loader2, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatSkeleton, TableSkeleton, DetailSkeleton } from "@/components/common/Skeletons";
 
 // Lazy components
 const GeoDataManagerLazy = lazy(() => import("@/features/geodata/GeoDataManager"));
@@ -62,6 +63,7 @@ const AdminDashboard = () => {
   const {
     reports,
     totalFiltered,
+    isLoadingReports,
     stats,
     categories,
     updateStatus,
@@ -132,16 +134,20 @@ const AdminDashboard = () => {
     });
   };
 
-  const exportCSV = async () => {
-    // Implementation remains similar but simplified
-    toast.info("Exporting CSV...");
-  };
 
-  const exportPDF = async () => {
-    toast.info("Exporting PDF...");
-  };
-
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (authLoading) return (
+    <div className="container px-4 py-8 space-y-8">
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      <StatSkeleton />
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <TableSkeleton rows={8} />
+      </div>
+    </div>
+  );
   if (!isAdmin) { navigate("/"); return null; }
 
   return (
@@ -177,8 +183,7 @@ const AdminDashboard = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <CardTitle className="text-lg">Daftar Laporan ({totalFiltered})</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={exportCSV}>Export CSV</Button>
-                    <Button variant="outline" size="sm" onClick={exportPDF}>Export PDF</Button>
+                    {/* Export buttons hidden until implementation */}
                   </div>
                 </div>
               </CardHeader>
@@ -200,40 +205,43 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <AdminReportsTable
-                  reports={reports}
-                  selectedIds={selectedIds}
-                  onToggleSelect={handleToggleSelect}
-                  onToggleSelectAll={handleToggleSelectAll}
-                  allVisibleSelected={allVisibleSelected}
-                  onOpenDetail={(r) => { setSelectedReport(r); setDetailOpen(true); }}
-                  onUpdateStatus={(id, status) => updateStatus({ id, status, userId: user?.id, userEmail: user?.email })}
-                  onDeleteReport={(id) => { setReportToDelete(id); setDeleteDialogOpen(true); }}
-                  updatingId={null}
-                  page={page} setPage={setPage}
-                  pageSize={pageSize} setPageSize={setPageSize}
-                  totalFiltered={totalFiltered}
-                />
+                {isLoadingReports ? (
+                  <TableSkeleton rows={pageSize} />
+                ) : (
+                  <AdminReportsTable
+                    reports={reports}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleSelectAll={handleToggleSelectAll}
+                    allVisibleSelected={allVisibleSelected}
+                    onOpenDetail={(r) => { setSelectedReport(r); setDetailOpen(true); }}
+                    onUpdateStatus={(id, status) => updateStatus({ id, status, userId: user?.id, userEmail: user?.email })}
+                    onDeleteReport={(id) => { setReportToDelete(id); setDeleteDialogOpen(true); }}
+                    updatingId={null}
+                    page={page} setPage={setPage}
+                    pageSize={pageSize} setPageSize={setPageSize}
+                    totalFiltered={totalFiltered}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="geo"><Suspense fallback={<Loader2 className="animate-spin" />}><GeoDataManagerLazy /></Suspense></TabsContent>
-          <TabsContent value="help">
-            <Card className="bg-card border-border shadow-sm p-6 border-l-4 border-l-primary mb-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-xl"><Sparkles className="w-6 h-6 text-primary" /></div>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-bold">Pembaruan Sistem: TanStack Query Enabled</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Sistem kini lebih cepat dengan manajemen state dan caching modern.</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-            <Suspense fallback={<Loader2 className="animate-spin" />}><HelpCenterLazy /></Suspense>
+          <TabsContent value="geo">
+            <Suspense fallback={<TableSkeleton rows={10} />}>
+              <GeoDataManagerLazy />
+            </Suspense>
           </TabsContent>
-          <TabsContent value="settings"><Suspense fallback={<Loader2 className="animate-spin" />}><AdminSettingsLazy /></Suspense></TabsContent>
+          <TabsContent value="help">
+            <Suspense fallback={<DetailSkeleton />}>
+              <HelpCenterLazy />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="settings">
+            <Suspense fallback={<DetailSkeleton />}>
+              <AdminSettingsLazy />
+            </Suspense>
+          </TabsContent>
         </Tabs>
       </div>
 

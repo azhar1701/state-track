@@ -6,7 +6,9 @@ import { Link } from "react-router-dom";
 import { Clock, MapPin, FileText } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { isSupabaseConfigured, supabase } from "@/services/client";
+import { supabase } from "@/services/client";
+import { StatusBadge, SeverityBadge } from "@/components/common/ReportBadges";
+import { SystemGuard } from "@/components/common/SystemGuard";
 
 interface RecentItem {
   id: string;
@@ -21,54 +23,12 @@ interface RecentItem {
   photo_url?: string | null;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  baru: "Baru",
-  diproses: "Diproses",
-  selesai: "Selesai",
-};
-
-const SEVERITY_LABELS: Record<string, string> = {
-  ringan: "Ringan",
-  sedang: "Sedang",
-  berat: "Berat",
-};
-
 const CATEGORY_LABELS: Record<string, string> = {
   irigasi: "Irigasi",
   sungai: "Sungai",
   lainnya: "Lainnya",
 };
 
-function StatusPill({ s }: { s: RecentItem["status"] }) {
-  const label = STATUS_LABELS[s] ?? (s || "Tidak diketahui");
-  let cls =
-    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-700 border border-amber-500/40";
-  if (s === "diproses") {
-    cls =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/20 text-primary border border-primary/40";
-  } else if (s === "selesai") {
-    cls =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/20 text-emerald-700 border border-emerald-500/40";
-  }
-  return <span className={cls}>{label}</span>;
-}
-
-function SevPill({ s }: { s?: RecentItem["severity"] }) {
-  if (!s) {
-    return <span className="text-xs text-muted-foreground">Belum dinilai</span>;
-  }
-  const label = SEVERITY_LABELS[s] ?? s;
-  let cls =
-    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-foreground border border-border";
-  if (s === "sedang") {
-    cls =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-500/20 text-orange-700 border border-orange-500/40";
-  } else if (s === "berat") {
-    cls =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-500/20 text-red-700 border border-red-500/40";
-  }
-  return <span className={cls}>{label}</span>;
-}
 
 const formatLocation = (
   item: Pick<RecentItem, "location_name" | "desa" | "kecamatan">,
@@ -112,12 +72,6 @@ export default function RecentReports() {
 
   useEffect(() => {
     const load = async () => {
-      if (!isSupabaseConfigured) {
-        setItems([]);
-        setError(null);
-        return;
-      }
-
       setError(null);
       const selectFields =
         "id,title,status,severity,created_at,category,kecamatan,desa";
@@ -178,105 +132,107 @@ export default function RecentReports() {
   }, []);
 
   return (
-    <div className="bg-card border-border shadow-sm border-white/20 rounded-2xl p-6 h-full flex flex-col">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl font-bold">Laporan Terbaru</h2>
-        <Link
-          to="/map"
-          className="text-sm text-primary hover:text-primary-hover font-medium transition-colors"
-        >
-          Lihat semua →
-        </Link>
-      </div>
-      <div className="space-y-3">
-        {items === null ? (
-          <div className="bg-white/5 rounded-xl px-4 py-8 text-center text-muted-foreground">
-            Memuat...
-          </div>
-        ) : error ? (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-8 text-center text-red-400">
-            {error}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="bg-white/5 rounded-xl px-4 py-8 text-center flex flex-col items-center justify-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center animate-[bounce_3s_ease-in-out_infinite]">
-              <MapPin className="w-6 h-6" />
+    <SystemGuard mode="overlay">
+      <div className="bg-card border-border shadow-sm border-white/20 rounded-2xl p-6 h-full flex flex-col">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-xl font-bold">Laporan Terbaru</h2>
+          <Link
+            to="/map"
+            className="text-sm text-primary hover:text-primary-hover font-medium transition-colors"
+          >
+            Lihat semua →
+          </Link>
+        </div>
+        <div className="space-y-3">
+          {items === null ? (
+            <div className="bg-white/5 rounded-xl px-4 py-8 text-center text-muted-foreground">
+              Memuat...
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Semua infrastruktur tampak baik!
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Jika Anda melihat kerusakan, jadilah yang pertama melaporkannya.
-              </p>
+          ) : error ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-8 text-center text-red-400">
+              {error}
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((it) => {
-              const categoryLabel = formatCategory(it.category);
-              const locationLabel = formatLocation(it);
-              const createdLabel = formatDateTime(it.created_at);
+          ) : items.length === 0 ? (
+            <div className="bg-white/5 rounded-xl px-4 py-8 text-center flex flex-col items-center justify-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center animate-[bounce_3s_ease-in-out_infinite]">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Semua infrastruktur tampak baik!
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Jika Anda melihat kerusakan, jadilah yang pertama melaporkannya.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((it) => {
+                const categoryLabel = formatCategory(it.category);
+                const locationLabel = formatLocation(it);
+                const createdLabel = formatDateTime(it.created_at);
 
-              return (
-                <Link
-                  key={it.id}
-                  to={`/map?report=${it.id}`}
-                  className="group bg-popover/95 backdrop-blur-md border border-border border-l-4 border-l-primary/60 shadow-sm rounded-xl p-4 transition-all duration-300 hover:border-l-primary hover:border-r-primary/40 hover:-translate-y-1 hover:shadow-md active:scale-[0.99] block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
-                      {it.photo_url ? (
-                        <img
-                          src={getOptimizedImageUrl(it.photo_url, 100, 60)}
-                          alt={it.title || "Foto laporan"}
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <FileText className="w-6 h-6 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1 flex-1">
-                          <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-                            {it.title || "(Tanpa judul)"}
-                          </h4>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="line-clamp-1">
-                              {locationLabel}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <SevPill s={it.severity} />
-                          <StatusPill s={it.status} />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5 shrink-0" />
-                          <span>{createdLabel}</span>
-                        </div>
-                        {categoryLabel && (
-                          <Badge
-                            variant="outline"
-                            className="bg-white/5 text-xs capitalize border-white/10"
-                          >
-                            {categoryLabel}
-                          </Badge>
+                return (
+                  <Link
+                    key={it.id}
+                    to={`/map?report=${it.id}`}
+                    className="group bg-popover/95 backdrop-blur-md border border-border border-l-4 border-l-primary/60 shadow-sm rounded-xl p-4 transition-all duration-300 hover:border-l-primary hover:border-r-primary/40 hover:-translate-y-1 hover:shadow-md active:scale-[0.99] block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500/20 to-teal-500/20 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+                        {it.photo_url ? (
+                          <img
+                            src={getOptimizedImageUrl(it.photo_url, 100, 60)}
+                            alt={it.title || "Foto laporan"}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <FileText className="w-6 h-6 text-primary" />
                         )}
                       </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                              {it.title || "(Tanpa judul)"}
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                              <span className="line-clamp-1">
+                                {locationLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <SeverityBadge severity={it.severity} />
+                            <StatusBadge status={it.status} />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5 shrink-0" />
+                            <span>{createdLabel}</span>
+                          </div>
+                          {categoryLabel && (
+                            <Badge
+                              variant="outline"
+                              className="bg-white/5 text-xs capitalize border-white/10"
+                            >
+                              {categoryLabel}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </SystemGuard>
   );
 }

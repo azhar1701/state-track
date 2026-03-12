@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useReportDetail } from "./useReportDetail";
-import { ReportListItem, ReportStatus, ReportSeverity, ReportLogEntry } from "./types";
+import { ReportListItem, ReportSeverity, ReportLogEntry } from "./types";
 import { DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { formatDateTime, formatReportLocation, getOptimizedImageUrl } from "@/lib/formatters";
 import { useAuth } from "@/features/auth/useAuth";
-import { Loader2 } from "lucide-react";
+import { StatusBadge, SeverityBadge } from "@/components/common/ReportBadges";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AdminDetailProps {
   selectedReport: ReportListItem | null;
@@ -57,14 +58,7 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
     }
   };
 
-  const renderStatusBadge = (status: ReportStatus) => {
-    const variants = {
-      selesai: 'success',
-      diproses: 'info',
-      baru: 'warning'
-    } as const;
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
+  // Removed renderStatusBadge logic
 
   const summarizeLog = (log: ReportLogEntry) => {
     switch (log.action) {
@@ -96,19 +90,33 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
           <Input className="h-9 text-sm" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Masukkan judul laporan" />
         </div>
 
-        <div className="flex wrap gap-2 items-center pb-4 border-b">
-          <Badge variant="outline" className="text-xs px-2.5 py-1">{selectedReport.category || '-'}</Badge>
-          <select
-            className="h-8 px-3 rounded-md border bg-background text-xs font-medium transition-colors hover:bg-muted focus:ring-2 focus:ring-primary/20 outline-none"
-            value={editSeverity}
-            onChange={(e) => setEditSeverity(e.target.value as ReportSeverity | "")}
-          >
-            <option value="">Pilih Severity</option>
-            <option value="berat">🔴 Berat</option>
-            <option value="sedang">🟡 Sedang</option>
-            <option value="ringan">🟢 Ringan</option>
-          </select>
-          {renderStatusBadge(selectedReport.status)}
+        <div className="flex flex-wrap gap-2 items-center pb-5 border-b border-border/50">
+          <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-muted/50 border-border/50">
+            {selectedReport.category || '-'}
+          </Badge>
+          <div className="relative">
+            <select
+              className={`appearance-none h-8 pl-3 pr-8 rounded-full border bg-background text-xs font-bold transition-all hover:bg-muted focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer ${editSeverity ? 'text-transparent' : 'text-muted-foreground'}`}
+              value={editSeverity}
+              onChange={(e) => setEditSeverity(e.target.value as ReportSeverity | "")}
+            >
+              <option value="" className="text-foreground">Pilih Severity</option>
+              <option value="berat" className="text-foreground">Berat</option>
+              <option value="sedang" className="text-foreground">Sedang</option>
+              <option value="ringan" className="text-foreground">Ringan</option>
+            </select>
+            {editSeverity && (
+              <div className="absolute inset-y-0 left-0 pointer-events-none flex items-center pl-3">
+                 <SeverityBadge severity={editSeverity} className="border-none bg-transparent shadow-none p-0" />
+              </div>
+            )}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          <StatusBadge status={selectedReport.status} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,7 +146,11 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
         <div className="space-y-2 pb-4 border-b">
           <label className="text-xs font-medium text-muted-foreground">Dokumentasi Foto</label>
           {detailLoading ? (
-            <div className="flex justify-center p-4"><Loader2 className="animate-spin h-5 w-5 text-muted-foreground" /></div>
+            <div className="grid grid-cols-3 gap-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-lg" />
+              ))}
+            </div>
           ) : photos.length > 0 ? (
             <div className="grid grid-cols-3 gap-2">
               {photos.map((src, i) => (
@@ -169,7 +181,10 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Riwayat Perubahan</label>
           {logsLoading ? (
-            <div className="text-sm text-muted-foreground py-4 text-center">Memuat riwayat...</div>
+            <div className="space-y-2 py-2">
+              <Skeleton className="h-12 w-full rounded-md opacity-70" />
+              <Skeleton className="h-12 w-full rounded-md opacity-40" />
+            </div>
           ) : logs.length === 0 ? (
             <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md text-center">Belum ada perubahan</div>
           ) : (

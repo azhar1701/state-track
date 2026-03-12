@@ -5,8 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { ReportListItem, ReportStatus, ReportSeverity } from "./types";
+import { ReportListItem, ReportStatus } from "./types";
 import { formatDateTime, formatReportLocation } from "@/lib/formatters";
+import { SeverityBadge, StatusBadge } from "@/components/common/ReportBadges";
 
 interface AdminReportsTableProps {
   reports: ReportListItem[];
@@ -41,11 +42,6 @@ export const AdminReportsTable = ({
   setPageSize,
   totalFiltered,
 }: AdminReportsTableProps) => {
-  const renderSeverityBadge = (sev?: ReportSeverity | null) => {
-    if (!sev) return <span className="text-muted-foreground">-</span>;
-    const variant = sev === 'berat' ? 'destructive' : sev === 'sedang' ? 'secondary' : 'outline';
-    return <Badge variant={variant}>{sev}</Badge>;
-  };
 
   const shortLocation = (r: ReportListItem) =>
     formatReportLocation(r.location_name, r.desa, r.kecamatan);
@@ -105,9 +101,11 @@ export const AdminReportsTable = ({
                 </button>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="text-xs">{report.category}</Badge>
+                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-muted/50 border-border/50">
+                  {report.category}
+                </Badge>
               </TableCell>
-              <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
+              <TableCell><SeverityBadge severity={report.severity} /></TableCell>
               <TableCell className="max-w-[150px] truncate" title={shortLocation(report)}>
                 {shortLocation(report) || <span className="text-muted-foreground text-xs">-</span>}
               </TableCell>
@@ -118,20 +116,22 @@ export const AdminReportsTable = ({
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">{formatDateTime(report.created_at, false)}</TableCell>
               <TableCell className="text-right">
-                <Select
-                  value={report.status}
-                  onValueChange={(value) => onUpdateStatus(report.id, value as ReportStatus)}
-                  disabled={updatingId === report.id}
-                >
-                  <SelectTrigger className="w-[120px] h-8 ml-auto text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="baru">Baru</SelectItem>
-                    <SelectItem value="diproses">Diproses</SelectItem>
-                    <SelectItem value="selesai">Selesai</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex justify-end">
+                  <Select
+                    value={report.status}
+                    onValueChange={(value) => onUpdateStatus(report.id, value as ReportStatus)}
+                    disabled={updatingId === report.id}
+                  >
+                    <SelectTrigger className="w-[120px] h-8 bg-transparent border-none p-0 hover:bg-transparent shadow-none focus:ring-0">
+                      <StatusBadge status={report.status} className="w-full justify-between" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baru">Baru</SelectItem>
+                      <SelectItem value="diproses">Diproses</SelectItem>
+                      <SelectItem value="selesai">Selesai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </TableCell>
               <TableCell>
                 <Button

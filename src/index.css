@@ -353,11 +353,17 @@ All colors MUST be HSL.
     }
   }
 
+  /* Liquid Glass Design System Elevation Layers */
   .glass-surface {
-    /* @apply bg-card border-border shadow-sm; */
-    background-color: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    box-shadow: var(--shadow-sm);
+    @apply bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-soft;
+  }
+
+  .glass-floating {
+    @apply bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-float;
+  }
+
+  .glass-overlay {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/40 dark:border-white/30 shadow-lifted;
   }
 
   /* Modern shadow utilities */

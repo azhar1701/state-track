@@ -2,14 +2,14 @@ import { handleApiError } from "@/lib/api-errors";
 import { logger } from "@/lib/logger";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase, isSupabaseConfigured } from "@/services/client";
+import { supabase } from "@/services/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { User, Mail, Lock, Droplets, Waves, Shield, Phone } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/features/auth/useAuth";
+import { SystemGuard } from "@/components/common/SystemGuard";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Email tidak valid" }),
@@ -24,7 +24,6 @@ const Auth = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -41,11 +40,6 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSupabaseConfigured) {
-      toast.error("Supabase belum dikonfigurasi. Hubungi administrator.");
-      return;
-    }
-
     setLoading(true);
     try {
       const validation = authSchema.omit({ fullName: true, phone: true, nikNip: true }).safeParse(formData);
@@ -98,11 +92,6 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSupabaseConfigured) {
-      toast.error("Supabase belum dikonfigurasi. Hubungi administrator.");
-      return;
-    }
-
     setLoading(true);
     try {
       const validation = authSchema.safeParse(formData);
@@ -158,207 +147,191 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left Hero Section - Desktop Only */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-primary/80">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE0YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnpNNiAzNGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA2LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6TTM2IDM0YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/60 to-background/40" />
+    <SystemGuard>
+      <div className="min-h-screen bg-background flex">
+        {/* Left Hero Section - Desktop Only */}
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-primary/80">
+            <div 
+              className="absolute inset-0 opacity-10" 
+              style={{ 
+                backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                backgroundSize: '24px 24px' 
+              }} 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/60 to-background/40" />
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-center">
+            <div className="mb-8 p-6 bg-primary/10 backdrop-blur-sm rounded-3xl border border-primary/20 shadow-2xl">
+              <Waves className="w-20 h-20 text-primary-foreground/80" />
+            </div>
+            <h1 className="text-6xl font-bold text-primary-foreground mb-6 tracking-tight">SIPASDA</h1>
+            <p className="text-2xl text-primary-foreground/70 mb-8 max-w-md leading-relaxed font-light">
+              Sistem Informasi Pelaporan<br />Sumber Daya Air
+            </p>
+            <div className="flex items-center gap-4 text-primary-foreground/80 bg-primary-foreground/10 px-6 py-3 rounded-full border border-primary-foreground/20">
+              <Droplets className="w-5 h-5" />
+              <span className="text-sm font-medium">Pemantauan • Pelaporan • Pengelolaan</span>
+            </div>
+          </div>
         </div>
 
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-center">
-          <div className="mb-8 p-6 bg-primary/10 backdrop-blur-sm rounded-3xl border border-primary/20 shadow-2xl">
-            <Waves className="w-24 h-24 text-primary-foreground/80" />
-          </div>
-          <h1 className="text-6xl font-bold text-primary-foreground mb-6 tracking-tight">SIPASDA</h1>
-          <p className="text-2xl text-primary-foreground/70 mb-8 max-w-md leading-relaxed font-light">
-            Sistem Informasi Pelaporan<br />Sumber Daya Air
-          </p>
-          <div className="flex items-center gap-4 text-primary-foreground/80 bg-primary-foreground/10 px-6 py-3 rounded-full border border-primary-foreground/20">
-            <Droplets className="w-5 h-5" />
-            <span className="text-sm font-medium">Monitoring • Reporting • Management</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex flex-col items-center mb-8">
-            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 mb-4">
-              <Waves className="w-12 h-12 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">SIPASDA</h1>
-            <p className="text-sm text-muted-foreground mt-1">Sistem Informasi Pelaporan Sumber Daya Air</p>
-          </div>
-
-          {/* Form Container */}
-          <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border p-8 shadow-2xl">
-            {!isSupabaseConfigured && (
-              <div className="mb-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm">
-                Supabase belum dikonfigurasi. Tambahkan .env.local untuk mengaktifkan autentikasi.
+        {/* Right Form Section */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md">
+            {/* Mobile Logo */}
+            <div className="lg:hidden flex flex-col items-center mb-8">
+              <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 mb-4">
+                <Waves className="w-12 h-12 text-primary" />
               </div>
-            )}
-
-            {/* Toggle Buttons */}
-            <div className="flex gap-2 mb-8 p-1 bg-muted/50 rounded-lg">
-              <button
-                type="button"
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${isLogin
-                  ? "bg-primary text-primary-foreground shadow-lg"
-                  : "text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                Masuk
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${!isLogin
-                  ? "bg-primary text-primary-foreground shadow-lg"
-                  : "text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                Daftar
-              </button>
+              <h1 className="text-2xl font-bold text-foreground">SIPASDA</h1>
+              <p className="text-sm text-muted-foreground mt-1">Sistem Informasi Pelaporan Sumber Daya Air</p>
             </div>
 
-            {/* Form Title */}
-            <h2 className="text-2xl font-bold text-foreground mb-6">
-              {isLogin ? "Selamat Datang Kembali" : "Buat Akun Baru"}
-            </h2>
-
-            {/* Form */}
-            <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-5">
-              {!isLogin && (
-                <div>
-                  <label htmlFor="auth-fullname" className="block text-sm font-medium text-muted-foreground mb-2">Nama Lengkap</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
-                    <Input
-                      id="auth-fullname"
-                      type="text"
-                      placeholder="Nama lengkap Anda"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      required
-                      className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="auth-email" className="block text-sm font-medium text-muted-foreground mb-2">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
-                  <Input
-                    id="auth-email"
-                    type="email"
-                    placeholder="nama@email.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
-                  />
-                </div>
+            {/* Form Container */}
+            <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border p-8 shadow-2xl">
+              {/* Toggle Buttons */}
+              <div className="flex gap-2 mb-8 p-1 bg-muted/50 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(true)}
+                  className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${isLogin
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(false)}
+                  className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${!isLogin
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Daftar
+                </button>
               </div>
 
-              <div>
-                <label htmlFor="auth-password" className="block text-sm font-medium text-muted-foreground mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
-                  <Input
-                    id="auth-password"
-                    type="password"
-                    placeholder={isLogin ? "••••••••" : "Minimal 6 karakter"}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
-                  />
+              {/* Form Title */}
+              <h2 className="text-2xl font-bold text-foreground mb-6">
+                {isLogin ? "Selamat Datang Kembali" : "Buat Akun Baru"}
+              </h2>
+
+              {/* Form */}
+              <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-5">
+                {!isLogin && (
+                  <div>
+                    <label htmlFor="auth-fullname" className="block text-sm font-medium text-muted-foreground mb-2">Nama Lengkap</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+                      <Input
+                        id="auth-fullname"
+                        type="text"
+                        placeholder="Nama lengkap Anda"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        required
+                        className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="auth-email" className="block text-sm font-medium text-muted-foreground mb-2">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+                    <Input
+                      id="auth-email"
+                      type="email"
+                      placeholder="nama@email.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                      className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
+                    />
+                  </div>
                 </div>
+
+                <div>
+                  <label htmlFor="auth-password" className="block text-sm font-medium text-muted-foreground mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+                    <Input
+                      id="auth-password"
+                      type="password"
+                      placeholder={isLogin ? "••••••••" : "Minimal 6 karakter"}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
+                    />
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <div>
+                    <label htmlFor="auth-phone" className="block text-sm font-medium text-muted-foreground mb-2">Nomor Telepon</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+                      <Input
+                        id="auth-phone"
+                        type="tel"
+                        placeholder="08123456789"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        required
+                        className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {!isLogin && (
+                  <div>
+                    <label htmlFor="auth-niknip" className="block text-sm font-medium text-muted-foreground mb-2">NIK/NIP</label>
+                    <div className="relative">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+                      <Input
+                        id="auth-niknip"
+                        type="text"
+                        placeholder="Nomor Induk Kependudukan/Pegawai"
+                        value={formData.nikNip}
+                        onChange={(e) => setFormData({ ...formData, nikNip: e.target.value })}
+                        required
+                        className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
+                      />
+                    </div>
+                  </div>
+                )}
+
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-medium shadow-lg shadow-primary/20 transition-all"
+                >
+                  {loading ? "Memproses..." : isLogin ? "Masuk" : "Daftar Sekarang"}
+                </Button>
+              </form>
+
+              {/* Footer Info */}
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg flex items-start gap-3 border border-border/50">
+                <Shield className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isLogin
+                    ? "Data Anda aman dan terenkripsi. Gunakan kredensial resmi untuk mengakses sistem."
+                    : "User pertama yang mendaftar otomatis menjadi admin. Data Anda aman dan terenkripsi."}
+                </p>
               </div>
-
-              {!isLogin && (
-                <div>
-                  <label htmlFor="auth-phone" className="block text-sm font-medium text-muted-foreground mb-2">Nomor Telepon</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
-                    <Input
-                      id="auth-phone"
-                      type="tel"
-                      placeholder="08123456789"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                      className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!isLogin && (
-                <div>
-                  <label htmlFor="auth-niknip" className="block text-sm font-medium text-muted-foreground mb-2">NIK/NIP</label>
-                  <div className="relative">
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
-                    <Input
-                      id="auth-niknip"
-                      type="text"
-                      placeholder="Nomor Induk Kependudukan/Pegawai"
-                      value={formData.nikNip}
-                      onChange={(e) => setFormData({ ...formData, nikNip: e.target.value })}
-                      required
-                      className="pl-11 bg-muted border-border text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring h-12"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {isLogin && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="remember"
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                      className="border-border data-[state=checked]:bg-primary"
-                    />
-                    <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                      Ingat saya
-                    </label>
-                  </div>
-                  <button type="button" className="text-sm text-primary hover:text-primary/80 transition-colors">
-                    Lupa password?
-                  </button>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-medium shadow-lg shadow-primary/20 transition-all"
-              >
-                {loading ? "Memproses..." : isLogin ? "Masuk" : "Daftar Sekarang"}
-              </Button>
-            </form>
-
-            {/* Footer Info */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg flex items-start gap-3 border border-border/50">
-              <Shield className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {isLogin
-                  ? "Data Anda aman dan terenkripsi. Gunakan kredensial resmi untuk mengakses sistem."
-                  : "User pertama yang mendaftar otomatis menjadi admin. Data Anda aman dan terenkripsi."}
-              </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </SystemGuard>
   );
 };
 

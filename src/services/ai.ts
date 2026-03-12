@@ -1,4 +1,5 @@
 import { supabase } from '@/services/client';
+import { Database } from './types';
 import { logger } from '@/lib/logger';
 
 export type AISuggestion = {
@@ -22,14 +23,21 @@ const CATEGORY_WEIGHTS = {
   lainnya: 1,
 };
 
-export function calculatePriorityScore(category: string, severity: string): number {
-  const sWeight = SEVERITY_WEIGHTS[severity as keyof typeof SEVERITY_WEIGHTS] || 1;
-  const cWeight = CATEGORY_WEIGHTS[category as keyof typeof CATEGORY_WEIGHTS] || 1;
-  
-  // Max score is 3 * 3 = 9, but we want 1-10. 
-  // Let's use (sWeight * cWeight) and cap/scale if needed.
-  // Actually, the prompt says 1-10. 
-  // (3 * 3) = 9. We can just use that or add 1.
+/**
+ * Calculates priority score based on severity and category weights.
+ * @param category - The infrastructure category
+ * @param severity - The reported severity level
+ * @returns Priority score from 1-9 (higher is more urgent)
+ */
+export function calculatePriorityScore(
+  category: Database['public']['Enums']['report_category'],
+  severity: Database['public']['Enums']['report_severity']
+): number {
+  const sWeight = SEVERITY_WEIGHTS[severity] || 1;
+  const cWeight = CATEGORY_WEIGHTS[category] || 1;
+
+  // Final score is a product of severity and category weights.
+  // Results in a scale of 1-9, capped at 10 for safety.
   return Math.min(10, sWeight * cWeight);
 }
 

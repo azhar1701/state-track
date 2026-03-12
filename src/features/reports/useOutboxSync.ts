@@ -11,6 +11,7 @@ import {
   type ReportOutboxPayload 
 } from '@/features/reports/outbox';
 import { calculatePriorityScore } from '@/services/ai';
+import type { Database } from '@/services/types';
 import { logger } from '@/lib/logger';
 
 const MAX_RETRIES = 5;
@@ -73,7 +74,10 @@ async function submitSingleRobust(out: OutboxReport, userId: string) {
     phone: payload.phone,
     kecamatan: payload.kecamatan,
     desa: payload.desa,
-    priority_score: calculatePriorityScore(payload.category, payload.severity),
+    priority_score: calculatePriorityScore(
+      payload.category as Database["public"]["Enums"]["report_category"], 
+      payload.severity as Database["public"]["Enums"]["report_severity"]
+    ),
   };
   
   const fullPayload = { 
@@ -82,7 +86,7 @@ async function submitSingleRobust(out: OutboxReport, userId: string) {
   } as typeof basePayload & { location_name?: string | null };
 
   // 3. Submit to database
-  let { error } = await supabase.from('reports').insert(fullPayload);
+  const { error } = await supabase.from('reports').insert(fullPayload);
   
   if (error) {
     // Basic schema error retry logic

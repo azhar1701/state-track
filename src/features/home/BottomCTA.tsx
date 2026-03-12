@@ -11,9 +11,9 @@ export default function BottomCTA() {
         <div className="absolute bottom-0 left-0 w-40 h-40 md:w-64 md:h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">Siap berkontribusi?</h2>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">Mulai Pelaporan Sekarang</h2>
           <p className="text-base md:text-lg lg:text-xl text-white/90 mt-3 md:mt-4 max-w-2xl mx-auto leading-relaxed">
-            Laporkan masalah infrastruktur di sekitar Anda atau lihat peta untuk memantau progres perbaikan.
+            Bantu kami memantau dan memelihara infrastruktur sumber daya air. Laporan Anda sangat berarti bagi masyarakat.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center mt-6 md:mt-8">
             <Link to="/report">
@@ -22,8 +22,8 @@ export default function BottomCTA() {
               </Button>
             </Link>
             <Link to="/map">
-              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto border-2 border-white bg-white text-primary hover:bg-white/90 rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
-                <MapIcon className="w-5 h-5" /> Lihat Peta
+              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto border-white/40 bg-transparent text-white hover:bg-white/10 backdrop-blur-md rounded-xl py-5 md:py-6 px-6 md:px-8 text-sm md:text-base font-semibold hover:scale-105 transition-all">
+                <MapIcon className="w-5 h-5" /> Pantau Progress
               </Button>
             </Link>
           </div>

@@ -13,8 +13,6 @@ const Footer = () => {
 
   const helpLinks = [
     { label: "Panduan", href: "/help" },
-    { label: "Kebijakan Privasi" },
-    { label: "Syarat Layanan" },
   ];
 
   return (

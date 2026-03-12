@@ -45,7 +45,7 @@ export const AdminFilters = ({
 
   return (
     <>
-      <Card className="mb-4 bg-card border-border shadow-sm">
+      <Card variant="glass-surface" className="mb-4 overflow-hidden">
         <CardContent className="pt-3 md:pt-4 pb-3 md:pb-4 px-3 md:px-4">
           <div className="space-y-3 md:space-y-4">
             <div>
@@ -121,27 +121,51 @@ export const AdminFilters = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground">Filter aktif:</span>
             {statusFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-xs">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-primary/10 text-primary border-primary/20">
                 {statusFilter}
-                <button onClick={() => setStatusFilter('semua')} aria-label="Hapus filter status"><X className="w-3 h-3" /></button>
+                <button 
+                  onClick={() => setStatusFilter('semua')} 
+                  aria-label="Hapus filter status"
+                  className="p-0.5 hover:bg-primary/20 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
             )}
             {severityFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-xs">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-amber-500/10 text-amber-500 border-amber-500/20">
                 {severityFilter}
-                <button onClick={() => setSeverityFilter('semua')} aria-label="Hapus filter severity"><X className="w-3 h-3" /></button>
+                <button 
+                  onClick={() => setSeverityFilter('semua')} 
+                  aria-label="Hapus filter severity"
+                  className="p-0.5 hover:bg-amber-500/20 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
             )}
             {categoryFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-xs">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-muted/50 border-border/50">
                 {categoryFilter}
-                <button onClick={() => setCategoryFilter('semua')} aria-label="Hapus filter kategori"><X className="w-3 h-3" /></button>
+                <button 
+                  onClick={() => setCategoryFilter('semua')} 
+                  aria-label="Hapus filter kategori"
+                  className="p-0.5 hover:bg-muted-foreground/20 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
             )}
             {search.length > 0 && (
-              <Badge variant="secondary" className="gap-1.5 text-xs">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-muted/50 border-border/50">
                 "{search}"
-                <button onClick={() => setSearch('')} aria-label="Hapus filter pencarian"><X className="w-3 h-3" /></button>
+                <button 
+                  onClick={() => setSearch('')} 
+                  aria-label="Hapus filter pencarian"
+                  className="p-0.5 hover:bg-muted-foreground/20 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
             )}
             <Button size="sm" variant="ghost" onClick={resetFilters} className="h-7 text-xs ml-auto">Reset Filter</Button>

@@ -279,7 +279,10 @@ export const useReportFormState = () => {
         photo_url: photoUrls[0] || null,
         photo_urls: photoUrls.length > 0 ? photoUrls : null,
         status: "baru" as const,
-        priority_score: calculatePriorityScore(formData.category, formData.severity)
+        priority_score: calculatePriorityScore(
+          formData.category as Database["public"]["Enums"]["report_category"], 
+          formData.severity as Database["public"]["Enums"]["report_severity"]
+        )
       };
 
       logger.info("🚀 Submitting report to Supabase...");

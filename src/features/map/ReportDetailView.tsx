@@ -4,6 +4,7 @@ import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { StatusBadge, SeverityBadge } from '@/components/common/ReportBadges';
 import { format } from 'date-fns';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import Lightbox from 'yet-another-react-lightbox';
@@ -48,42 +49,6 @@ interface ReportDetailViewProps {
  onRoute?: () => void;
  isAdmin?: boolean;
 }
-
-const statusConfig = {
- baru: {
- badge: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-200/50 dark:border-amber-500/30',
- label: 'Baru',
- icon: '◆',
- },
- diproses: {
- badge: 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 border border-primary/30 dark:border-primary/30',
- label: 'Diproses',
- icon: '⟳',
- },
- selesai: {
- badge: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-500/30',
- label: 'Selesai',
- icon: '✓',
- },
-} as const;
-
-const severityConfig = {
- ringan: {
- badge: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-500/30',
- icon: '◆',
- label: 'Ringan',
- },
- sedang: {
- badge: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-200/50 dark:border-amber-500/30',
- icon: '⬟',
- label: 'Sedang',
- },
- berat: {
- badge: 'bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-300 border border-red-200/50 dark:border-red-500/30',
- icon: '⚠',
- label: 'Berat',
- },
-} as const;
 
 const categoryLabels: Record<string, string> = {
  irigasi: 'Irigasi',
@@ -161,8 +126,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
  }
  };
 
- const statusConf = statusConfig[report.status as keyof typeof statusConfig];
- const severityConf = report.severity ? severityConfig[report.severity] : null;
+  // Removed legacy conf logic
 
  return (
  <>
@@ -184,9 +148,9 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
  style={{ opacity }}
  className={cn(
- 'fixed z-[1401] bg-popover/95 border-border shadow-lg flex flex-col',
- 'lg:top-0 lg:right-0 lg:h-full lg:w-[420px]',
- 'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:h-[90vh]'
+ 'fixed z-[1401] bg-popover/90 backdrop-blur-xl border-border shadow-2xl flex flex-col glass-floating',
+ 'lg:top-0 lg:right-0 lg:h-full lg:w-[420px] lg:border-l lg:rounded-none',
+ 'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-[2.5rem] max-lg:h-[90vh]'
  )}
  >
  {/* Mobile Drag Handle */}
@@ -241,26 +205,13 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
  </div>
 
  {/* Badges */}
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- transition={{ delay: 0.2 }}
- className="flex flex-wrap items-center gap-2"
- >
- {statusConf && (
- <Badge className={`text-xs px-3 py-1 ${statusConf.badge} font-medium border`}>
- {statusConf.icon} {statusConf.label}
- </Badge>
- )}
- {severityConf && (
- <Badge className={`text-xs px-3 py-1 ${severityConf.badge} font-medium border`}>
- {severityConf.icon} {severityConf.label}
- </Badge>
- )}
- <Badge variant="secondary" className="text-xs px-3 py-1 border border-border/50 dark:border-border/50">
+ <div className="flex flex-wrap items-center gap-2">
+ <StatusBadge status={report.status} />
+ <SeverityBadge severity={report.severity} />
+ <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 bg-white/10 dark:bg-white/5 border-white/20 dark:border-white/10">
  {categoryLabels[report.category] || report.category}
  </Badge>
- </motion.div>
+ </div>
  </motion.div>
 
  {/* Image Carousel with Embla */}
@@ -368,14 +319,14 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
  color="purple"
  />
 
- {report.severity && (
- <InfoCard
- icon={<AlertCircle className="w-4 h-4" />}
- label="Tingkat Keparahan"
- value={severityConf?.label}
- color={report.severity === 'ringan' ? 'emerald' : report.severity === 'sedang' ? 'amber' : 'red'}
- />
- )}
+  {report.severity && (
+  <InfoCard
+  icon={<AlertCircle className="w-4 h-4" />}
+  label="Tingkat Keparahan"
+  value={<SeverityBadge severity={report.severity} />}
+  color={report.severity === 'ringan' ? 'emerald' : report.severity === 'sedang' ? 'amber' : 'red'}
+  />
+  )}
  </motion.div>
 
  {/* Reporter Information */}
