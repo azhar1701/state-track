@@ -75,7 +75,6 @@ export const useReportFormState = () => {
   // Photos
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Location
   const [location, setLocation] = useState<LocationData | null>(null);
@@ -90,7 +89,6 @@ export const useReportFormState = () => {
   // Status
   const [loading, setLoading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
-  const [isDeduplicating, setIsDeduplicating] = useState(false);
 
   // Load Categories
   useEffect(() => {
@@ -170,9 +168,6 @@ export const useReportFormState = () => {
 
       setPhotoFiles(prev => [...prev, ...compressed]);
       setPhotoPreviews(prev => [...prev, ...previews]);
-
-      // Auto-trigger AI if first photo
-      if (compressed.length > 0 && photoFiles.length === 0) void runAIAnalysis(compressed[0]);
     } catch (err) {
       logger.error("Photo processing failed", err);
       toast.error("Gagal memproses foto");
@@ -184,15 +179,6 @@ export const useReportFormState = () => {
   const removePhoto = (idx: number) => {
     setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const runAIAnalysis = async (file: File) => {
-    setIsAnalyzing(true);
-    try {
-      await new Promise(r => setTimeout(r, 2000)); // Mock delay
-    } finally {
-      setIsAnalyzing(false);
-    }
   };
 
   const handleMapClick = async (lat: number, lng: number) => {
@@ -221,10 +207,6 @@ export const useReportFormState = () => {
 
   const handleSubmit = async () => {
     if (!user || !location) return;
-
-    setIsDeduplicating(true);
-    await new Promise(r => setTimeout(r, 2500)); // Fake AI checking
-    setIsDeduplicating(false);
 
     setLoading(true);
     setUploadPercent(10);
@@ -355,10 +337,10 @@ export const useReportFormState = () => {
   return {
     currentStep, setCurrentStep, totalSteps,
     formData, setFormData, errors, saveStatus,
-    photoFiles, photoPreviews, handlePhotoChange, removePhoto, isAnalyzing, runAIAnalysis,
+    photoFiles, photoPreviews, handlePhotoChange, removePhoto,
     location, setLocation, handleMapClick, getUserLocation,
     categories, kecamatanList, desaList, selectedKecamatanId, handleKecamatanChange, selectedDesaId, handleDesaChange,
     loading, uploadPercent, handleSubmit,
-    isDeduplicating, setIsDeduplicating
   };
 };
+

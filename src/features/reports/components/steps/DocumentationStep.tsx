@@ -25,7 +25,7 @@ export const DocumentationStep = ({
     <div className="space-y-6 fade-in">
       <div className="space-y-4">
         <Label className="text-sm font-semibold">Dokumentasi Foto (Opsional)</Label>
-        
+
         <div className="flex flex-wrap gap-3">
           <Button
             type="button"
@@ -36,7 +36,7 @@ export const DocumentationStep = ({
             <Camera className="w-6 h-6" />
             <span className="text-xs">Ambil Foto</span>
           </Button>
-          
+
           <div className="flex-1 relative">
             <Input
               id="photo-upload"
@@ -80,7 +80,7 @@ export const DocumentationStep = ({
         )}
 
         <p className="text-xs text-muted-foreground text-center">
-          Maksimal 10 foto. Gunakan foto yang jelas untuk mempermudah analisis AI.
+          Maksimal 10 foto. Gunakan foto yang jelas untuk mempermudah verifikasi.
         </p>
       </div>
 

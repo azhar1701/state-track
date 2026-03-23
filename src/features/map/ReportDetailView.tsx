@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getOptimizedImageUrl } from '@/lib/formatters';
-import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone, Sparkles, Wand2, FileText } from 'lucide-react';
+import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import useEmblaCarousel from 'embla-carousel-react';
-import { AISpinner } from '@/components/ui/ai-spinner';
+
 
 interface Report {
     id: string;
@@ -101,17 +101,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
     const opacity = useTransform(y, [0, 100], [1, 0.5]);
     const constraintsRef = useRef(null);
 
-    // AI Mock States
-    const [isVisionScanning, setIsVisionScanning] = useState(false);
-    const [visionResult, setVisionResult] = useState<string | null>(null);
 
-    const handleVisionAnalysis = () => {
-        setIsVisionScanning(true);
-        setTimeout(() => {
-            setIsVisionScanning(false);
-            setVisionResult(`Damage Probability: ${Math.floor(Math.random() * 20 + 80)}% | Type: Neural Decay Anomaly`);
-        }, 2500);
-    };
 
     const photos = (report.photo_urls && report.photo_urls.length > 0)
         ? report.photo_urls
@@ -257,41 +247,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                                                     <ZoomIn className="h-5 w-5" />
                                                 </motion.button>
 
-                                                {/* AI Vision Enhancement Button (Slop) */}
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleVisionAnalysis();
-                                                    }}
-                                                    disabled={isVisionScanning || !!visionResult}
-                                                    className="absolute top-3 left-3 bg-gradient-to-r from-purple-600/80 to-indigo-600/80 hover:from-purple-600 hover:to-indigo-600 text-white rounded-full px-3 py-1.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-purple-400/30"
-                                                >
-                                                    {isVisionScanning ? (
-                                                        <AISpinner size={14} />
-                                                    ) : (
-                                                        <>
-                                                            <Wand2 className="h-3.5 w-3.5" />
-                                                            <span className="text-xs font-semibold">AI Enhance</span>
-                                                        </>
-                                                    )}
-                                                </motion.button>
 
-                                                {/* Vision Analysis Result Overlay */}
-                                                {visionResult && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        className="absolute bottom-12 left-1/2 -translate-x-1/2 w-[90%] bg-black/80 backdrop-blur-md border border-purple-500/50 rounded-lg p-3 text-center pointer-events-none"
-                                                    >
-                                                        <div className="flex items-center justify-center gap-2 mb-1">
-                                                            <Sparkles className="h-4 w-4 text-purple-400" />
-                                                            <span className="text-xs font-bold text-purple-300 uppercase tracking-widest">Vision Analysis Complete</span>
-                                                        </div>
-                                                        <p className="text-sm font-medium text-white">{visionResult}</p>
-                                                    </motion.div>
-                                                )}
                                             </div>
                                         </div>
                                     ))}
