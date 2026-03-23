@@ -17,7 +17,7 @@ const DRAFT_KEY = "report_draft";
 export const useReportFormState = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // Step Management
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
@@ -79,7 +79,7 @@ export const useReportFormState = () => {
 
   // Location
   const [location, setLocation] = useState<LocationData | null>(null);
-  
+
   // Master Data
   const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
   const [kecamatanList, setKecamatanList] = useState<Array<{ id: string; name: string }>>([]);
@@ -90,6 +90,7 @@ export const useReportFormState = () => {
   // Status
   const [loading, setLoading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [isDeduplicating, setIsDeduplicating] = useState(false);
 
   // Load Categories
   useEffect(() => {
@@ -141,9 +142,9 @@ export const useReportFormState = () => {
     if (desa) setFormData(prev => ({ ...prev, desa: desa.name }));
   };
 
-  const desaList = useMemo(() => 
+  const desaList = useMemo(() =>
     allDesaList.filter(d => d.kecamatan_id === selectedKecamatanId),
-  [allDesaList, selectedKecamatanId]);
+    [allDesaList, selectedKecamatanId]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement> | File) => {
     let files: File[] = [];
@@ -152,7 +153,7 @@ export const useReportFormState = () => {
     } else {
       files = Array.from(e.target.files || []).slice(0, 10);
     }
-    
+
     if (!files.length) return;
 
     setLoading(true);
@@ -169,7 +170,7 @@ export const useReportFormState = () => {
 
       setPhotoFiles(prev => [...prev, ...compressed]);
       setPhotoPreviews(prev => [...prev, ...previews]);
-      
+
       // Auto-trigger AI if first photo
       if (compressed.length > 0 && photoFiles.length === 0) void runAIAnalysis(compressed[0]);
     } catch (err) {
@@ -199,7 +200,7 @@ export const useReportFormState = () => {
     try {
       const res = await reverseGeocode(lat, lng);
       if (res) setLocation(prev => ({ ...prev!, name: formatAddress(res) }));
-    } catch {}
+    } catch { }
   };
 
   const getUserLocation = () => {
@@ -220,7 +221,11 @@ export const useReportFormState = () => {
 
   const handleSubmit = async () => {
     if (!user || !location) return;
-    
+
+    setIsDeduplicating(true);
+    await new Promise(r => setTimeout(r, 2500)); // Fake AI checking
+    setIsDeduplicating(false);
+
     setLoading(true);
     setUploadPercent(10);
 
@@ -248,7 +253,7 @@ export const useReportFormState = () => {
         const { error: uploadError } = await supabase.storage
           .from("report-photos")
           .upload(fileName, file);
-        
+
         if (!uploadError) {
           const { data } = supabase.storage.from("report-photos").getPublicUrl(fileName);
           photoUrls.push(data.publicUrl);
@@ -280,7 +285,7 @@ export const useReportFormState = () => {
         photo_urls: photoUrls.length > 0 ? photoUrls : null,
         status: "baru" as const,
         priority_score: calculatePriorityScore(
-          formData.category as Database["public"]["Enums"]["report_category"], 
+          formData.category as Database["public"]["Enums"]["report_category"],
           formData.severity as Database["public"]["Enums"]["report_severity"]
         )
       };
@@ -294,7 +299,7 @@ export const useReportFormState = () => {
         submissionResult = await (supabase.from("reports") as any)
           .insert(insertPayload)
           .select("id");
-        
+
         if (submissionResult.error && submissionResult.error.message?.includes('priority_score')) {
           logger.warn("⚠️ priority_score column missing, falling back to safe insert");
           const { priority_score, ...safePayload } = insertPayload;
@@ -311,28 +316,28 @@ export const useReportFormState = () => {
 
       if (error) {
         logger.error("❌ Supabase insert error:", error);
-        
+
         // Return the actual database error message so the user knows exactly what is wrong
         const dbMessage = error.message || "";
-        
+
         if (error.code === '23505') throw new Error("Laporan dengan judul ini sudah ada di lokasi tersebut.");
         if (dbMessage.includes('custom_categories')) {
           throw new Error(`Database error: Kategori '${formData.category}' belum diaktifkan di tabel custom_categories.`);
         }
-        
+
         throw new Error(dbMessage || "Gagal menyimpan data ke database");
       }
 
       const insertedId = insertedRows?.[0]?.id;
 
       setUploadPercent(100);
-      confetti({ 
-        particleCount: 150, 
-        spread: 70, 
+      confetti({
+        particleCount: 150,
+        spread: 70,
         origin: { y: 0.6 },
         colors: ['#3b82f6', '#10b981', '#f59e0b']
       });
-      
+
       localStorage.removeItem(DRAFT_KEY);
       // Wait slightly for animation
       setTimeout(() => navigate(`/report/success${insertedId ? `?id=${insertedId}` : ''}`), 1000);
@@ -353,6 +358,7 @@ export const useReportFormState = () => {
     photoFiles, photoPreviews, handlePhotoChange, removePhoto, isAnalyzing, runAIAnalysis,
     location, setLocation, handleMapClick, getUserLocation,
     categories, kecamatanList, desaList, selectedKecamatanId, handleKecamatanChange, selectedDesaId, handleDesaChange,
-    loading, uploadPercent, handleSubmit
+    loading, uploadPercent, handleSubmit,
+    isDeduplicating, setIsDeduplicating
   };
 };

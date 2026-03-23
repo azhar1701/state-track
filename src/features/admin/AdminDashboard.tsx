@@ -154,8 +154,10 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-4 md:py-6">
       <div className="container px-3 md:px-4">
         <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold mb-1">Dashboard Admin</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">Dashboard Admin</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => onChangeTab(v as AdminTab)}>

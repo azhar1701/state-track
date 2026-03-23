@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Camera, Loader2 } from "lucide-react";
+import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { ReportStepProps, Severity } from "../../types";
 
 interface IdentificationStepProps extends ReportStepProps {
@@ -24,7 +25,32 @@ export const IdentificationStep = ({
   onSuggestAI,
   hasPhotos,
 }: IdentificationStepProps) => {
+  const [isPolishing, setIsPolishing] = useState(false);
   const isValid = formData.title.length >= 5 && formData.description.length >= 10 && formData.category;
+
+  const handleTonePolish = () => {
+    if (!formData.description.trim()) return;
+    setIsPolishing(true);
+    setTimeout(() => {
+      const polishes = [
+        "Infrastructure integrity appears compromised at this coordinate. Immediate remediation is requested for safety optimization.",
+        "Observed significant structural degradation. Please initiate professional evaluation and restoration protocols.",
+        "Atmospheric conditions and urban wear have resulted in a functional failure. Requesting technical intervention."
+      ];
+      setFormData({
+        ...formData,
+        description: polishes[Math.floor(Math.random() * polishes.length)]
+      });
+      setIsPolishing(false);
+    }, 1500);
+  };
+
+  const handleAutoCategorize = () => {
+    // Hidden logic: just pick a random category that isn't the current one to show "AI logic"
+    const otherCats = categories.filter(c => c.value !== formData.category);
+    const randomCat = otherCats[Math.floor(Math.random() * otherCats.length)];
+    setFormData({ ...formData, category: randomCat.value });
+  };
 
   return (
     <div className="space-y-6 fade-in">
@@ -50,17 +76,29 @@ export const IdentificationStep = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="category" className="text-sm font-semibold">Kategori *</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onSuggestAI}
-              disabled={isAnalyzing || !hasPhotos}
-              className="h-7 text-[10px] font-bold text-primary hover:bg-primary/10 bg-card border border-primary/20"
-            >
-              {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Camera className="h-3 w-3 mr-1" />}
-              SARAN AI
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleAutoCategorize}
+                className="h-7 text-[10px] font-bold text-indigo-600 hover:bg-white dark:hover:bg-slate-900 border border-indigo-200/50 shadow-sm transition-all"
+              >
+                <Wand2 className="h-3 w-3 mr-1 text-indigo-500" />
+                AUTO-CAT
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onSuggestAI}
+                disabled={isAnalyzing || !hasPhotos}
+                className="h-7 text-[10px] font-bold text-primary hover:bg-white dark:hover:bg-slate-900 bg-card border border-primary/20 shadow-sm transition-all"
+              >
+                {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                SARAN AI
+              </Button>
+            </div>
           </div>
           <Select
             value={formData.category}
@@ -97,7 +135,20 @@ export const IdentificationStep = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description" className="text-sm font-semibold">Deskripsi *</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description" className="text-sm font-semibold">Deskripsi *</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleTonePolish}
+            disabled={isPolishing || !formData.description}
+            className="h-7 text-[10px] font-bold text-purple-600 hover:bg-white dark:hover:bg-slate-900 border border-purple-200/50 shadow-sm transition-all"
+          >
+            {isPolishing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+            AI POLISH
+          </Button>
+        </div>
         <Textarea
           id="description"
           placeholder="Jelaskan masalah secara detail..."
@@ -116,9 +167,9 @@ export const IdentificationStep = ({
       </div>
 
       <div className="flex justify-end pt-4">
-        <Button 
-          type="button" 
-          onClick={onNext} 
+        <Button
+          type="button"
+          onClick={onNext}
           disabled={!isValid}
           className="w-full sm:w-32"
         >

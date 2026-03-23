@@ -9,11 +9,11 @@ const cardVariants = cva(
     variants: {
       variant: {
         default: "bg-card text-card-foreground shadow-soft",
-        glass: "bg-popover/95 backdrop-blur-md shadow-lg",
-        "glass-surface": "glass-surface",
-        "glass-floating": "glass-floating",
-        "glass-overlay": "glass-overlay",
-        interactive: "bg-popover/95 backdrop-blur-md shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] cursor-pointer",
+        glass: "bg-card shadow-lg",
+        "glass-surface": "soft-surface",
+        "glass-floating": "soft-floating",
+        "glass-overlay": "soft-overlay",
+        interactive: "bg-card shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] cursor-pointer",
         outline: "bg-transparent shadow-none",
       },
       padding: {

@@ -90,7 +90,7 @@ const Navbar = memo(() => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-xl border-b border-border">
+    <nav className="sticky top-0 z-50 w-full bg-background border-b border-border shadow-sm">
       <div className="container flex h-14 items-center px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 mr-8 group">
@@ -127,8 +127,8 @@ const Navbar = memo(() => {
                   )}
                   <div
                     className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${link.active
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                       }`}
                   >
                     <Icon className="h-4 w-4" />

@@ -9,6 +9,7 @@ All colors MUST be HSL.
 */
 
 @layer utilities {
+
   /* Fluid Padding */
   .p-fluid {
     padding: clamp(1rem, 2vw, 2rem);
@@ -44,10 +45,8 @@ All colors MUST be HSL.
 
   /* Radial Gradient Background */
   .bg-gradient-radial {
-    background-image: radial-gradient(
-      circle at top center,
-      var(--tw-gradient-stops)
-    );
+    background-image: radial-gradient(circle at top center,
+        var(--tw-gradient-stops));
   }
 }
 
@@ -111,11 +110,9 @@ All colors MUST be HSL.
     --ring: 45 100% 50%;
     /* Gold ring for focus */
 
-    --gradient-hero: linear-gradient(
-      135deg,
-      hsl(216 100% 35%),
-      hsl(216 100% 45%)
-    );
+    --gradient-hero: linear-gradient(135deg,
+        hsl(216 100% 35%),
+        hsl(216 100% 45%));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -239,16 +236,12 @@ All colors MUST be HSL.
     --ring: 45 100% 50%;
     /* Gold ring */
 
-    --gradient-hero: linear-gradient(
-      135deg,
-      hsl(216 100% 45%),
-      hsl(216 100% 55%)
-    );
-    --gradient-card: linear-gradient(
-      180deg,
-      hsl(222 47% 11%),
-      hsl(222 47% 13%)
-    );
+    --gradient-hero: linear-gradient(135deg,
+        hsl(216 100% 45%),
+        hsl(216 100% 55%));
+    --gradient-card: linear-gradient(180deg,
+        hsl(222 47% 11%),
+        hsl(222 47% 13%));
 
     /* Premium Deep Navy Background */
     --background: 224 71% 4%;
@@ -306,6 +299,7 @@ All colors MUST be HSL.
 }
 
 @layer components {
+
   /* Icon size utilities ensure consistent icon dimensions */
   .icon-xs {
     width: 0.75rem;
@@ -353,17 +347,30 @@ All colors MUST be HSL.
     }
   }
 
-  /* Liquid Glass Design System Elevation Layers */
+  /* Soft UI Evolution Design System Elevation Layers */
+  .soft-surface {
+    @apply bg-card border border-border/50 shadow-soft rounded-2xl;
+  }
+
+  .soft-floating {
+    @apply bg-card border border-border/80 shadow-float rounded-3xl;
+  }
+
+  .soft-overlay {
+    @apply bg-popover border border-border shadow-lifted rounded-[2rem];
+  }
+
+  /* Maintain backward compatibility for glass- class names but implement with Soft UI */
   .glass-surface {
-    @apply bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-soft;
+    @apply soft-surface;
   }
 
   .glass-floating {
-    @apply bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-float;
+    @apply soft-floating;
   }
 
   .glass-overlay {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/40 dark:border-white/30 shadow-lifted;
+    @apply soft-overlay;
   }
 
   /* Modern shadow utilities */
@@ -423,49 +430,36 @@ All colors MUST be HSL.
 /* Leaflet Glassmorphism Controls */
 .leaflet-control-zoom,
 .leaflet-bar {
-  border: none !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-  border-radius: 1rem !important;
+  background: hsl(var(--card)) !important;
+  box-shadow: var(--shadow-float) !important;
+  border-radius: 1.25rem !important;
   overflow: hidden;
-  backdrop-filter: blur(16px) !important;
+  border: 1px solid hsl(var(--border) / 0.5) !important;
 }
 
 .leaflet-control-zoom a,
 .leaflet-bar a {
-  background: rgba(255, 255, 255, 0.15) !important;
-  backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  background: hsl(var(--card)) !important;
+  border: none !important;
+  border-bottom: 1px solid hsl(var(--border) / 0.3) !important;
   color: hsl(var(--primary)) !important;
   font-weight: 600 !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  width: 36px !important;
-  height: 36px !important;
-  line-height: 34px !important;
-}
-
-.leaflet-control-zoom a:hover,
-.leaflet-bar a:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
-  transform: scale(1.05);
-}
-
-.leaflet-control-zoom a:active,
-.leaflet-bar a:active {
-  transform: scale(0.95);
+  transition: all 0.2s var(--ease-out-quart) !important;
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 38px !important;
 }
 
 .dark .leaflet-control-zoom a,
 .dark .leaflet-bar a {
-  background: rgba(30, 41, 59, 0.4) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #f1f5f9 !important;
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .dark .leaflet-control-zoom a:hover,
 .dark .leaflet-bar a:hover {
-  background: rgba(30, 41, 59, 0.6) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: hsl(var(--secondary) / 0.8) !important;
+  border-color: hsl(var(--border) / 0.5) !important;
 }
 
 /* Improve visibility of the Leaflet scale label in light/dark themes */
@@ -498,26 +492,23 @@ All colors MUST be HSL.
 }
 
 .leaflet-popup-content-wrapper {
-  background: rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  border-radius: 1rem !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border) / 0.5) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: var(--shadow-lifted) !important;
 }
 
 .dark .leaflet-popup-content-wrapper {
-  background: rgba(30, 41, 59, 0.5) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: hsl(var(--card)) !important;
 }
 
 .leaflet-popup-tip {
-  background: rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(20px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  background: hsl(var(--card)) !important;
+  box-shadow: none !important;
 }
 
 .dark .leaflet-popup-tip {
-  background: rgba(30, 41, 59, 0.5) !important;
+  background: hsl(var(--card)) !important;
 }
 
 .custom-marker {
@@ -570,6 +561,7 @@ All colors MUST be HSL.
 
 /* Reduced-motion support: disable animations and transitions for motion-sensitive users */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

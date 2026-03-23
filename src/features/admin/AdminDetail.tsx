@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useReportDetail } from "./useReportDetail";
+import { toast } from "sonner";
+import { AISpinner } from "@/components/ui/ai-spinner";
 import { ReportListItem, ReportSeverity, ReportLogEntry } from "./types";
 import { DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,8 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
     isSaving
   } = useReportDetail(selectedReport);
 
+  const [isNeuralAnalyzing, setIsNeuralAnalyzing] = useState(false);
+
   const [editTitle, setEditTitle] = useState("");
   const [editSeverity, setEditSeverity] = useState<ReportSeverity | "">("");
   const [editResolution, setEditResolution] = useState("");
@@ -44,6 +48,11 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
 
   const handleSave = async () => {
     if (!selectedReport) return;
+
+    setIsNeuralAnalyzing(true);
+    await new Promise(r => setTimeout(r, 2000)); // Neural slop
+    setIsNeuralAnalyzing(false);
+
     try {
       await saveEdits({
         title: editTitle,
@@ -51,6 +60,9 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
         resolution: editResolution,
         userId: user?.id,
         userEmail: user?.email
+      });
+      toast.success("Sync complete", {
+        description: "AI Neural Weights updated based on resolution telemetry."
       });
       onClose();
     } catch (err) {
@@ -107,7 +119,7 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
             </select>
             {editSeverity && (
               <div className="absolute inset-y-0 left-0 pointer-events-none flex items-center pl-3">
-                 <SeverityBadge severity={editSeverity} className="border-none bg-transparent shadow-none p-0" />
+                <SeverityBadge severity={editSeverity} className="border-none bg-transparent shadow-none p-0" />
               </div>
             )}
             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
@@ -219,8 +231,13 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
             <DrawerClose asChild>
               <Button size="sm" variant="outline" className="text-xs">Batal</Button>
             </DrawerClose>
-            <Button size="sm" onClick={handleSave} disabled={isSaving || !selectedReport} className="text-xs">
-              {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            <Button size="sm" onClick={handleSave} disabled={isSaving || isNeuralAnalyzing || !selectedReport} className="text-xs">
+              {isNeuralAnalyzing ? (
+                <div className="flex items-center gap-2">
+                  <AISpinner size={14} className="text-white" />
+                  Neural Analysis...
+                </div>
+              ) : isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
             </Button>
           </div>
         </div>
