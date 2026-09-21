@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Marker, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from "react-leaflet";
 import { Button } from "@/components/ui/button";
-import { Loader as Loader2, FileText, Clock, CheckCircle } from "lucide-react";
+import { Loader as Loader2, ChevronDown } from "lucide-react";
 import L from "leaflet";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -103,6 +103,8 @@ const MapView = () => {
 
   // routing
   const [routingPath, setRoutingPath] = useState<[number, number][] | null>(null);
+
+  const [showStatsDetails, setShowStatsDetails] = useState(false);
 
   // ui panels
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -281,12 +283,7 @@ const MapView = () => {
 
   const recentReports = useMemo(() => reports.slice(0, 3), [reports]);
 
-  const statusSummary = useMemo(() => [
-    { key: "total", label: "Total", value: statusCounts.total, icon: FileText, tone: "text-primary" },
-    { key: "baru", label: "Baru", value: statusCounts.baru, icon: Clock, tone: "text-amber-500 dark:text-amber-400" },
-    { key: "diproses", label: "Diproses", value: statusCounts.diproses, icon: Loader2, tone: "text-sky-500 dark:text-sky-400" },
-    { key: "selesai", label: "Selesai", value: statusCounts.selesai, icon: CheckCircle, tone: "text-emerald-500 dark:text-emerald-400" },
-  ], [statusCounts]);
+  
 
   // map interactions
   useEffect(() => {
@@ -305,33 +302,21 @@ const MapView = () => {
     return () => { mapInstance.off("mousemove", onMove); mapInstance.off("contextmenu", onContext); };
   }, [mapInstance]);
 
-  // custom scale control
+    // reactive scale state (integrated into bottom-right HUD to prevent overlap with bottom-left legend)
+  const [currentScale, setCurrentScale] = useState<string>("1 : 50.000");
+
   useEffect(() => {
     if (!mapInstance) return;
-    const existing = document.querySelector(".leaflet-control-scale");
-    if (existing) existing.remove();
-    const ScaleControl = L.Control.extend({
-      options: { position: "bottomleft" },
-      onAdd: function () {
-        const div = L.DomUtil.create("div", "custom-scale-control glass-surface text-[11px] font-semibold text-foreground px-3 py-1.5 rounded-xl shadow-lifted mb-16 ml-2 pointer-events-none");
-        const update = () => {
-          const zoom = mapInstance.getZoom();
-          const scale = (40075017 * Math.cos((mapInstance.getCenter().lat * Math.PI) / 180)) / Math.pow(2, zoom + 8);
-          div.textContent = `Skala 1 : ${(Math.round(scale / 100) * 100).toLocaleString("id-ID")}`;
-        };
-        mapInstance.on("zoomend moveend", update);
-        update();
-        (this as unknown as { _u?: () => void })._u = update;
-        return div;
-      },
-      onRemove: function () {
-        const up = (this as unknown as { _u?: () => void })._u;
-        if (up) mapInstance.off("zoomend moveend", up);
-      },
-    });
-    const ctrl = new ScaleControl();
-    ctrl.addTo(mapInstance);
-    return () => { ctrl.remove(); };
+    const updateScale = () => {
+      const zoom = mapInstance.getZoom();
+      const scale = (40075017 * Math.cos((mapInstance.getCenter().lat * Math.PI) / 180)) / Math.pow(2, zoom + 8);
+      setCurrentScale(`1 : ${(Math.round(scale / 100) * 100).toLocaleString("id-ID")}`);
+    };
+    mapInstance.on("zoomend moveend", updateScale);
+    updateScale();
+    return () => {
+      mapInstance.off("zoomend moveend", updateScale);
+    };
   }, [mapInstance]);
 
   // fit bounds on first admin boundaries load
@@ -460,68 +445,110 @@ const MapView = () => {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
-  return (
-    <div className="min-h-screen bg-background page-transition">
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6 space-y-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Peta Laporan dan Infrastruktur SDA</h1>
-            <p className="text-muted-foreground">Lihat semua laporan dan sebaran infrastruktur SDA di peta interaktif</p>
-          </div>
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4 flex-wrap">
-              {statusSummary.map(({ key, label, value, icon: Icon, tone }) => (
-                <div key={key} className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-900/80 rounded-lg border shadow-sm">
-                  <Icon className={`h-5 w-5 ${tone}`} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className="text-lg font-bold">{loading ? "..." : value}</p>
-                  </div>
-                </div>
-              ))}
+    return (
+    <div className="relative w-full h-[calc(100dvh-3.5rem)] overflow-hidden bg-background">
+      {/* Floating Quick Stats HUD */}
+      <div className="absolute top-3 md:top-4 left-3 md:left-4 z-[1000] pointer-events-auto">
+        <div className="flex flex-col gap-2">
+          <div
+            onClick={() => setShowStatsDetails((v) => !v)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl cursor-pointer hover:bg-background transition-all group"
+            role="button"
+            tabIndex={0}
+            aria-label="Buka ringkasan statistik laporan"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setShowStatsDetails((v) => !v);
+            }}
+          >
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span>{loading ? "..." : statusCounts.total} Laporan</span>
             </div>
-            <div className="flex items-center gap-3">
-              {categoryCounts.length > 0 && (
-                <div className="px-4 py-2 bg-blue-50/80 dark:bg-primary/20 rounded-lg border border-blue-200 dark:border-primary">
-                  <p className="text-xs text-primary dark:text-blue-400 font-medium mb-1">Kategori Teratas</p>
-                  <div className="flex gap-3">
-                    {categoryCounts.map(([cat, count]) => (
-                      <div key={cat} className="text-xs">
-                        <span className="font-semibold text-primary dark:text-blue-100">{count}</span>
-                        <span className="text-primary dark:text-blue-400 ml-1">{cat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {locationCounts.length > 0 && (
-                <div className="px-4 py-2 bg-purple-50/80 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Lokasi Teratas</p>
-                  <div className="flex gap-3">
-                    {locationCounts.map(([loc, count]) => (
-                      <div key={loc} className="text-xs">
-                        <span className="font-semibold text-purple-900 dark:text-purple-100">{count}</span>
-                        <span className="text-purple-600 dark:text-purple-400 ml-1">{loc.slice(0,15)}{loc.length>15?"...":""}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {recentReports.length > 0 && (
-                <div className="px-4 py-2 bg-green-50/80 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Laporan Terbaru</p>
-                  <p className="text-xs text-green-900 dark:text-green-100">
-                    <span className="font-semibold">{(recentReports[0].title||"Tanpa Judul").slice(0,30)}{(recentReports[0].title||"").length>30?"...":""}</span>
-                    <span className="text-green-600 dark:text-green-400 ml-1">• {format(new Date(recentReports[0].created_at),"HH:mm")}</span>
-                  </p>
-                </div>
-              )}
+            <div className="w-px h-4 bg-border/80" />
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
+                {statusCounts.baru} Baru
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-medium">
+                {statusCounts.diproses} Proses
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                {statusCounts.selesai} Selesai
+              </span>
             </div>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${
+                showStatsDetails ? "rotate-180" : ""
+              }`}
+            />
           </div>
-        </div>
 
-        <div className={`relative rounded-lg overflow-hidden shadow-lg border ${isMobile?"h-[calc(100dvh-120px)]":"h-[calc(100vh-180px)]"} ${activeMapTool?"cursor-crosshair":""}`}>
-          <MapCanvas basemap={basemap} center={mapCenter} zoom={mapZoom} ref={setMapInstance}>
+          {/* Expanded Stats Details Card */}
+          {showStatsDetails && (
+            <div className="w-80 bg-background/95 backdrop-blur-md border border-border/80 shadow-lifted rounded-2xl p-4 space-y-3 animate-in-fade">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Ringkasan Spasial
+                </span>
+                <button
+                  onClick={() => setShowStatsDetails(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Tutup
+                </button>
+              </div>
+
+              {categoryCounts.length > 0 && (
+                <div>
+                  <div className="text-2xs font-semibold text-muted-foreground mb-1">
+                    Kategori Teratas
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {categoryCounts.map(([cat, count]) => (
+                      <span
+                        key={cat}
+                        className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-xs font-medium"
+                      >
+                        {cat}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {locationCounts.length > 0 && (
+                <div>
+                  <div className="text-2xs font-semibold text-muted-foreground mb-1">
+                    Lokasi Terbanyak
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {locationCounts.map(([loc, count]) => (
+                      <span
+                        key={loc}
+                        className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary/80 text-xs font-medium"
+                      >
+                        {loc}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {recentReports.length > 0 && (
+                <div className="pt-2 border-t border-border/50 text-xs">
+                  <span className="text-muted-foreground">Laporan Terkini: </span>
+                  <span className="font-semibold text-foreground">
+                    {(recentReports[0].title || "Tanpa Judul").slice(0, 30)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={`relative w-full h-full ${activeMapTool ? "cursor-crosshair" : ""}`}>
+        <MapCanvas basemap={basemap} center={mapCenter} zoom={mapZoom} ref={setMapInstance}>
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
             {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={goToUserLocation} />}
 
@@ -614,11 +641,11 @@ const MapView = () => {
           )}
 
           {selectedReport && (
-            <div className={`absolute z-[1300] ${isMobile?"bottom-32 left-2 right-2":"top-24 left-4"}`}>
-              <div className="max-w-[42rem]">
-                <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedReport(null)} onRoute={() => fetchRoute([selectedReport.latitude,selectedReport.longitude])} />
-              </div>
-            </div>
+            <ReportDetailDrawer
+              report={selectedReport}
+              onClose={() => setSelectedReport(null)}
+              onRoute={() => fetchRoute([selectedReport.latitude, selectedReport.longitude])}
+            />
           )}
 
           <LayerDetailDrawer isOpen={!!selectedLayer} onClose={() => setSelectedLayer(null)} feature={(selectedLayer?.feature as GeoJSON.Feature<Geometry,Record<string,unknown>>)||null} onZoomToFeature={handleZoomToLayer} />
@@ -657,10 +684,23 @@ const MapView = () => {
             </Pane>
           )}
 
-          {cursorLatLng && !selectedReport && (
-            <div className="absolute bottom-4 left-4 z-[800] bg-white/90 dark:bg-slate-900/90 border border-border rounded-lg px-3 py-1.5 text-[10px] font-mono shadow-md pointer-events-none">
-              <div className="text-[9px] uppercase tracking-wide text-muted-foreground mb-0.5">Koordinat</div>
-              <div className="font-semibold">{cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}</div>
+          {!selectedReport && (
+            <div className="custom-scale-control absolute bottom-4 right-4 z-[800] bg-background/90 backdrop-blur-md border border-border/80 rounded-2xl px-3.5 py-1.5 text-[11px] font-mono shadow-float pointer-events-none hidden sm:flex items-center gap-2.5 text-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Skala</span>
+                <span className="font-semibold">{currentScale}</span>
+              </div>
+              {cursorLatLng && (
+                <>
+                  <div className="w-px h-3.5 bg-border/80" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Koordinat</span>
+                    <span className="font-semibold">
+                      {cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -683,10 +723,10 @@ const MapView = () => {
               {Object.entries(dynamicLoading).some(([k,v])=>overlays.dynamic?.[k]&&v) && <div className="bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2 shadow-md"><div className="flex items-center gap-2 text-sm text-white"><Loader2 className="w-4 h-4 animate-spin" /><span className="font-medium">Memuat layer geospasial...</span></div></div>}
             </div>
           )}
-        </div>
-      </div>
+              </div>
     </div>
   );
 };
 
 export default MapView;
+

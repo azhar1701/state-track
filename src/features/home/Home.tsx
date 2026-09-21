@@ -283,7 +283,7 @@ const Home = () => {
 
             <motion.h1
               variants={itemVariants}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-[-0.03em] text-foreground leading-[0.9]"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.15] sm:leading-tight"
             >
               Sistem Informasi{" "}
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -307,7 +307,7 @@ const Home = () => {
                 <Link to="/auth">
                   <Button
                     size="lg"
-                    className="group gap-2.5 shadow-xl rounded-2xl py-7 px-8 text-lg font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
+                    className="group gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 text-base font-semibold shadow-md bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
                   >
                     Masuk / Daftar
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -318,7 +318,7 @@ const Home = () => {
                   <Link to="/report">
                     <Button
                       size="lg"
-                      className="group gap-2.5 shadow-xl rounded-2xl py-7 px-8 text-lg font-bold bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
+                      className="group gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 text-base font-semibold shadow-md bg-primary hover:bg-primary-hover text-primary-foreground transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
                     >
                       <FileText className="w-5 h-5" />
                       Buat Laporan
@@ -329,7 +329,7 @@ const Home = () => {
                     <Button
                       size="lg"
                       variant="outline"
-                      className="gap-2.5 rounded-2xl py-7 px-8 text-lg font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
+                      className="gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 text-base font-semibold border bg-card/80 backdrop-blur-xs border-border shadow-xs hover:bg-muted transition-all active:scale-[0.98]"
                     >
                       <MapIcon className="w-5 h-5" />
                       Lihat Peta
@@ -340,7 +340,7 @@ const Home = () => {
                       <Button
                         size="lg"
                         variant="outline"
-                        className="gap-2.5 rounded-2xl py-7 px-8 text-lg font-bold border-2 bg-card border-border shadow-sm hover:bg-muted transition-all active:scale-[0.98]"
+                        className="gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 text-base font-semibold border bg-card/80 backdrop-blur-xs border-border shadow-xs hover:bg-muted transition-all active:scale-[0.98]"
                       >
                         Dashboard Admin
                       </Button>

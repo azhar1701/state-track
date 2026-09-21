@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,9 @@ interface LocationStepProps extends ReportStepProps {
   onDesaChange: (id: string) => void;
   onGetUserLocation: () => void;
   onMapClick: (lat: number, lng: number) => void;
+  gpsAccuracy?: number | null;
 }
+
 
 const markerIcon = L.icon({
   iconUrl: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTYgNDhDMTYgNDggMzIgMjguNCAzMiAxNkMzMiA3LjE2MzQ0IDI0LjgzNjYgMCAxNiAwQzcuMTYzNDQgMCAwIDcuMTYzNDQgMCAxNkMwIDI4LjQgMTYgNDggMTYgNDhaIiBmaWxsPSIjMzk4MmY2Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",
@@ -56,6 +59,7 @@ export const LocationStep = ({
   onMapClick,
   onNext,
   onBack,
+  gpsAccuracy,
 }: LocationStepProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
@@ -145,10 +149,40 @@ export const LocationStep = ({
             )}
             <MapEvents onClick={onMapClick} />
           </MapContainer>
+          {gpsAccuracy !== null && gpsAccuracy !== undefined && (
+            <div
+              className={cn(
+                "absolute top-4 left-4 z-[1000] px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-md flex items-center gap-1.5 border",
+                gpsAccuracy < 15
+                  ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40"
+                  : gpsAccuracy <= 35
+                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40"
+                  : "bg-destructive/20 text-destructive border-destructive/40"
+              )}
+            >
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  gpsAccuracy < 15
+                    ? "bg-emerald-500 animate-pulse"
+                    : gpsAccuracy <= 35
+                    ? "bg-amber-500"
+                    : "bg-destructive"
+                )}
+              />
+              <span>
+                {gpsAccuracy < 15
+                  ? `GPS Presisi (±${gpsAccuracy}m)`
+                  : gpsAccuracy <= 35
+                  ? `GPS Cukup (±${gpsAccuracy}m)`
+                  : `GPS Kurang Presisi (±${gpsAccuracy}m)`}
+              </span>
+            </div>
+          )}
           <Button
             type="button"
             size="sm"
-            className="absolute bottom-4 left-4 z-[1000] shadow-md"
+            className="absolute bottom-4 left-4 z-[1000] shadow-md rounded-xl"
             onClick={onGetUserLocation}
           >
             <Navigation className="w-3.5 h-3.5 mr-2" />

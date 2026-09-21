@@ -1,7 +1,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import CommandMenu from "@/components/layout/CommandMenu";
@@ -38,16 +38,19 @@ const AppInner = memo(() => {
   useOutboxSync(user?.id);
   usePWAUpdateToast();
 
+  const location = useLocation();
+  const isMapPage = location.pathname === "/map" || location.pathname.startsWith("/map/");
+
   const mainStyle = useMemo(() => ({
-    paddingBottom: isMobile && user ? '72px' : '0'
-  }), [isMobile, user]);
+    paddingBottom: isMobile && !isMapPage ? '72px' : '0'
+  }), [isMobile, isMapPage]);
 
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
       <Navbar />
       <OfflineIndicator />
-      <main id="main-content" className="min-h-[calc(100vh-3.5rem)]" style={mainStyle}>
+      <main id="main-content" className={isMapPage ? "h-[calc(100dvh-3.5rem)] overflow-hidden" : "min-h-[calc(100vh-3.5rem)]"} style={mainStyle}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -69,7 +72,7 @@ const AppInner = memo(() => {
           </Suspense>
         </ErrorBoundary>
       </main>
-      {isMobile && user && <BottomNav />}
+      {isMobile && <BottomNav />}
       <InstallPrompt />
       <NotificationPrompt />
       <KeyboardShortcuts />

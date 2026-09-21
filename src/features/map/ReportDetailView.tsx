@@ -13,14 +13,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 
 
 import type { Report } from '@/services/types';
-
-interface ReportDetailViewProps {
-    report: Report;
-    onClose: () => void;
-    onNavigate?: () => void;
-    onRoute?: () => void;
-    isAdmin?: boolean;
-}
+import { toast } from 'sonner';
 
 interface ReportDetailViewProps {
     report: Report;
@@ -102,9 +95,9 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
         const url = `${window.location.origin}${window.location.pathname}?report=${report.id}`;
         try {
             await navigator.clipboard.writeText(url);
-            alert('Link berhasil disalin!');
+            toast.success('Tautan laporan berhasil disalin ke clipboard');
         } catch {
-            alert('Gagal menyalin link');
+            toast.error('Gagal menyalin tautan laporan');
         }
     };
 
@@ -154,7 +147,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="sticky top-0 z-10 bg-popover/95 border-border shadow-lg border-b border-border px-5 py-4"
+                        className="sticky top-0 z-10 bg-popover/95 border-b border-border px-5 py-4"
                     >
                         <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex-1 min-w-0">
@@ -430,7 +423,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.36 }}
-                    className="absolute bottom-0 left-0 right-0 bg-card border-border shadow-sm border-t border-border px-5 py-4 space-y-3 z-20"
+                    className="absolute bottom-0 left-0 right-0 bg-card border-t border-border px-5 py-4 space-y-3 z-20"
                 >
                     <div className="grid grid-cols-2 gap-3">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -458,7 +451,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Button
                                 variant="secondary"
-                                className="w-full h-10 text-sm font-medium bg-card border-border shadow-sm"
+                                className="w-full h-10 text-sm font-medium bg-card border border-border shadow-sm"
                             >
                                 Update Status Laporan
                             </Button>

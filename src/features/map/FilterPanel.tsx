@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { X, Filter, Loader2, Plus } from 'lucide-react';
 import { supabase } from '@/services/client';
 import { useAuth } from '@/features/auth/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 export interface MapFilters {
  category?: string;
@@ -34,6 +36,7 @@ const statusLabels = {
 };
 
 export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelProps) => {
+  const isMobile = useIsMobile();
  const { user } = useAuth();
  const [localFilters, setLocalFilters] = useState<MapFilters>(filters);
  const [presets, setPresets] = useState<Array<{ id: string; name: string; filters: MapFilters }>>([]);
@@ -144,15 +147,35 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  };
 
  return (
- <motion.div initial={{ x: '100%' }}
- animate={{ x: 0 }}
- exit={{ x: '100%' }}
- transition={{ type: 'spring', damping: 25, stiffness: 200 }}
- className="fixed inset-y-0 right-0 z-[1200] w-85 bg-popover/95 border-border shadow-lg shadow-lg pointer-events-auto overflow-y-auto border-l border-border flex flex-col"
- >
- <div className="sticky top-0 bg-card border-border shadow-sm border-b border-border px-6 py-4 flex items-center justify-between z-10">
+    <>
+      {/* Interactive Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/30 backdrop-blur-xs z-[1190] pointer-events-auto"
+        aria-hidden="true"
+      />
+
+      <motion.div
+        initial={isMobile ? { y: "100%" } : { x: "100%" }}
+        animate={isMobile ? { y: 0 } : { x: 0 }}
+        exit={isMobile ? { y: "100%" } : { x: "100%" }}
+        transition={{ type: "spring", damping: 26, stiffness: 220 }}
+        className={cn(
+          "fixed z-[1200] bg-popover/95 backdrop-blur-xl border-border shadow-lifted pointer-events-auto flex flex-col",
+          "max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[85vh] max-lg:border-t max-lg:pb-safe",
+          "lg:top-0 lg:right-0 lg:h-full lg:w-96 lg:border-l lg:rounded-none overflow-y-auto"
+        )}
+      >
+        {/* Mobile Drag Handle */}
+        <div className="lg:hidden flex justify-center py-2.5 cursor-grab touch-none" onClick={onClose}>
+          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+        </div>
+ <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border/80 px-6 py-4 flex items-center justify-between z-10">
  <div className="flex items-center gap-3">
- <div className="w-10 h-10 rounded-xl bg-popover/95 border-border shadow-lg flex items-center justify-center text-primary">
+ <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
  <Filter className="w-5 h-5" />
  </div>
  <div>
@@ -161,7 +184,7 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  </div>
  </div>
  {onClose && (
- <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl hover:bg-popover/95 border-border shadow-lg">
+ <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl h-10 w-10 hover:bg-muted/60">
  <X className="w-5 h-5" />
  </Button>
  )}
@@ -171,7 +194,7 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  {user && (
  <div className="space-y-4">
  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Preset Tersimpan</Label>
- <div className="bg-card border-border shadow-sm rounded-2xl p-2 border border-border">
+ <div className="bg-card/70 border border-border/70 rounded-2xl p-2.5">
  {loadingPresets ? (
  <div className="p-4 text-center">
  <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />
@@ -192,12 +215,12 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  transition={{ delay: idx * 0.05 }}
  className="flex items-center justify-between gap-2 p-1 group"
  >
- <Button variant="ghost" size="sm" onClick={() => applyPreset(p.id)} className="flex-1 text-left justify-start h-10 px-3 rounded-xl hover:bg-popover/95 border-border shadow-lg border border-transparent hover:border-border transition-all"
+ <Button variant="ghost" size="sm" onClick={() => applyPreset(p.id)} className="flex-1 text-left justify-start h-10 px-3 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border/60 transition-all"
  >
  <span className="text-sm font-medium truncate">{p.name}</span>
  </Button>
  <Button variant="ghost" size="icon" onClick={() => deletePreset(p.id)}
- className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-card border-border shadow-sm transition-colors opacity-0 group-hover:opacity-100"
+ className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
  >
  <X className="w-4 h-4" />
  </Button>
@@ -208,7 +231,7 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  )}
  </div>
  <div className="flex items-center gap-2 pt-2">
- <Input placeholder="Nama preset baru..." value={presetName} onChange={(e) => setPresetName(e.target.value)} className="h-10 bg-card border-border shadow-sm border-border rounded-xl focus:ring-primary/20"
+ <Input placeholder="Nama preset baru..." value={presetName} onChange={(e) => setPresetName(e.target.value)} className="h-10 bg-muted/30 border border-border/70 rounded-xl focus:bg-background transition-colors text-sm"
  />
  <Button onClick={savePreset} size="icon" className="h-10 w-10 shrink-0 rounded-xl shadow-lg shadow-primary/20">
  <Plus className="w-4 h-4" />
@@ -220,17 +243,17 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  <div className="space-y-6">
  <div className="space-y-3">
  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Parameter Utama</Label>
- <div className="space-y-4 bg-card border-border shadow-sm rounded-2xl p-5 border border-border">
+ <div className="space-y-4 bg-card/70 border border-border/70 rounded-2xl p-5">
  <div className="space-y-2.5">
  <Label className="text-sm font-medium">Kategori</Label>
  <Select
  value={localFilters.category || 'all'}
  onValueChange={(value) => updateFilter('category', value === 'all' ? undefined : value)}
  >
- <SelectTrigger className="h-11 bg-card border-border shadow-sm border-border rounded-xl">
+ <SelectTrigger className="h-11 bg-muted/30 border border-border/70 rounded-xl focus:bg-background transition-colors">
  <SelectValue placeholder="Semua kategori" />
  </SelectTrigger>
- <SelectContent className="bg-popover/95 border-border shadow-lg border-border rounded-xl">
+ <SelectContent className="bg-popover border border-border shadow-lg rounded-xl">
  <SelectItem value="all">Semua kategori</SelectItem>
  {Object.entries(categoryLabels)
  .map(([value, label]) => (
@@ -246,10 +269,10 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  value={localFilters.status || 'all'}
  onValueChange={(value) => updateFilter('status', value === 'all' ? undefined : value)}
  >
- <SelectTrigger className="h-11 bg-card border-border shadow-sm border-border rounded-xl">
+ <SelectTrigger className="h-11 bg-muted/30 border border-border/70 rounded-xl focus:bg-background transition-colors">
  <SelectValue placeholder="Semua status" />
  </SelectTrigger>
- <SelectContent className="bg-popover/95 border-border shadow-lg border-border rounded-xl">
+ <SelectContent className="bg-popover border border-border shadow-lg rounded-xl">
  <SelectItem value="all">Semua status</SelectItem>
  {Object.entries(statusLabels).map(([value, label]) => (
  <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -262,14 +285,14 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
 
  <div className="space-y-3">
  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Rentang Waktu</Label>
- <div className="grid grid-cols-2 gap-3 bg-card border-border shadow-sm rounded-2xl p-5 border border-border">
+ <div className="grid grid-cols-2 gap-3 bg-card/70 border border-border/70 rounded-2xl p-5">
  <div className="space-y-2.5">
  <Label className="text-xs font-semibold">Mulai</Label>
  <Input
  type="date"
  value={localFilters.dateFrom || ''}
  onChange={(e) => updateFilter('dateFrom', e.target.value)}
- className="h-10 bg-card border-border shadow-sm border-border rounded-xl text-xs"
+ className="h-10 bg-muted/30 border border-border/70 rounded-xl text-xs"
  />
  </div>
  <div className="space-y-2.5">
@@ -278,7 +301,7 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  type="date"
  value={localFilters.dateTo || ''}
  onChange={(e) => updateFilter('dateTo', e.target.value)}
- className="h-10 bg-card border-border shadow-sm border-border rounded-xl text-xs"
+ className="h-10 bg-muted/30 border border-border/70 rounded-xl text-xs"
  />
  </div>
  </div>
@@ -286,16 +309,17 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
  </div>
  </div>
 
- <div className="sticky bottom-0 bg-card border-border shadow-sm border-t border-border p-6 flex gap-3 z-10">
- <Button variant="outline" onClick={handleReset} className="flex-1 h-12 bg-card border-border shadow-sm border-border rounded-xl hover:bg-white/5 transition-all"
+ <div className="sticky bottom-0 bg-background/80 backdrop-blur-md border-t border-border/80 p-5 flex gap-3 z-10">
+ <Button variant="outline" onClick={handleReset} className="flex-1 h-11 rounded-xl hover:bg-muted/60 transition-all font-semibold"
  >
  Reset
  </Button>
- <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20 transition-all font-bold"
+ <Button onClick={handleApply} className="flex-1 h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl shadow-md transition-all font-bold"
  >
  Terapkan
  </Button>
  </div>
  </motion.div>
- );
+    </>
+  );
 };

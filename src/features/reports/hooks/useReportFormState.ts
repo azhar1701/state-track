@@ -45,6 +45,7 @@ export const useReportFormState = () => {
 
   const [errors, setErrors] = useState<Partial<Record<keyof ReportFormData, string>>>({});
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
 
   // Validation Effect
   useEffect(() => {
@@ -199,12 +200,18 @@ export const useReportFormState = () => {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const accuracy = Math.round(pos.coords.accuracy);
+        setGpsAccuracy(accuracy);
         handleMapClick(pos.coords.latitude, pos.coords.longitude);
+        toast.success("Lokasi GPS berhasil ditemukan", {
+          description: `Akurasi satelit: ±${accuracy} meter`
+        });
       },
       (err) => {
         logger.warn("Location access denied", err);
         toast.error("Gagal mendapatkan lokasi GPS");
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -346,7 +353,7 @@ export const useReportFormState = () => {
     currentStep, setCurrentStep, totalSteps,
     formData, setFormData, errors, saveStatus,
     photoFiles, photoPreviews, handlePhotoChange, removePhoto,
-    location, setLocation, handleMapClick, getUserLocation,
+    location, setLocation, handleMapClick, getUserLocation, gpsAccuracy,
     categories, kecamatanList, desaList, selectedKecamatanId, handleKecamatanChange, selectedDesaId, handleDesaChange,
     loading, uploadPercent, handleSubmit,
   };

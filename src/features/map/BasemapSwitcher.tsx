@@ -79,7 +79,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-2 bg-card border-border shadow-sm shadow-lifted rounded-lg transition-all text-foreground btn-haptic"
+          className="flex items-center gap-2 px-3.5 py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl transition-all text-foreground btn-haptic"
           aria-label="Basemap Switcher"
         >
           {basemapIcons[currentBasemap]}
@@ -91,7 +91,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
         </button>
 
         {isOpen && (
-          <div className="absolute top-full right-0 mt-2 w-40 bg-card border-border shadow-sm shadow-lifted rounded-lg overflow-hidden border border-border">
+          <div className="absolute top-full right-0 mt-2 w-44 bg-background/95 backdrop-blur-md border border-border/80 shadow-lifted rounded-2xl overflow-hidden p-1">
             {(Object.keys(basemaps) as BasemapType[]).map((key) => (
               <button
                 key={key}
@@ -114,12 +114,14 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
       <button
         onClick={() => setIsOfflineMode(!isOfflineMode)}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 mt-2 bg-card border-border shadow-sm shadow-lifted rounded-lg transition-all border",
-          isOfflineMode ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" : "border-transparent text-muted-foreground"
+          "flex items-center gap-2 px-3.5 py-1.5 mt-2 bg-background/90 backdrop-blur-md shadow-float rounded-2xl transition-all border text-xs font-bold uppercase tracking-tighter btn-haptic",
+          isOfflineMode
+            ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            : "border-border/80 text-muted-foreground hover:text-foreground hover:bg-background"
         )}
       >
-        <div className={cn("w-2 h-2 rounded-full", isOfflineMode ? "bg-emerald-500 animate-pulse" : "bg-gray-300")} />
-        <span className="text-xs font-bold uppercase tracking-tighter">OFFLINE TILES</span>
+        <div className={cn("w-2 h-2 rounded-full", isOfflineMode ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40")} />
+        <span>OFFLINE TILES</span>
       </button>
     </div>
   );

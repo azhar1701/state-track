@@ -14,7 +14,7 @@ const ReportForm = () => {
     currentStep, setCurrentStep, totalSteps,
     formData, setFormData, errors, saveStatus,
     photoFiles, photoPreviews, handlePhotoChange, removePhoto,
-    location, setLocation, handleMapClick, getUserLocation,
+    location, setLocation, handleMapClick, getUserLocation, gpsAccuracy,
     categories, kecamatanList, desaList, selectedKecamatanId, handleKecamatanChange, selectedDesaId, handleDesaChange,
     loading, uploadPercent, handleSubmit,
   } = useReportFormState();
@@ -29,7 +29,7 @@ const ReportForm = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 md:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 pb-20 md:py-8">
       <div className="container max-w-2xl px-4">
         <Card className="shadow-xl border-none overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4">
@@ -113,10 +113,12 @@ const ReportForm = () => {
                     onDesaChange={handleDesaChange}
                     onGetUserLocation={getUserLocation}
                     onMapClick={handleMapClick}
+                    gpsAccuracy={gpsAccuracy}
                     onNext={() => setCurrentStep(4)}
                     onBack={() => setCurrentStep(2)}
                   />
                 )}
+
 
                 {currentStep === 4 && (
                   <ReviewStep

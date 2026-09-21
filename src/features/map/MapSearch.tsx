@@ -43,7 +43,7 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
  <motion.div initial={{ opacity: 0, scale: 0.95, y: -20 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: -20 }}
- className="bg-popover/95 border-border shadow-lg shadow-lg p-4 w-full max-w-md rounded-2xl border border-border"
+ className="bg-background/95 backdrop-blur-md border border-border/80 shadow-lifted p-4 w-full max-w-md rounded-2xl"
  >
  <div className="flex items-center gap-2 mb-3">
  <div className="relative flex-1">
@@ -52,7 +52,7 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
  value={query}
  onChange={(e) => setQuery(e.target.value)}
  placeholder="Cari lokasi, alamat, atau tempat..."
- className="pl-9 pr-9 h-10 bg-card border-border shadow-sm border-border rounded-xl"
+ className="pl-9 pr-9 h-11 bg-muted/30 border border-border/70 rounded-xl focus:bg-background transition-colors text-sm"
  autoFocus
  />
  {loading && (
@@ -71,7 +71,7 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
  )}
  </div>
  {onClose && (
- <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
+ <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl h-11 w-11 hover:bg-muted/60">
  <X className="w-4 h-4" />
  </Button>
  )}
@@ -83,12 +83,12 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
  <motion.div key={i} initial={{ opacity: 0, x: -10 }}
  animate={{ opacity: 1, x: 0 }}
  transition={{ delay: i * 0.1 }}
- className="flex items-start gap-3 px-4 py-3 rounded-xl bg-card border-border shadow-sm animate-pulse"
+ className="flex items-start gap-3 px-4 py-3 rounded-xl bg-muted/20 border border-border/60 animate-pulse"
  >
- <div className="w-4 h-4 mt-0.5 bg-white/10 rounded shrink-0" />
+ <div className="w-4 h-4 mt-0.5 bg-muted rounded shrink-0" />
  <div className="flex-1 space-y-2">
- <div className="h-4 bg-white/10 rounded w-3/4" />
- <div className="h-3 bg-white/10 rounded w-1/2" />
+ <div className="h-4 bg-muted rounded w-3/4" />
+ <div className="h-3 bg-muted rounded w-1/2" />
  </div>
  </motion.div>
  ))}
@@ -108,9 +108,9 @@ export const MapSearch = ({ onSelect, onClose }: MapSearchProps) => {
  animate={{ opacity: 1, x: 0 }}
  transition={{ delay: i * 0.05 }}
  onClick={() => handleSelect(r)}
- className="w-full text-left px-4 py-3 rounded-xl hover:bg-card border-border shadow-sm transition-all flex items-start gap-3 border border-transparent hover:border-border group"
+ className="w-full text-left px-4 py-3 rounded-xl bg-card/60 hover:bg-muted/50 border border-border/60 hover:border-primary/40 shadow-xs transition-all flex items-start gap-3 group"
  >
- <div className="w-8 h-8 rounded-full bg-card border-border shadow-sm flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+ <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary transition-colors">
  <MapPin className="w-4 h-4 text-primary" />
  </div>
  <div className="flex-1 min-w-0">

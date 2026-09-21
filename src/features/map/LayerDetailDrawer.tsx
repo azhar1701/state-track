@@ -75,7 +75,7 @@ export function LayerDetailDrawer({
  {/* Desktop: Side Panel */}
  {!isMobile && (
  <div
- className={`fixed top-0 right-0 h-full w-[400px] z-[1400] bg-popover/95 border-border shadow-lg border-l border-border transition-transform duration-300 ${
+ className={`fixed top-0 right-0 h-full w-[400px] z-[1400] bg-background/95 backdrop-blur-md border-l border-border/80 shadow-lifted transition-transform duration-300 ${
  isOpen ? 'translate-x-0' : 'translate-x-full'
  }`}
  >
@@ -146,7 +146,7 @@ export function LayerDetailDrawer({
  {/* Mobile: Bottom Sheet */}
  {isMobile && (
  <div
- className={`fixed bottom-0 left-0 right-0 z-[1400] bg-popover/95 border-border shadow-lg border-t border-border rounded-t-3xl transition-transform duration-300 ${
+ className={`fixed bottom-0 left-0 right-0 z-[1400] bg-background/95 backdrop-blur-md border-t border-border/80 shadow-lifted rounded-t-3xl transition-transform duration-300 ${
  isOpen ? 'translate-y-0' : 'translate-y-full'
  }`}
  style={{ maxHeight: '50vh' }}
@@ -154,7 +154,7 @@ export function LayerDetailDrawer({
  <div className="h-full flex flex-col">
  {/* Drag Handle */}
  <div className="flex justify-center pt-3 pb-2">
- <div className="w-12 h-1 rounded-full bg-white/30" />
+ <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
  </div>
 
  {/* Header */}

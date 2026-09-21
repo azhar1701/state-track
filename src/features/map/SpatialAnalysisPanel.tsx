@@ -131,7 +131,7 @@ export function SpatialAnalysisPanel({
  };
 
  return (
- <div className="absolute top-24 left-4 z-[1200] w-96 bg-card/95 dark:bg-card/95 border border-border rounded-lg shadow-md max-h-[calc(100vh-140px)] overflow-hidden flex flex-col">
+ <div className="absolute top-24 left-4 z-[1200] w-96 bg-background/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-lifted max-h-[calc(100vh-140px)] overflow-hidden flex flex-col">
  <div className="flex items-center justify-between p-3 border-b border-border">
  <div className="flex items-center gap-2">
  <Activity className="w-4 h-4" />
@@ -190,9 +190,9 @@ export function SpatialAnalysisPanel({
  </div>
 
  {selectedPoint && (
- <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded p-2 text-xs">
- <div className="font-semibold text-primary dark:text-blue-100 mb-1">Titik Terpilih:</div>
- <div className="text-primary dark:text-blue-300 font-mono">
+ <div className="bg-primary/8 border border-primary/30 rounded-xl p-2.5 text-xs">
+ <div className="font-semibold text-primary mb-1">Titik Terpilih:</div>
+ <div className="text-primary/80 font-mono">
  {selectedPoint[0].toFixed(6)}, {selectedPoint[1].toFixed(6)}
  </div>
  </div>
@@ -294,9 +294,9 @@ export function SpatialAnalysisPanel({
  </div>
 
  {selectedPoint && (
- <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded p-2 text-xs">
- <div className="font-semibold text-primary dark:text-blue-100 mb-1">Titik Referensi:</div>
- <div className="text-primary dark:text-blue-300 font-mono">
+ <div className="bg-primary/8 border border-primary/30 rounded-xl p-2.5 text-xs">
+ <div className="font-semibold text-primary mb-1">Titik Referensi:</div>
+ <div className="text-primary/80 font-mono">
  {selectedPoint[0].toFixed(6)}, {selectedPoint[1].toFixed(6)}
  </div>
  </div>

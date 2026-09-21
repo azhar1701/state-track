@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import domtoimage from 'dom-to-image-more';
 import { Map } from 'leaflet';
@@ -66,7 +67,7 @@ export const exportMapToPNG = async (map: Map, options: ExportOptions = {}): Pro
   } catch (error) {
     toggleControls(map, true);
     logger.error('Export failed:', error);
-    alert('Gagal mengekspor peta. Error: ' + (error instanceof Error ? error.message : String(error)));
+    toast.error('Gagal mengekspor peta: ' + (error instanceof Error ? error.message : String(error)));
     throw error;
   }
 };

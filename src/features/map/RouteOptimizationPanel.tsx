@@ -96,7 +96,7 @@ export function RouteOptimizationPanel({
  };
 
  return (
- <div className="absolute top-24 right-4 z-[1200] w-96 bg-card/95 dark:bg-card/95 border border-border rounded-lg shadow-md max-h-[calc(100vh-140px)] overflow-hidden flex flex-col">
+ <div className="absolute top-24 right-4 z-[1200] w-96 bg-background/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-lifted max-h-[calc(100vh-140px)] overflow-hidden flex flex-col">
  <div className="flex items-center justify-between p-3 border-b border-border">
  <div className="flex items-center gap-2">
  <Route className="w-4 h-4" />
@@ -150,7 +150,7 @@ export function RouteOptimizationPanel({
  <div
  key={report.id}
  className={`border rounded p-2 cursor-pointer transition-colors ${selectedReports.has(report.id)
- ? 'bg-blue-50 dark:bg-primary/20 border-blue-300 dark:border-primary'
+ ? 'bg-primary/10 border-primary/40'
  : 'hover:bg-muted dark:hover:bg-muted'
  }`}
  onClick={() => toggleReport(report.id)}
