@@ -54,7 +54,7 @@ const HeatLayer = ({ reports, visible }: { reports: Report[], visible: boolean }
       r.severity === 'berat' ? 1.0 : r.severity === 'sedang' ? 0.6 : 0.3
     ]);
     
-    const heatLayer = (L as any).heatLayer(points, {
+    const heatLayer = L.heatLayer(points, {
       radius: 25,
       blur: 15,
       maxZoom: 17,
@@ -70,7 +70,14 @@ const HeatLayer = ({ reports, visible }: { reports: Report[], visible: boolean }
 };
 
 export const ReportLayer = ({ filters, overlays, onReportClick }: ReportLayerProps) => {
-  const { data: reports = [] } = useMapReports(filters);
+  const { reports: allReports } = useMapReports();
+
+  // Apply filters client-side (consistent with MapView pattern)
+  const reports = allReports.filter((r) => {
+    if (filters.category && filters.category !== 'semua' && r.category !== filters.category) return false;
+    if (filters.status && filters.status !== 'semua' && r.status !== filters.status) return false;
+    return true;
+  });
 
   return (
     <>

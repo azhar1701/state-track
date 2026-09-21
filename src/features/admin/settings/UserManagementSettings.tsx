@@ -57,11 +57,20 @@ export const UserManagementSettings = () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
+      type RawUserProfile = {
+        id: string;
+        full_name: string | null;
+        phone: string | null;
+        nik_nip: string | null;
+        created_at: string;
+        email?: string | null;
+      };
+
       // Fetch users securely with emails via RPC
       const { data: profiles, error: profilesError } = await supabase
-        .rpc("get_admin_users" as any); // Type assertion because rpc isn't in types yet
+        .rpc("get_admin_users");
 
-      let finalProfiles = profiles;
+      let finalProfiles: RawUserProfile[] | null = profiles;
 
       // Fallback if RPC doesn't exist yet
       if (profilesError && profilesError.message.includes("function get_admin_users does not exist")) {
@@ -115,7 +124,7 @@ export const UserManagementSettings = () => {
         }
       });
 
-      const userList: UserRow[] = (finalProfiles ?? []).map((profile: any) => ({
+      const userList: UserRow[] = (finalProfiles ?? []).map((profile: RawUserProfile) => ({
         id: profile.id,
         full_name: profile.full_name,
         phone: profile.phone,

@@ -146,11 +146,11 @@ export function useOutboxSync(userId?: string | null) {
           await submitSingleRobust(item, currentUserId);
           await deleteOutboxReport(item.id);
           logger.info(`[Sync] Successfully sent report ${item.id}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           logger.error(`[Sync] Failed to send report ${item.id}`, err);
           
           item.retryCount++;
-          item.lastError = err.message || 'Unknown error';
+          item.lastError = err instanceof Error ? err.message : 'Unknown error';
           await updateOutboxReport(item);
           
           // Wait before processing next item in outbox (exponential backoff)

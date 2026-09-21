@@ -65,6 +65,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          priority_score?: number | null
         }
         Insert: {
           category: Database["public"]["Enums"]["report_category"]
@@ -87,6 +88,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          priority_score?: number | null
         }
         Update: {
           category?: Database["public"]["Enums"]["report_category"]
@@ -109,6 +111,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          priority_score?: number | null
         }
         Relationships: []
       }
@@ -473,6 +476,61 @@ export type Database = {
         }
         Returns: string
       }
+      get_admin_users: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          full_name: string | null
+          phone: string | null
+          nik_nip: string | null
+          created_at: string
+          email: string | null
+        }[]
+      }
+      get_simplified_admin_boundaries: {
+        Args: {
+          simplify_factor: number
+        }
+        Returns: Json
+      }
+      get_reports_in_radius: {
+        Args: {
+          lng: number
+          lat: number
+          radius_m: number
+        }
+        Returns: {
+          id: string
+          dist: number
+          longitude: number
+          latitude: number
+          [key: string]: Json | undefined
+        }[]
+      }
+      get_reports_hex_density: {
+        Args: {
+          min_lng: number
+          min_lat: number
+          max_lng: number
+          max_lat: number
+          cell_size_m: number
+        }
+        Returns: {
+          count: number
+          geom: Json
+          center: [number, number]
+        }[]
+      }
+      get_nearest_neighbor_stats: {
+        Args: Record<string, never>
+        Returns: {
+          nearestNeighborIndex: number
+          nni: number
+          meanDistance: number
+          standardDeviation: number
+          clustered: boolean
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -618,4 +676,7 @@ export const Constants = {
       report_severity: ["ringan", "sedang", "berat"],
     },
   },
-} as const
+} as const;
+
+export type Report = Database["public"]["Tables"]["reports"]["Row"];
+

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/services/client";
+import { useReportStats } from "@/features/reports/hooks/useReportStats";
 import {
   Select,
   SelectContent,
@@ -76,12 +77,8 @@ const itemVariants: Variants = {
 const Home = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const prefersReducedMotion = useReducedMotion();
-  const [stats, setStats] = useState({
-    total: 0,
-    baru: 0,
-    diproses: 0,
-    selesai: 0,
-  });
+  // stats via shared hook — 1 query instead of 4 parallel count queries
+  const { stats, loading: statsLoading } = useReportStats();
   const [chartDays, setChartDays] = useState<7 | 30>(30);
   const [chartDaily, setChartDaily] = useState<
     Array<{ date: string; count: number }>
@@ -89,7 +86,6 @@ const Home = () => {
   const [chartByCategory, setChartByCategory] = useState<
     Array<{ name: string; count: number }>
   >([]);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(true);
   const [marqueeItems, setMarqueeItems] = useState<string[]>([]);
 
@@ -153,37 +149,7 @@ const Home = () => {
     }
   }, [chartDays]);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      setStatsLoading(true);
-      const [totalRes, baruRes, diprosesRes, selesaiRes] = await Promise.all([
-        supabase.from("reports").select("id", { count: "exact", head: true }),
-        supabase
-          .from("reports")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "baru"),
-        supabase
-          .from("reports")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "diproses"),
-        supabase
-          .from("reports")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "selesai"),
-      ]);
-
-      setStats({
-        total: (totalRes.count ?? 0) as number,
-        baru: (baruRes.count ?? 0) as number,
-        diproses: (diprosesRes.count ?? 0) as number,
-        selesai: (selesaiRes.count ?? 0) as number,
-      });
-    } catch (err) {
-      logger.error("Stats fetch error:", err);
-    } finally {
-      setStatsLoading(false);
-    }
-  }, []);
+  // fetchStats removed — handled by useReportStats hook
 
   const fetchMarquee = useCallback(async () => {
     try {
@@ -209,7 +175,6 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    fetchStats();
     fetchChartData();
     fetchMarquee();
 
@@ -221,7 +186,6 @@ const Home = () => {
           "postgres_changes",
           { event: "*", schema: "public", table: "reports" },
           () => {
-            fetchStats();
             fetchChartData();
             fetchMarquee();
           },
@@ -234,7 +198,7 @@ const Home = () => {
     return () => {
       if (channel) channel.unsubscribe();
     };
-  }, [fetchStats, fetchChartData, fetchMarquee]);
+  }, [fetchChartData, fetchMarquee]);
 
   useEffect(() => {
     fetchChartData();

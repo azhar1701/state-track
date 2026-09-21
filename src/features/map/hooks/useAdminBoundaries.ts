@@ -25,7 +25,7 @@ export const useAdminBoundaries = ({ enabled, zoom }: AdminBoundariesOptions) =>
       const simplifyFactor = zoom >= 12 ? 0 : zoom >= 10 ? 0.001 : 0.01;
 
       try {
-        const { data, error } = await (supabase as any).rpc("get_simplified_admin_boundaries", {
+        const { data, error } = await supabase.rpc("get_simplified_admin_boundaries", {
           simplify_factor: simplifyFactor
         });
 

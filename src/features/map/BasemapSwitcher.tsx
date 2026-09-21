@@ -1,6 +1,6 @@
 import { useMap } from 'react-leaflet';
 import { TileLayer } from 'leaflet';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Map, Satellite, Mountain, Moon, Sun, ChevronDown } from 'lucide-react';
 import { basemaps, type BasemapType } from './basemap-config';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,12 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
     };
   }, [map, currentBasemap]);
 
+  const switchBasemap = useCallback((basemap: BasemapType) => {
+    setCurrentBasemap(basemap);
+    onBasemapChange?.(basemap);
+    setIsOpen(false);
+  }, [onBasemapChange]);
+
   useEffect(() => {
     const handleGlobalChange = (e: Event) => {
       const type = (e as CustomEvent).detail?.type as BasemapType;
@@ -66,13 +72,7 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
     };
     window.addEventListener('basemap-change', handleGlobalChange);
     return () => window.removeEventListener('basemap-change', handleGlobalChange);
-  }, [map]);
-
-  const switchBasemap = (basemap: BasemapType) => {
-    setCurrentBasemap(basemap);
-    onBasemapChange?.(basemap);
-    setIsOpen(false);
-  };
+  }, [switchBasemap]);
 
   return (
     <div className="absolute top-4 right-4 z-[1000]">

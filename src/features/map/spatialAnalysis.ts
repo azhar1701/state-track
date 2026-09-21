@@ -41,7 +41,7 @@ export const useProximityQuery = (center: [number, number] | null, radiusKm: num
     queryKey: ['spatial', 'proximity', center, radiusKm],
     queryFn: async () => {
       if (!center) return [];
-      const { data, error } = await (supabase as any).rpc('get_reports_in_radius', {
+      const { data, error } = await supabase.rpc('get_reports_in_radius', {
         lng: center[0],
         lat: center[1],
         radius_m: radiusKm * 1000
@@ -49,7 +49,7 @@ export const useProximityQuery = (center: [number, number] | null, radiusKm: num
       if (error) throw error;
       
       const from = point(center);
-      return (Array.isArray(data) ? data : []).map((r: any) => ({
+      return (Array.isArray(data) ? data : []).map((r) => ({
         id: r.id,
         distance: r.dist / 1000,
         bearing: bearing(from, point([r.longitude, r.latitude]))
@@ -67,7 +67,7 @@ export const useDensityQuery = (bbox: [number, number, number, number] | null, c
     queryKey: ['spatial', 'density', bbox, cellSizeKm],
     queryFn: async () => {
       if (!bbox) return [];
-      const { data, error } = await (supabase as any).rpc('get_reports_hex_density', {
+      const { data, error } = await supabase.rpc('get_reports_hex_density', {
         min_lng: bbox[0],
         min_lat: bbox[1],
         max_lng: bbox[2],
@@ -76,10 +76,10 @@ export const useDensityQuery = (bbox: [number, number, number, number] | null, c
       });
       if (error) throw error;
 
-      return (Array.isArray(data) ? data : []).map((cell: any, idx: number) => ({
+      return (Array.isArray(data) ? data : []).map((cell, idx: number) => ({
         id: `hex-${idx}`,
         count: cell.count,
-        geometry: cell.geom,
+        geometry: cell.geom as unknown as Polygon,
         center: cell.center
       })) as DensityCell[];
     },
@@ -94,7 +94,7 @@ export const useNNIQuery = (enabled: boolean) => {
   return useQuery({
     queryKey: ['spatial', 'nni'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('get_nearest_neighbor_stats');
+      const { data, error } = await supabase.rpc('get_nearest_neighbor_stats');
       if (error) throw error;
       return data as SpatialStats;
     },

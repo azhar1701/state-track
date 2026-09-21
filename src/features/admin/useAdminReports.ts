@@ -15,7 +15,8 @@ import {
   ReportCategory
 } from "./types";
 import { useEffect } from "react";
-import { createRealtimeBatcher } from "@/lib/realtime-batcher";
+import { createRealtimeBatcher, type RealtimePayload } from "@/lib/realtime-batcher";
+import { useReportStats } from "@/features/reports/hooks/useReportStats";
 
 interface FetchReportsParams {
   statusFilter: StatusFilter;
@@ -29,6 +30,7 @@ interface FetchReportsParams {
 
 export const useAdminReports = (params: FetchReportsParams) => {
   const queryClient = useQueryClient();
+  const { stats, refetch: refetchStats } = useReportStats();
   const { statusFilter, severityFilter, categoryFilter, search, sortBy, page, pageSize } = params;
 
   // Realtime subscription
@@ -44,7 +46,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     const channel = supabase
       .channel("admin-reports-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, 
-        (payload) => batcher.push(payload as any)
+        (payload) => batcher.push(payload as unknown as RealtimePayload)
       )
       .subscribe();
 
@@ -100,25 +102,6 @@ export const useAdminReports = (params: FetchReportsParams) => {
     },
   });
 
-  const statsQuery = useQuery({
-    queryKey: ["admin", "stats"],
-    queryFn: async () => {
-      const [totalRes, baruRes, diprosesRes, selesaiRes] = await Promise.all([
-        supabase.from("reports").select("*", { count: "exact", head: true }),
-        supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "baru"),
-        supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "diproses"),
-        supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "selesai"),
-      ]);
-      
-      return {
-        total: totalRes.count || 0,
-        baru: baruRes.count || 0,
-        diproses: diprosesRes.count || 0,
-        selesai: selesaiRes.count || 0,
-      };
-    },
-  });
-
   const categoriesQuery = useQuery({
     queryKey: ["admin", "categories"],
     queryFn: async () => {
@@ -155,7 +138,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "reports"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+      void refetchStats();
       toast.success("Status berhasil diupdate");
     },
     onError: (err) => {
@@ -185,7 +168,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "reports"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+      void refetchStats();
       toast.success(`Berhasil mengupdate ${variables.ids.length} laporan`);
     },
     onError: (err) => {
@@ -201,7 +184,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "reports"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+      void refetchStats();
       toast.success("Laporan berhasil dihapus");
     },
     onError: (err) => {
@@ -215,7 +198,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     totalFiltered: reportsQuery.data?.total || 0,
     isLoadingReports: reportsQuery.isLoading,
     isErrorReports: reportsQuery.isError,
-    stats: statsQuery.data || { total: 0, baru: 0, diproses: 0, selesai: 0 },
+    stats,
     categories: categoriesQuery.data || [],
     isLoadingCategories: categoriesQuery.isLoading,
     updateStatus: updateStatusMutation.mutateAsync,

@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { reverseGeocode, formatAddress } from "@/features/map/geocoding";
 import { calculatePriorityScore } from "@/services/ai";
 import { enqueueReportForSync } from "@/features/reports/useOutboxSync";
+import type { ReportOutboxPayload } from "@/features/reports/outbox";
 import { ReportFormData, LocationData, reportSchema } from "../types";
 import type { Database } from "@/services/types";
 
@@ -116,7 +117,7 @@ export const useReportFormState = () => {
       ]);
       if (kecRes.data) setKecamatanList(kecRes.data as Array<{ id: string; name: string }>);
       if (desaRes.data) {
-        const mapped = (desaRes.data as any[]).map(d => ({
+        const mapped = (desaRes.data as Array<{ id: string; name: string; kecamatan_id?: string | null }>).map(d => ({
           id: d.id,
           name: d.name,
           kecamatan_id: d.kecamatan_id || ""
@@ -186,7 +187,9 @@ export const useReportFormState = () => {
     try {
       const res = await reverseGeocode(lat, lng);
       if (res) setLocation(prev => ({ ...prev!, name: formatAddress(res) }));
-    } catch { }
+    } catch (err) {
+      logger.debug("Reverse geocode failed", err);
+    }
   };
 
   const getUserLocation = () => {
@@ -212,13 +215,15 @@ export const useReportFormState = () => {
     setUploadPercent(10);
 
     try {
-      const payload = {
+      const payload: ReportOutboxPayload = {
         ...formData,
+        category: formData.category as Database["public"]["Enums"]["report_category"],
+        severity: (formData.severity || 'ringan') as 'ringan' | 'sedang' | 'berat',
         location: { ...location, name: location.name || null }
       };
 
       if (!navigator.onLine) {
-        await enqueueReportForSync(payload as any, photoFiles);
+        await enqueueReportForSync(payload, photoFiles);
         toast.success("Laporan disimpan offline", {
           description: "Akan otomatis terkirim saat koneksi internet pulih"
         });
@@ -249,12 +254,12 @@ export const useReportFormState = () => {
       }
 
       // Prepare final payload
-      const insertPayload = {
+      const insertPayload: Database["public"]["Tables"]["reports"]["Insert"] = {
         user_id: user.id,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        category: formData.category,
-        severity: formData.severity,
+        category: formData.category as Database["public"]["Enums"]["report_category"],
+        severity: (formData.severity || null) as Database["public"]["Enums"]["report_severity"] | null,
         incident_date: formData.incidentDate,
         latitude: parseFloat(location.latitude.toFixed(8)),
         longitude: parseFloat(location.longitude.toFixed(8)),
@@ -278,14 +283,16 @@ export const useReportFormState = () => {
       // We try to include priority_score, but fallback if the column doesn't exist yet
       let submissionResult;
       try {
-        submissionResult = await (supabase.from("reports") as any)
+        submissionResult = await supabase
+          .from("reports")
           .insert(insertPayload)
           .select("id");
 
         if (submissionResult.error && submissionResult.error.message?.includes('priority_score')) {
           logger.warn("⚠️ priority_score column missing, falling back to safe insert");
-          const { priority_score, ...safePayload } = insertPayload;
-          submissionResult = await (supabase.from("reports") as any)
+          const { priority_score: _ignored, ...safePayload } = insertPayload;
+          submissionResult = await supabase
+            .from("reports")
             .insert(safePayload)
             .select("id");
         }
@@ -323,10 +330,11 @@ export const useReportFormState = () => {
       localStorage.removeItem(DRAFT_KEY);
       // Wait slightly for animation
       setTimeout(() => navigate(`/report/success${insertedId ? `?id=${insertedId}` : ''}`), 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("Submission failed", err);
+      const errorMessage = err instanceof Error ? err.message : "Terjadi kesalahan pada server. Silakan coba lagi.";
       toast.error("Gagal mengirim laporan", {
-        description: err.message || "Terjadi kesalahan pada server. Silakan coba lagi."
+        description: errorMessage
       });
     } finally {
       setLoading(false);

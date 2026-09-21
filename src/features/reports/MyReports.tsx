@@ -40,33 +40,9 @@ import EmptyState from "@/components/common/EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
 // Sync button removed per request
 
-type ReportRow = {
-  id: string;
-  title: string;
-  description: string;
-  category:
-  | "jalan"
-  | "jembatan"
-  | "irigasi"
-  | "sungai"
-  | "drainase"
-  | "lainnya";
-  status: "baru" | "diproses" | "selesai";
-  incident_date: string | null;
-  created_at: string;
-  user_id: string;
-  latitude: number;
-  longitude: number;
-  location_name: string | null;
-  photo_url: string | null;
-  photo_urls: string[] | null;
-  severity: "ringan" | "sedang" | "berat" | null;
-  resolution: string | null;
-  reporter_name: string | null;
-  phone: string | null;
-  kecamatan: string | null;
-  desa: string | null;
-};
+import type { Report } from "@/services/types";
+
+type ReportRow = Report;
 
 const categoryLabels: Record<string, string> = {
   irigasi: "Irigasi",

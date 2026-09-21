@@ -116,8 +116,8 @@ export const useReportDetail = (report: ReportListItem | null) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "reports", "logs", id] });
       toast.success("Perubahan berhasil disimpan");
     },
-    onError: (err: any) => {
-      if (err.type === 'conflict') {
+    onError: (err: unknown) => {
+      if (typeof err === "object" && err !== null && "type" in err && (err as { type: string }).type === "conflict") {
         // Handled by component
         return;
       }

@@ -21,7 +21,8 @@ export const ReviewStep = ({
   onSubmit,
   onBack,
 }: ReviewStepProps) => {
-  const severityVariant = formData.severity === 'berat' ? 'destructive' : formData.severity === 'sedang' ? 'warning' : 'secondary';
+  const severityVariant: "destructive" | "warning" | "secondary" =
+    formData.severity === 'berat' ? 'destructive' : formData.severity === 'sedang' ? 'warning' : 'secondary';
 
   return (
     <div className="space-y-6 fade-in">
@@ -41,7 +42,7 @@ export const ReviewStep = ({
               <Label className="text-xs text-muted-foreground uppercase">Kategori & Severity</Label>
               <div className="flex gap-2">
                 <Badge variant="outline">{formData.category}</Badge>
-                <Badge variant={severityVariant as any}>{formData.severity}</Badge>
+                <Badge variant={severityVariant}>{formData.severity}</Badge>
               </div>
             </div>
           </div>

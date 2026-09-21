@@ -1,27 +1,7 @@
 import { ReportDetailView } from './ReportDetailView';
+import type { Report } from '@/services/types';
 
-export interface Report {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: string;
-  severity?: 'ringan' | 'sedang' | 'berat' | null;
-  resolution?: string | null;
-  latitude: number;
-  longitude: number;
-  location_name: string | null;
-  photo_url: string | null;
-  photo_urls?: string[] | null;
-  created_at: string;
-  user_id: string;
-  // Reporter information
-  reporter_name?: string | null;
-  phone?: string | null;
-  // Administrative location
-  kecamatan?: string | null;
-  desa?: string | null;
-}
+export type { Report };
 
 interface ReportDetailDrawerProps {
   report: Report;
