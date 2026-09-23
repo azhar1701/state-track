@@ -279,7 +279,7 @@ export default function MyReports() {
         error: initialError,
         count: initialCount,
       } = await query;
-      let data = initialData;
+      let data: ReportRow[] | null = initialData as unknown as ReportRow[] | null;
       const error = initialError;
       let count = initialCount;
 
