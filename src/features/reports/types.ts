@@ -51,6 +51,6 @@ export interface ReportStepProps {
   formData: ReportFormData;
   setFormData: React.Dispatch<React.SetStateAction<ReportFormData>>;
   errors: Partial<Record<keyof ReportFormData, string>>;
-  onNext: () => void;
+  onNext?: () => void;
   onBack?: () => void;
 }

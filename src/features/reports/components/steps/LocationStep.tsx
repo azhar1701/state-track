@@ -57,8 +57,6 @@ export const LocationStep = ({
   onDesaChange,
   onGetUserLocation,
   onMapClick,
-  onNext,
-  onBack,
   gpsAccuracy,
 }: LocationStepProps) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,8 +73,6 @@ export const LocationStep = ({
       setSearchLoading(false);
     }
   };
-
-  const isValid = location && selectedKecamatanId && selectedDesaId;
 
   return (
     <div className="space-y-6 fade-in">
@@ -195,11 +191,6 @@ export const LocationStep = ({
             <span>{location.name}</span>
           </div>
         )}
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <Button variant="outline" onClick={onBack} className="flex-1">Kembali</Button>
-        <Button onClick={onNext} disabled={!isValid} className="flex-1">Lanjut</Button>
       </div>
     </div>
   );

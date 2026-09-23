@@ -53,8 +53,10 @@ export const getOptimizedImageUrl = (url?: string | null, width: number = 400, q
   
   // Check if it's already a public URL from Supabase
   if (url.includes('supabase.co/storage/v1/object/public')) {
+    const validQuality = Math.min(100, Math.max(1, Math.round(quality || 70)));
+    const validWidth = Math.max(10, Math.round(width || 400));
     const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}width=${width}&quality=${quality}`;
+    return `${url}${separator}width=${validWidth}&quality=${validQuality}`;
   }
   
   return url;

@@ -1,25 +1,21 @@
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, MapPin, Calendar, User, Phone } from "lucide-react";
+import { CheckCircle, MapPin, Calendar, User, Phone } from "lucide-react";
 import { ReportStepProps, LocationData } from "../../types";
 
 interface ReviewStepProps extends ReportStepProps {
   location: LocationData | null;
   photoPreviews: string[];
-  loading: boolean;
+  loading?: boolean;
   uploadPercent: number | null;
-  onSubmit: () => void;
+  onSubmit?: () => void;
 }
 
 export const ReviewStep = ({
   formData,
   location,
   photoPreviews,
-  loading,
   uploadPercent,
-  onSubmit,
-  onBack,
 }: ReviewStepProps) => {
   const severityVariant: "destructive" | "warning" | "secondary" =
     formData.severity === 'berat' ? 'destructive' : formData.severity === 'sedang' ? 'warning' : 'secondary';
@@ -84,31 +80,20 @@ export const ReviewStep = ({
         </div>
       )}
 
-      <div className="space-y-4 pt-2">
-        {uploadPercent !== null && (
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs font-medium">
-              <span>Mengirim Laporan...</span>
-              <span>{uploadPercent}%</span>
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-300" 
-                style={{ width: `${uploadPercent}%` }} 
-              />
-            </div>
+      {uploadPercent !== null && (
+        <div className="space-y-1.5 pt-2">
+          <div className="flex justify-between text-xs font-medium">
+            <span>Mengirim Laporan...</span>
+            <span>{uploadPercent}%</span>
           </div>
-        )}
-
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack} disabled={loading} className="flex-1">
-            Kembali
-          </Button>
-          <Button onClick={onSubmit} disabled={loading} className="flex-1">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Kirim Laporan"}
-          </Button>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300" 
+              style={{ width: `${uploadPercent}%` }} 
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

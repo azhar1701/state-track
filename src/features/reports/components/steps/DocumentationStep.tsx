@@ -13,13 +13,10 @@ interface DocumentationStepProps extends ReportStepProps {
 }
 
 export const DocumentationStep = ({
-  photoFiles,
   photoPreviews,
   onPhotoChange,
   onRemovePhoto,
   onShowCamera,
-  onNext,
-  onBack,
 }: DocumentationStepProps) => {
   return (
     <div className="space-y-6 fade-in">
@@ -82,11 +79,6 @@ export const DocumentationStep = ({
         <p className="text-xs text-muted-foreground text-center">
           Maksimal 10 foto. Gunakan foto yang jelas untuk mempermudah verifikasi.
         </p>
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <Button variant="outline" onClick={onBack} className="flex-1">Kembali</Button>
-        <Button onClick={onNext} className="flex-1">Lanjut</Button>
       </div>
     </div>
   );

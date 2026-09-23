@@ -3,7 +3,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { ReportStepProps, Severity } from "../../types";
 
 interface IdentificationStepProps extends ReportStepProps {
@@ -14,10 +13,8 @@ export const IdentificationStep = ({
   formData,
   setFormData,
   errors,
-  onNext,
   categories,
 }: IdentificationStepProps) => {
-  const isValid = formData.title.length >= 5 && formData.description.length >= 10 && formData.category;
 
   return (
     <div className="space-y-6 fade-in">
@@ -93,17 +90,6 @@ export const IdentificationStep = ({
             </motion.p>
           )}
         </AnimatePresence>
-      </div>
-
-      <div className="flex justify-end pt-4">
-        <Button
-          type="button"
-          onClick={onNext}
-          disabled={!isValid}
-          className="w-full sm:w-32"
-        >
-          Lanjut
-        </Button>
       </div>
     </div>
   );
