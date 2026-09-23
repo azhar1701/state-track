@@ -12,7 +12,7 @@ export type ReportListItem = Pick<
 
 export type ReportDetail = Pick<
   ReportRow,
-  "description" | "reporter_name" | "phone" | "latitude" | "longitude" | "photo_url" | "photo_urls"
+  "description" | "reporter_name" | "phone" | "latitude" | "longitude" | "photo_url" | "photo_urls" | "user_id"
 >;
 
 export type ReportLogEntry = Database["public"]["Tables"]["report_logs"]["Row"];
@@ -23,7 +23,7 @@ export type CategoryFilter = "semua" | ReportCategory;
 export type SortOption = "created_at_desc" | "severity_desc" | "category_asc";
 
 export const REPORT_LIST_COLUMNS = "id,title,category,status,created_at,updated_at,location_name,severity,kecamatan,desa,resolution,priority_score";
-export const REPORT_DETAIL_COLUMNS = "description,reporter_name,phone,latitude,longitude,photo_url,photo_urls";
+export const REPORT_DETAIL_COLUMNS = "description,reporter_name,phone,latitude,longitude,photo_url,photo_urls,user_id";
 export const SEVERITY_WEIGHT: Record<ReportSeverity, number> = {
   ringan: 1,
   sedang: 2,

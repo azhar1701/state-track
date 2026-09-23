@@ -249,7 +249,7 @@ export default function MyReports() {
       let query = supabase
         .from("reports")
         .select(
-          "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,severity,kecamatan,desa,resolution",
+          "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,kecamatan,desa,resolution",
           { count: "exact" }
         )
         .eq("user_id", user.id)
@@ -306,6 +306,7 @@ export default function MyReports() {
           resolution: null,
           reporter_name: null,
           phone: null,
+          photo_urls: null,
           description: "Tidak ada deskripsi",
         })) as unknown as ReportRow[];
         count = fallbackCount;

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { DownloadCloud, UploadCloud, Database, FileJson, Clock, Loader2, CheckCircle2, AlertTriangle, HardDrive } from "lucide-react";
 import { supabase } from "@/services/client";

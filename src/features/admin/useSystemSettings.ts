@@ -3,6 +3,7 @@ import { handleApiError } from "@/lib/api-errors";
 import { useState, useCallback } from 'react';
 import { supabase } from '@/services/client';
 import { toast } from 'sonner';
+import type { Json } from '@/services/types';
 
 export type SaveSettingOptions = {
   silent?: boolean;
@@ -60,7 +61,7 @@ export const useSystemSettings = () => {
       const { error: sysError } = await supabase
         .from('system_settings')
         .upsert(
-          { category, key, value: value as Record<string, unknown> },
+          { category, key, value: value as Json },
           { onConflict: 'category,key' }
         );
 
@@ -69,7 +70,7 @@ export const useSystemSettings = () => {
         const { error: appError } = await supabase
           .from('app_settings')
           .upsert(
-            { category, key, value: value as Record<string, unknown> },
+            { category, key, value: value as Json },
             { onConflict: 'category,key' }
           );
 

@@ -3,8 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trash2, FileText, BarChart3 } from "lucide-react";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Trash2, FileText, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
 import { ReportListItem, ReportStatus } from "./types";
 import { formatDateTime, formatReportLocation } from "@/lib/formatters";
 import { SeverityBadge, StatusBadge } from "@/components/common/ReportBadges";
@@ -170,57 +169,64 @@ export const AdminReportsTable = ({
         </TableBody>
       </Table>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>
-            Menampilkan <span className="font-medium text-foreground">{Math.min((page - 1) * pageSize + 1, totalFiltered)}-{Math.min(page * pageSize, totalFiltered)}</span> dari <span className="font-medium text-foreground">{totalFiltered}</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline">Per halaman:</span>
-            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-              <SelectTrigger className="w-[70px] h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setPage(Math.max(1, page - 1))}
-                aria-disabled={page === 1}
-                className="h-8 text-xs"
-              />
-            </PaginationItem>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-4 pt-4 border-t">
+        <p className="text-xs text-muted-foreground shrink-0">
+          Menampilkan{" "}
+          <span className="font-medium text-foreground">
+            {Math.min((page - 1) * pageSize + 1, totalFiltered)}–{Math.min(page * pageSize, totalFiltered)}
+          </span>{" "}
+          dari{" "}
+          <span className="font-medium text-foreground">{totalFiltered}</span>
+        </p>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Per halaman:</span>
+          <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+            <SelectTrigger className="w-[68px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-1 ml-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
             {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
               const pageNum = i + 1;
               return (
-                <PaginationItem key={pageNum}>
-                  <PaginationLink
-                    isActive={page === pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className="h-8 w-8 text-xs"
-                  >
-                    {pageNum}
-                  </PaginationLink>
-                </PaginationItem>
+                <Button
+                  key={pageNum}
+                  variant={page === pageNum ? "default" : "outline"}
+                  size="icon"
+                  className="h-7 w-7 text-xs"
+                  onClick={() => setPage(pageNum)}
+                >
+                  {pageNum}
+                </Button>
               );
             })}
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                aria-disabled={page >= totalPages}
-                className="h-8 text-xs"
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

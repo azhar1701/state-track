@@ -121,6 +121,11 @@ const AdminDashboard = () => {
   const hasPrev = selectedReportIndex > 0 || page > 1;
   const hasNext = selectedReportIndex < reports.length - 1 || page * pageSize < totalFiltered;
 
+  const handleDetailUpdateStatus = async (id: string, status: ReportStatus) => {
+    await updateStatus({ id, status });
+    setSelectedReport(prev => (prev && prev.id === id ? { ...prev, status } : prev));
+  };
+
 
   const allVisibleSelected = useMemo(() => {
     if (reports.length === 0) return false;
@@ -347,12 +352,12 @@ const AdminDashboard = () => {
       </AlertDialog>
 
       <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-        <DrawerContent className="h-[85vh]">
+        <DrawerContent className="h-[88vh] max-h-[92vh] max-w-5xl mx-auto">
           <Suspense fallback={
-            <div className="p-8 text-center">
-              <DrawerTitle className="sr-only">Memuat...</DrawerTitle>
+            <div className="p-6">
+              <DrawerTitle className="sr-only">Detail Laporan</DrawerTitle>
               <DrawerDescription className="sr-only">Sedang memuat detail laporan</DrawerDescription>
-              <Loader2 className="animate-spin mx-auto" />
+              <DetailSkeleton />
             </div>
           }>
             <AdminDetail
@@ -364,6 +369,7 @@ const AdminDashboard = () => {
               hasNext={hasNext}
               currentIndex={selectedReportIndex >= 0 ? (page - 1) * pageSize + selectedReportIndex : undefined}
               totalCount={totalFiltered}
+              onUpdateStatus={handleDetailUpdateStatus}
             />
           </Suspense>
         </DrawerContent>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getOptimizedImageUrl } from '@/lib/formatters';
-import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone, FileText } from 'lucide-react';
+import { X, Share2, Navigation, ChevronLeft, ChevronRight, ZoomIn, MapPin, Calendar, AlertCircle, CheckCircle2, User, Phone, FileText, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -75,9 +75,24 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
 
 
 
-    const photos = (report.photo_urls && report.photo_urls.length > 0)
+    // Reporter's original photo (from photo_url, unless it's an evidence upload)
+    const isEvidenceUrl = (url: string) =>
+        url.includes('evidence') || url.includes('penanganan') || url.includes('bukti');
+
+    const allStoredPhotos: string[] = report.photo_urls && report.photo_urls.length > 0
         ? report.photo_urls
         : (report.photo_url ? [report.photo_url] : []);
+
+    // Reporter's original photos: the legacy single photo + any non-evidence entries
+    const reporterPhotos: string[] = [
+        ...(report.photo_url && !isEvidenceUrl(report.photo_url) ? [report.photo_url] : []),
+        ...(report.photo_urls ?? []).filter(u => !isEvidenceUrl(u) && u !== report.photo_url),
+    ];
+    // Evidence photos uploaded by admin
+    const evidencePhotos: string[] = allStoredPhotos.filter(isEvidenceUrl);
+
+    // Unified slide list for Lightbox (reporter photos first, then evidence)
+    const allLightboxPhotos = [...reporterPhotos, ...evidencePhotos];
 
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -190,7 +205,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                     </motion.div>
 
                     {/* Image Carousel with Embla */}
-                    {photos.length > 0 && (
+                    {reporterPhotos.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -199,7 +214,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                         >
                             <div className="overflow-hidden" ref={emblaRef}>
                                 <div className="flex">
-                                    {photos.map((photo, i) => (
+                                    {reporterPhotos.map((photo, i) => (
                                         <div key={i} className="flex-[0_0_100%] min-w-0">
                                             <div className="aspect-video relative group bg-muted dark:bg-muted">
                                                 <img
@@ -218,15 +233,13 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                                                 >
                                                     <ZoomIn className="h-5 w-5" />
                                                 </motion.button>
-
-
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {photos.length > 1 && (
+                            {reporterPhotos.length > 1 && (
                                 <>
                                     <motion.button
                                         whileHover={{ scale: 1.1 }}
@@ -250,7 +263,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                                         transition={{ delay: 0.3 }}
                                         className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2"
                                     >
-                                        {photos.map((_, i) => (
+                                        {reporterPhotos.map((_, i) => (
                                             <motion.button
                                                 key={i}
                                                 onClick={() => emblaApi?.scrollTo(i)}
@@ -415,6 +428,54 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                                 </div>
                             </motion.div>
                         )}
+
+                        {/* Admin Evidence Photos */}
+                        {evidencePhotos.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.36 }}
+                                className="space-y-3"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4" />
+                                        Bukti Foto Penanganan
+                                    </div>
+                                    <span className="text-[11px] font-medium bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-500/30">
+                                        {evidencePhotos.length} foto
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {evidencePhotos.map((src, i) => (
+                                        <motion.button
+                                            key={i}
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            onClick={() => {
+                                                setLightboxIndex(reporterPhotos.length + i);
+                                                setLightboxOpen(true);
+                                            }}
+                                            className="relative aspect-square rounded-xl overflow-hidden border-2 border-emerald-200/60 dark:border-emerald-500/30 bg-muted group"
+                                        >
+                                            <img
+                                                src={getOptimizedImageUrl(src, 300, 75)}
+                                                alt={`Bukti penanganan ${i + 1}`}
+                                                loading="lazy"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                            </div>
+                                        </motion.button>
+                                    ))}
+                                </div>
+                                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                                    Foto diunggah oleh petugas sebagai bukti penanganan laporan
+                                </p>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
@@ -460,12 +521,12 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                 </motion.div>
             </motion.div>
 
-            {/* Lightbox */}
+            {/* Lightbox — covers both reporter photos and evidence */}
             <Lightbox
                 open={lightboxOpen}
                 close={() => setLightboxOpen(false)}
                 index={lightboxIndex}
-                slides={photos.map((src) => ({ src }))}
+                slides={allLightboxPhotos.map((src) => ({ src }))}
             />
         </>
     );
