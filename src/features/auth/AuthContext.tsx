@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const currentUserIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   // Optional fallback: allowlist admin emails via env var (comma-separated)
@@ -65,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
+    currentUserIdRef.current = null;
     setUser(null);
     setSession(null);
     setIsAdmin(false);
@@ -76,12 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (event === 'TOKEN_REFRESHED') {
         logger.info('Token refreshed successfully');
+        setSession(newSession);
         return;
       }
       if (event === 'SIGNED_OUT') {
+        currentUserIdRef.current = null;
         setSession(null);
         setUser(null);
         setIsAdmin(false);
@@ -89,39 +93,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setSession(session);
-      setUser(session?.user ?? null);
+      setSession(newSession);
+      const nextUser = newSession?.user ?? null;
+      setUser(nextUser);
 
-      if (session?.user) {
-        setLoading(true);
-        setTimeout(() => {
-          checkAdminStatus(session.user!.id);
-        }, 0);
+      if (nextUser) {
+        // If it's the exact same user ID that was already verified, do not set loading=true
+        // This prevents tearing down and recreating components on tab switch / window focus
+        if (currentUserIdRef.current !== nextUser.id) {
+          currentUserIdRef.current = nextUser.id;
+          setLoading(true);
+          checkAdminStatus(nextUser.id);
+        }
       } else {
+        currentUserIdRef.current = null;
         setIsAdmin(false);
         setLoading(false);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session: initialSession }, error }) => {
       if (error) {
         logger.error('Session error:', error);
+        currentUserIdRef.current = null;
         setSession(null);
         setUser(null);
         setLoading(false);
         return;
       }
 
-      setSession(session);
-      setUser(session?.user ?? null);
+      setSession(initialSession);
+      const nextUser = initialSession?.user ?? null;
+      setUser(nextUser);
 
-      if (session?.user) {
+      if (nextUser) {
+        currentUserIdRef.current = nextUser.id;
         setLoading(true);
-        checkAdminStatus(session.user.id);
+        checkAdminStatus(nextUser.id);
       } else {
+        currentUserIdRef.current = null;
         setLoading(false);
       }
     }).catch(() => {
+      currentUserIdRef.current = null;
       setSession(null);
       setUser(null);
       setLoading(false);

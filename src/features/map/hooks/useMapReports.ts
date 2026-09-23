@@ -18,15 +18,17 @@ const REPORTS_SELECT =
 interface UseMapReportsResult {
   reports: Report[];
   loading: boolean;
-  fetchReports: () => Promise<void>;
+  fetchReports: (isInitial?: boolean) => Promise<void>;
 }
 
 export const useMapReports = (): UseMapReportsResult => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true);
+  const fetchReports = useCallback(async (isInitial = false) => {
+    if (isInitial) {
+      setLoading(true);
+    }
     const { data, error } = await cachedQuery(
       REPORTS_CACHE_KEY,
       () =>
@@ -45,12 +47,12 @@ export const useMapReports = (): UseMapReportsResult => {
   }, []);
 
   useEffect(() => {
-    void fetchReports();
+    void fetchReports(true);
 
     const batcher = createRealtimeBatcher(
       () => {
         invalidateCache(REPORTS_CACHE_KEY);
-        void fetchReports();
+        void fetchReports(false);
       },
       { debounceMs: 500, maxWaitMs: 2000, channel: 'map-reports-changes' },
     );
