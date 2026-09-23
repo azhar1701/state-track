@@ -458,6 +458,17 @@ export type Database = {
         }
         Returns: string
       }
+      update_report_with_conflict_check: {
+        Args: {
+          p_report_id: string
+          p_expected_updated_at: string | null
+          p_title: string
+          p_severity: string | null
+          p_resolution: string | null
+          p_status: string
+        }
+        Returns: Json
+      }
       cleanup_old_backups: {
         Args: {
           retention_days?: number

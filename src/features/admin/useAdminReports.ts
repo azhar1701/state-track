@@ -11,7 +11,6 @@ import {
   CategoryFilter, 
   SortOption,
   REPORT_LIST_COLUMNS,
-  SEVERITY_WEIGHT,
   ReportCategory
 } from "./types";
 import { useEffect } from "react";
@@ -72,6 +71,10 @@ export const useAdminReports = (params: FetchReportsParams) => {
         query = query.order("created_at", { ascending: false });
       } else if (sortBy === "category_asc") {
         query = query.order("category", { ascending: true }).order("created_at", { ascending: false });
+      } else if (sortBy === "severity_desc") {
+        query = query
+          .order("priority_score", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
       } else {
         query = query.order("created_at", { ascending: false });
       }
@@ -82,21 +85,15 @@ export const useAdminReports = (params: FetchReportsParams) => {
       const { data, error, count } = await query.range(from, to);
       if (error) throw error;
 
-      let items = (data || []).map(item => ({
+      const items = (data || []).map(item => ({
         ...item,
         category: (item.category as ReportCategory) || "lainnya",
         status: (item.status as ReportStatus) || "baru",
         severity: (item.severity as ReportSeverity | null) || null,
+        priority_score: typeof item.priority_score === "number" && item.priority_score > 0
+          ? item.priority_score
+          : (item.severity === "berat" ? 85 : item.severity === "sedang" ? 50 : 25),
       })) as ReportListItem[];
-
-      if (sortBy === "severity_desc") {
-        items = [...items].sort((a, b) => {
-          const weightB = b.severity ? SEVERITY_WEIGHT[b.severity] : 0;
-          const weightA = a.severity ? SEVERITY_WEIGHT[a.severity] : 0;
-          if (weightB !== weightA) return weightB - weightA;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-      }
 
       return { items, total: count || 0 };
     },

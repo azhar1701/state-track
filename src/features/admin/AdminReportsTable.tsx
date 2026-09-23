@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trash2, FileText, Activity } from "lucide-react";
+import { Trash2, FileText, BarChart3 } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { ReportListItem, ReportStatus } from "./types";
 import { formatDateTime, formatReportLocation } from "@/lib/formatters";
@@ -76,9 +76,11 @@ export const AdminReportsTable = ({
             <TableHead className="font-semibold">Lokasi</TableHead>
             <TableHead className="font-semibold">Respon</TableHead>
             <TableHead className="font-semibold">Tanggal</TableHead>
-            <TableHead className="font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-              <Activity className="w-3 h-3" />
-              Dread Score
+            <TableHead className="font-semibold text-foreground">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                <span>Skor Prioritas</span>
+              </div>
             </TableHead>
             <TableHead className="text-right font-semibold">Status</TableHead>
             <TableHead className="w-10"></TableHead>
@@ -121,14 +123,14 @@ export const AdminReportsTable = ({
               <TableCell className="text-xs text-muted-foreground">{formatDateTime(report.created_at, false)}</TableCell>
               <TableCell>
                 {(() => {
-                  const score = Math.floor(Math.random() * 60) + 20; // 20-80
-                  const color = score > 70 ? 'bg-red-500' : score > 40 ? 'bg-amber-500' : 'bg-emerald-500';
+                  const score = Math.max(0, Math.min(100, report.priority_score ?? (report.severity === 'berat' ? 85 : report.severity === 'sedang' ? 50 : 25)));
+                  const color = score >= 70 ? 'bg-red-500' : score >= 40 ? 'bg-amber-500' : 'bg-emerald-500';
                   return (
-                    <div className="flex items-center gap-2 group/score">
+                    <div className="flex items-center gap-2 group/score" title={`Skor Prioritas: ${score}`}>
                       <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${score}%` }} />
+                        <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${score}%` }} />
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-muted-foreground group-hover/score:text-purple-600 transition-colors">
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground group-hover/score:text-foreground transition-colors">
                         {score}
                       </span>
                     </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useReportDetail } from "./useReportDetail";
 import { toast } from "sonner";
-import { AISpinner } from "@/components/ui/ai-spinner";
 import { ReportListItem, ReportSeverity, ReportLogEntry } from "./types";
+import { Loader2 } from "lucide-react";
 import { DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,6 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
     isSaving
   } = useReportDetail(selectedReport);
 
-  const [isNeuralAnalyzing, setIsNeuralAnalyzing] = useState(false);
 
   const [editTitle, setEditTitle] = useState("");
   const [editSeverity, setEditSeverity] = useState<ReportSeverity | "">("");
@@ -49,24 +48,20 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
   const handleSave = async () => {
     if (!selectedReport) return;
 
-    setIsNeuralAnalyzing(true);
-    await new Promise(r => setTimeout(r, 2000)); // Neural slop
-    setIsNeuralAnalyzing(false);
-
     try {
       await saveEdits({
-        title: editTitle,
+        title: editTitle.trim() || selectedReport.title,
         severity: editSeverity,
         resolution: editResolution,
         userId: user?.id,
         userEmail: user?.email
       });
-      toast.success("Sync complete", {
-        description: "AI Neural Weights updated based on resolution telemetry."
-      });
       onClose();
-    } catch (err) {
-      // Conflict handling could go here
+    } catch (err: unknown) {
+      if (typeof err === "object" && err !== null && "type" in err && (err as { type: string }).type === "conflict") {
+        return;
+      }
+      toast.error("Gagal menyimpan perubahan laporan");
     }
   };
 
@@ -231,13 +226,13 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
             <DrawerClose asChild>
               <Button size="sm" variant="outline" className="text-xs">Batal</Button>
             </DrawerClose>
-            <Button size="sm" onClick={handleSave} disabled={isSaving || isNeuralAnalyzing || !selectedReport} className="text-xs">
-              {isNeuralAnalyzing ? (
-                <div className="flex items-center gap-2">
-                  <AISpinner size={14} className="text-white" />
-                  Neural Analysis...
+            <Button size="sm" onClick={handleSave} disabled={isSaving || !selectedReport} className="text-xs">
+              {isSaving ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menyimpan...</span>
                 </div>
-              ) : isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              ) : 'Simpan Perubahan'}
             </Button>
           </div>
         </div>
