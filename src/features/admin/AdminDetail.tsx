@@ -17,9 +17,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface AdminDetailProps {
   selectedReport: ReportListItem | null;
   onClose: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
-const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
+const AdminDetail = ({ selectedReport, onClose, onPrev, onNext, hasPrev, hasNext, currentIndex, totalCount }: AdminDetailProps) => {
   const { user } = useAuth();
   const {
     fullReport,
@@ -87,8 +93,41 @@ const AdminDetail = ({ selectedReport, onClose }: AdminDetailProps) => {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <DrawerHeader className="text-left pb-3 border-b flex-shrink-0">
-        <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
-        <DrawerDescription className="text-xs text-muted-foreground mt-1">Kelola dan tinjau informasi laporan</DrawerDescription>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <DrawerTitle className="text-lg font-semibold">Detail Laporan</DrawerTitle>
+            <DrawerDescription className="text-xs text-muted-foreground mt-0.5">Kelola dan tinjau informasi laporan</DrawerDescription>
+          </div>
+          {(onPrev || onNext) && (
+            <div className="flex items-center gap-1 shrink-0">
+              {currentIndex !== undefined && totalCount !== undefined && (
+                <span className="text-xs text-muted-foreground tabular-nums px-1">
+                  {currentIndex + 1} / {totalCount}
+                </span>
+              )}
+              <button
+                onClick={onPrev}
+                disabled={!hasPrev}
+                aria-label="Laporan sebelumnya"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!hasNext}
+                aria-label="Laporan berikutnya"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
       </DrawerHeader>
 
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">

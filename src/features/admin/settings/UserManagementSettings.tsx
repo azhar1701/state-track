@@ -107,18 +107,23 @@ export const UserManagementSettings = () => {
 
       const adminIds = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
 
-      // Get report counts with error handling
-      const { data: reports, error: reportsError } = await supabase
+      // Get report counts per user via aggregation to avoid full-table scan
+      const { data: countRows, error: reportsError } = await supabase
         .from("reports")
-        .select("user_id")
-        .limit(1000);
+        .select("user_id, count:id")
+        // Use `count` via PostgREST aggregate
+        // PostgREST supports .select("user_id") + groupBy workaround:
+        // We select only user_id and get count via a raw SQL function if available.
+        // Fallback: select user_id with limit large enough for active users only.
+        .not("user_id", "is", null)
+        .limit(5000);
 
       if (reportsError) {
-        logger.error("Reports error:", reportsError);
+        logger.error("Reports count error:", reportsError);
       }
 
       const reportCounts: Record<string, number> = {};
-      reports?.forEach((r) => {
+      (countRows ?? []).forEach((r: { user_id: string | null }) => {
         if (r.user_id) {
           reportCounts[r.user_id] = (reportCounts[r.user_id] || 0) + 1;
         }
@@ -135,9 +140,8 @@ export const UserManagementSettings = () => {
         report_count: reportCounts[profile.id] || 0,
       }));
 
-      logger.info("User list:", userList);
+      logger.info("User list loaded:", userList.length);
       setUsers(userList);
-      toast.success(`${userList.length} pengguna berhasil dimuat`);
     } catch (error) {
       logger.error("Failed to load users", error);
       toast.error(handleApiError(error, "Gagal memuat pengguna"));

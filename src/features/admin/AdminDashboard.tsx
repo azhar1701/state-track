@@ -65,6 +65,7 @@ const AdminDashboard = () => {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportListItem | null>(null);
+  const [selectedReportIndex, setSelectedReportIndex] = useState<number>(-1);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -87,6 +88,39 @@ const AdminDashboard = () => {
     page,
     pageSize
   });
+
+  const openDetail = (r: ReportListItem, idx: number) => {
+    setSelectedReport(r);
+    setSelectedReportIndex(idx);
+    setDetailOpen(true);
+  };
+
+  const handlePrev = () => {
+    const prevIdx = selectedReportIndex - 1;
+    if (prevIdx >= 0) {
+      setSelectedReport(reports[prevIdx]);
+      setSelectedReportIndex(prevIdx);
+    } else if (page > 1) {
+      setPage(p => p - 1);
+      // Index will be reconciled when new page loads
+      setSelectedReportIndex(pageSize - 1);
+    }
+  };
+
+  const handleNext = () => {
+    const nextIdx = selectedReportIndex + 1;
+    if (nextIdx < reports.length) {
+      setSelectedReport(reports[nextIdx]);
+      setSelectedReportIndex(nextIdx);
+    } else if (page * pageSize < totalFiltered) {
+      setPage(p => p + 1);
+      setSelectedReportIndex(0);
+    }
+  };
+
+  const hasPrev = selectedReportIndex > 0 || page > 1;
+  const hasNext = selectedReportIndex < reports.length - 1 || page * pageSize < totalFiltered;
+
 
   const allVisibleSelected = useMemo(() => {
     if (reports.length === 0) return false;
@@ -249,7 +283,10 @@ const AdminDashboard = () => {
                     onToggleSelect={handleToggleSelect}
                     onToggleSelectAll={handleToggleSelectAll}
                     allVisibleSelected={allVisibleSelected}
-                    onOpenDetail={(r) => { setSelectedReport(r); setDetailOpen(true); }}
+                    onOpenDetail={(r) => {
+                      const idx = reports.findIndex(rep => rep.id === r.id);
+                      openDetail(r, idx);
+                    }}
                     onUpdateStatus={(id, status) => updateStatus({ id, status, userId: user?.id, userEmail: user?.email })}
                     onDeleteReport={(id) => { setReportToDelete(id); setDeleteDialogOpen(true); }}
                     updatingId={null}
@@ -321,6 +358,12 @@ const AdminDashboard = () => {
             <AdminDetail
               selectedReport={selectedReport}
               onClose={() => setDetailOpen(false)}
+              onPrev={handlePrev}
+              onNext={handleNext}
+              hasPrev={hasPrev}
+              hasNext={hasNext}
+              currentIndex={selectedReportIndex >= 0 ? (page - 1) * pageSize + selectedReportIndex : undefined}
+              totalCount={totalFiltered}
             />
           </Suspense>
         </DrawerContent>
