@@ -8,8 +8,11 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Loader2, Tags, X, Edit2, Plus, CheckCircle, Palette, BarChart3, Settings2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/api-errors';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +47,6 @@ const iconOptions = [
   { value: '🔧', label: 'Perbaikan' },
 ];
 
-
 export const CategorySettings = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState({ label: '', icon: '📋', color: '#3b82f6', description: '' });
@@ -56,6 +58,7 @@ export const CategorySettings = () => {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
+      // 1. Instantly load custom categories
       const { data: cats, error: catsError } = await supabase
         .from('custom_categories')
         .select('id, value, label, icon, color, description, is_active, created_at')
@@ -63,26 +66,39 @@ export const CategorySettings = () => {
 
       if (catsError) throw catsError;
 
-      const { data: reports, error: reportsError } = await supabase
-        .from('reports')
-        .select('category');
-
-      if (reportsError) throw reportsError;
-
-      const categoryCounts = (reports || []).reduce((acc, { category }) => {
-        acc[category] = (acc[category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const updatedCategories = ((cats as unknown as Category[]) || []).map((cat) => ({
+      const baseCategories: Category[] = ((cats as unknown as Category[]) || []).map((cat) => ({
         ...cat,
-        count: (categoryCounts as Record<string, number>)[cat.value] || 0
+        count: 0,
       }));
+      setCategories(baseCategories);
+      setLoading(false);
 
-      setCategories(updatedCategories);
+      // 2. Fetch category counts non-blockingly without hanging initial render
+      try {
+        const { data: reports, error: reportsError } = await supabase
+          .from('reports')
+          .select('category')
+          .limit(10000);
+
+        if (!reportsError && reports) {
+          const categoryCounts = reports.reduce((acc, { category }) => {
+            acc[category] = (acc[category] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          setCategories((prev) =>
+            prev.map((cat) => ({
+              ...cat,
+              count: (categoryCounts as Record<string, number>)[cat.value] || 0,
+            }))
+          );
+        }
+      } catch (countsErr) {
+        logger.warn('Failed to load category counts non-blocking', countsErr);
+      }
     } catch (error) {
-      console.error('Failed to load categories:', error);
-      toast.error('Gagal memuat kategori');
+      logger.error('Failed to load categories:', error);
+      toast.error(handleApiError(error, 'Gagal memuat kategori'));
     } finally {
       setLoading(false);
     }
@@ -122,8 +138,8 @@ export const CategorySettings = () => {
       toast.success('Kategori berhasil ditambahkan', { icon: <CheckCircle className="h-4 w-4" /> });
       await loadCategories();
     } catch (error) {
-      console.error('Failed to add category:', error);
-      toast.error('Gagal menambahkan kategori');
+      logger.error('Failed to add category:', error);
+      toast.error(handleApiError(error, 'Gagal menambahkan kategori'));
     } finally {
       setSaving(false);
     }
@@ -153,8 +169,8 @@ export const CategorySettings = () => {
       toast.success('Kategori berhasil diupdate', { icon: <CheckCircle className="h-4 w-4" /> });
       await loadCategories();
     } catch (error) {
-      console.error('Failed to update category:', error);
-      toast.error('Gagal mengupdate kategori');
+      logger.error('Failed to update category:', error);
+      toast.error(handleApiError(error, 'Gagal mengupdate kategori'));
     } finally {
       setSaving(false);
     }
@@ -173,8 +189,8 @@ export const CategorySettings = () => {
       toast.success(isActive ? 'Kategori diaktifkan' : 'Kategori dinonaktifkan');
       await loadCategories();
     } catch (error) {
-      console.error('Failed to toggle category:', error);
-      toast.error('Gagal mengubah status kategori');
+      logger.error('Failed to toggle category:', error);
+      toast.error(handleApiError(error, 'Gagal mengubah status kategori'));
     } finally {
       setSaving(false);
     }
@@ -203,8 +219,8 @@ export const CategorySettings = () => {
       toast.success('Kategori berhasil dihapus');
       await loadCategories();
     } catch (error) {
-      console.error('Failed to delete category:', error);
-      toast.error('Gagal menghapus kategori');
+      logger.error('Failed to delete category:', error);
+      toast.error(handleApiError(error, 'Gagal menghapus kategori'));
     } finally {
       setSaving(false);
     }
@@ -213,8 +229,20 @@ export const CategorySettings = () => {
   if (loading) {
     return (
       <Card variant="glass" className="border-0">
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardHeader className="p-4 sm:p-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <div className="space-y-3 pt-2">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+          </div>
         </CardContent>
       </Card>
     );

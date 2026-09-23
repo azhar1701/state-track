@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Loader2, Database, Layers, Settings2, Info, CheckCircle } from 'lucide-react';
+import {
+  Loader2,
+  Database,
+  Layers,
+  Settings2,
+  Info,
+  CheckCircle,
+  CheckCircle2,
+  RotateCcw,
+} from 'lucide-react';
 import { useSystemSettings } from '@/features/admin/useSystemSettings';
 
 type GeoLayerSettings = {
@@ -39,22 +49,63 @@ const defaultSettings: GeoLayerSettings = {
 };
 
 export const GeoLayerSettings = () => {
-  const { saveSetting } = useSystemSettings();
+  const { fetchSetting, saveSetting } = useSystemSettings();
   const [settings, setSettings] = useState<GeoLayerSettings>(defaultSettings);
+  const [initialSettings, setInitialSettings] = useState<GeoLayerSettings>(defaultSettings);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setSettings(prev => ({ ...prev, ...parsed }));
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        setLoadingSettings(true);
+        // 1. Fetch from cloud database
+        const remote = await fetchSetting<GeoLayerSettings>('geo', 'layer_settings');
+        if (!isMounted) return;
+
+        if (remote && typeof remote === 'object') {
+          const merged = { ...defaultSettings, ...remote };
+          setSettings(merged);
+          setInitialSettings(merged);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          }
+          return;
+        }
+
+        // 2. Fallback to localStorage
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const merged = { ...defaultSettings, ...parsed };
+            setSettings(merged);
+            setInitialSettings(merged);
+            return;
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to load geo layer settings', error);
+      } finally {
+        if (isMounted) setLoadingSettings(false);
       }
-    } catch (error) {
-      logger.warn('Failed to load geo layer settings', error);
-    }
-  }, []);
+    };
+
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchSetting]);
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  }, [settings, initialSettings]);
+
+  const handleReset = useCallback(() => {
+    setSettings(initialSettings);
+    toast.info("Perubahan pengaturan GeoLayer di-reset");
+  }, [initialSettings]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -72,11 +123,13 @@ export const GeoLayerSettings = () => {
         return;
       }
 
-      await saveSetting('geo', 'layer_settings', settings);
+      // Save quietly via hook to prevent dual toast
+      await saveSetting('geo', 'layer_settings', settings, { silent: true });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       }
+      setInitialSettings(settings);
 
       toast.success('Pengaturan GeoLayer berhasil disimpan', {
         icon: <CheckCircle className="h-4 w-4" />,
@@ -89,11 +142,34 @@ export const GeoLayerSettings = () => {
     }
   }, [settings, saveSetting]);
 
+  if (loadingSettings) {
+    return (
+      <div className="space-y-4">
+        <Card variant="glass" className="border-0">
+          <CardHeader className="p-4 sm:p-6 space-y-2">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-80" />
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+            </div>
+            <Skeleton className="h-16 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card variant="glass" className="border-0">
         <CardHeader className="p-4 sm:p-6">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Database className="h-5 w-5 text-primary" />
@@ -103,10 +179,22 @@ export const GeoLayerSettings = () => {
                 Kelola validasi, publikasi, dan konfigurasi layer geografis
               </CardDescription>
             </div>
-            <Badge variant="outline" className="gap-1.5">
-              <Layers className="h-3 w-3" />
-              Advanced
-            </Badge>
+            <div className="flex items-center gap-2">
+              {isDirty ? (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">
+                  Belum Disimpan
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  Tersimpan
+                </Badge>
+              )}
+              <Badge variant="outline" className="gap-1.5 hidden sm:inline-flex">
+                <Layers className="h-3 w-3" />
+                Advanced
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -297,10 +385,29 @@ export const GeoLayerSettings = () => {
             <p className="text-xs text-muted-foreground">
               Perubahan akan diterapkan pada layer yang diunggah berikutnya
             </p>
-            <Button onClick={handleSave} disabled={saving} size="sm" className="w-full sm:w-auto">
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Pengaturan
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {isDirty && (
+                <Button
+                  onClick={handleReset}
+                  variant="ghost"
+                  size="sm"
+                  disabled={saving}
+                  className="text-xs gap-1.5"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset
+                </Button>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={saving || !isDirty}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

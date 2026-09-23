@@ -8,8 +8,30 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Users, UserCog, Activity, Shield, Loader2, RefreshCcw, Search, Mail, Phone, Ban, CheckCircle } from "lucide-react";
+import {
+  Users,
+  UserCog,
+  Activity,
+  Shield,
+  RefreshCcw,
+  Search,
+  Mail,
+  Phone,
+  Ban,
+  CheckCircle,
+} from "lucide-react";
 import { supabase } from "@/services/client";
 import { useAuth } from "@/features/auth/useAuth";
 
@@ -32,6 +54,13 @@ type ActivityLog = {
   created_at: string;
 };
 
+type PendingRoleChange = {
+  userId: string;
+  userName: string;
+  newRole: "admin" | "user";
+  currentRole: "admin" | "user";
+};
+
 const formatDateTime = (iso?: string | null) => {
   if (!iso) return "-";
   try {
@@ -43,6 +72,41 @@ const formatDateTime = (iso?: string | null) => {
   }
 };
 
+/** Skeleton row for user table */
+const UserTableSkeletonRow = () => (
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-4 w-4 rounded-full" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-3 w-36" />
+        </div>
+      </div>
+    </TableCell>
+    <TableCell><Skeleton className="h-3.5 w-24" /></TableCell>
+    <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-8 rounded-full" /></TableCell>
+    <TableCell><Skeleton className="h-3.5 w-28" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
+    <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto rounded-md" /></TableCell>
+  </TableRow>
+);
+
+/** Skeleton row for activity table */
+const ActivitySkeletonRow = () => (
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-3 w-3 rounded-full" />
+        <Skeleton className="h-3.5 w-36" />
+      </div>
+    </TableCell>
+    <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+    <TableCell><Skeleton className="h-3.5 w-28" /></TableCell>
+  </TableRow>
+);
+
 export const UserManagementSettings = () => {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -52,6 +116,7 @@ export const UserManagementSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [pendingChange, setPendingChange] = useState<PendingRoleChange | null>(null);
 
   const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
@@ -83,17 +148,17 @@ export const UserManagementSettings = () => {
 
         if (rawError) {
           logger.error("Fallback profiles error:", rawError);
-          toast.error(`Error loading profiles: ${rawError.message}`);
+          toast.error(`Error memuat profil: ${rawError.message}`);
           return;
         }
         finalProfiles = rawProfiles;
       } else if (profilesError) {
         logger.error("Profiles RPC error:", profilesError);
-        toast.error(`Error loading profiles: ${profilesError.message}`);
+        toast.error(handleApiError(profilesError, "Gagal memuat pengguna"));
         return;
       }
 
-      logger.info("Profiles loaded:", finalProfiles);
+      logger.info("Profiles loaded:", finalProfiles?.length ?? 0);
 
       // Load roles with error handling
       const { data: roles, error: rolesError } = await supabase
@@ -107,14 +172,10 @@ export const UserManagementSettings = () => {
 
       const adminIds = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
 
-      // Get report counts per user via aggregation to avoid full-table scan
+      // Get report counts per user — limit to avoid full-table scan
       const { data: countRows, error: reportsError } = await supabase
         .from("reports")
-        .select("user_id, count:id")
-        // Use `count` via PostgREST aggregate
-        // PostgREST supports .select("user_id") + groupBy workaround:
-        // We select only user_id and get count via a raw SQL function if available.
-        // Fallback: select user_id with limit large enough for active users only.
+        .select("user_id")
         .not("user_id", "is", null)
         .limit(5000);
 
@@ -184,28 +245,37 @@ export const UserManagementSettings = () => {
     loadActivities();
   }, [loadUsers, loadActivities]);
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "user") => {
+  /** Open confirmation dialog instead of immediately mutating */
+  const requestRoleChange = (userId: string, newRole: "admin" | "user") => {
     if (!isAdmin) return;
+    const user = users.find((u) => u.id === userId);
+    if (!user || user.role === newRole) return;
+    setPendingChange({
+      userId,
+      userName: user.full_name || user.email || userId,
+      newRole,
+      currentRole: user.role,
+    });
+  };
+
+  const confirmRoleChange = async () => {
+    if (!pendingChange || !isAdmin) return;
+    const { userId, newRole } = pendingChange;
+    setPendingChange(null);
     setUpdatingUserId(userId);
     try {
       if (newRole === "admin") {
         const { error } = await supabase
           .from("user_roles")
           .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id" });
-        if (error) {
-          logger.error("Upsert error:", error);
-          throw error;
-        }
+        if (error) throw error;
       } else {
         const { error } = await supabase
           .from("user_roles")
           .delete()
           .eq("user_id", userId)
           .eq("role", "admin");
-        if (error) {
-          logger.error("Delete error:", error);
-          throw error;
-        }
+        if (error) throw error;
       }
       toast.success(`Role berhasil diubah menjadi ${newRole === "admin" ? "Admin" : "User"}`);
       await loadUsers();
@@ -234,96 +304,141 @@ export const UserManagementSettings = () => {
   };
 
   return (
-    <Card variant="glass" className="border-0">
-      <CardHeader className="p-4 sm:p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <Users className="h-5 w-5 text-primary" />
-              Manajemen Pengguna
-            </CardTitle>
-            <CardDescription className="mt-1.5">
-              Kelola pengguna, role, dan aktivitas sistem
-            </CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <Badge variant="secondary">{stats.total} Total</Badge>
-            <Badge variant="outline">{stats.admins} Admin</Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto bg-card border-border shadow-sm rounded-xl">
-            <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm py-2">
-              <UserCog className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Pengguna</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-1.5 text-xs sm:text-sm py-2">
-              <Activity className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Aktivitas</span>
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-1.5 text-xs sm:text-sm py-2">
-              <Shield className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Izin</span>
-            </TabsTrigger>
-          </TabsList>
+    <>
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog open={!!pendingChange} onOpenChange={(open) => !open && setPendingChange(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Perubahan Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan mengubah role{" "}
+              <strong>{pendingChange?.userName}</strong> dari{" "}
+              <strong>{pendingChange?.currentRole === "admin" ? "Admin" : "User"}</strong> menjadi{" "}
+              <strong>{pendingChange?.newRole === "admin" ? "Admin" : "User"}</strong>.
+              {pendingChange?.newRole === "admin" && (
+                <span className="block mt-2 text-amber-600 dark:text-amber-400">
+                  ⚠️ Pengguna ini akan mendapat akses penuh ke panel admin.
+                </span>
+              )}
+              {pendingChange?.newRole === "user" && (
+                <span className="block mt-2 text-muted-foreground">
+                  Pengguna ini akan kehilangan akses admin.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRoleChange}>
+              Ya, Ubah Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-          <TabsContent value="users" className="space-y-4 mt-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cari nama, email, atau telepon..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Role</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={loadUsers} disabled={loading} variant="outline" size="icon">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-              </Button>
+      <Card variant="glass" className="border-0">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Users className="h-5 w-5 text-primary" />
+                Manajemen Pengguna
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Kelola pengguna, role, dan aktivitas sistem
+              </CardDescription>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-card border-border shadow-sm rounded-lg p-3">
-                <div className="text-2xl font-bold">{stats.total}</div>
-                <div className="text-xs text-muted-foreground">Total Pengguna</div>
-              </div>
-              <div className="bg-card border-border shadow-sm rounded-lg p-3">
-                <div className="text-2xl font-bold text-primary">{stats.admins}</div>
-                <div className="text-xs text-muted-foreground">Administrator</div>
-              </div>
-              <div className="bg-card border-border shadow-sm rounded-lg p-3">
-                <div className="text-2xl font-bold text-green-600">{stats.users}</div>
-                <div className="text-xs text-muted-foreground">User Biasa</div>
-              </div>
-              <div className="bg-card border-border shadow-sm rounded-lg p-3">
-                <div className="text-2xl font-bold text-orange-600">{stats.activeToday}</div>
-                <div className="text-xs text-muted-foreground">Aktif Hari Ini</div>
-              </div>
+            <div className="flex gap-2">
+              {loading ? (
+                <>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </>
+              ) : (
+                <>
+                  <Badge variant="secondary">{stats.total} Total</Badge>
+                  <Badge variant="outline">{stats.admins} Admin</Badge>
+                </>
+              )}
             </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 h-auto bg-card border-border shadow-sm rounded-xl">
+              <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm py-2">
+                <UserCog className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Pengguna</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-1.5 text-xs sm:text-sm py-2">
+                <Activity className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Aktivitas</span>
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="gap-1.5 text-xs sm:text-sm py-2">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Izin</span>
+              </TabsTrigger>
+            </TabsList>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            {/* ── Tab: Pengguna ── */}
+            <TabsContent value="users" className="space-y-4 mt-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari nama, email, atau telepon..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Role</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={loadUsers} disabled={loading} variant="outline" size="icon">
+                  <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                </Button>
               </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">Tidak ada pengguna ditemukan</p>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-card border-border shadow-sm rounded-lg p-3 space-y-2">
+                      <Skeleton className="h-7 w-10" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="bg-card border-border shadow-sm rounded-lg p-3">
+                      <div className="text-2xl font-bold">{stats.total}</div>
+                      <div className="text-xs text-muted-foreground">Total Pengguna</div>
+                    </div>
+                    <div className="bg-card border-border shadow-sm rounded-lg p-3">
+                      <div className="text-2xl font-bold text-primary">{stats.admins}</div>
+                      <div className="text-xs text-muted-foreground">Administrator</div>
+                    </div>
+                    <div className="bg-card border-border shadow-sm rounded-lg p-3">
+                      <div className="text-2xl font-bold text-green-600">{stats.users}</div>
+                      <div className="text-xs text-muted-foreground">User Biasa</div>
+                    </div>
+                    <div className="bg-card border-border shadow-sm rounded-lg p-3">
+                      <div className="text-2xl font-bold text-orange-600">{stats.activeToday}</div>
+                      <div className="text-xs text-muted-foreground">Aktif Hari Ini</div>
+                    </div>
+                  </>
+                )}
               </div>
-            ) : (
+
+              {/* User Table */}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -338,85 +453,88 @@ export const UserManagementSettings = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <UserCog className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{user.full_name || "-"}</div>
-                              <div className="text-xs text-muted-foreground">{user.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {user.phone || "-"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Shield className="h-3 w-3" />
-                            {user.nik_nip || "-"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{user.report_count || 0}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatDateTime(user.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                            {user.role === "admin" ? "Admin" : "User"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Select
-                            value={user.role}
-                            onValueChange={(value) => handleRoleChange(user.id, value as "admin" | "user")}
-                            disabled={updatingUserId === user.id}
-                          >
-                            <SelectTrigger className="w-[110px] h-8 text-xs ml-auto">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    {loading ? (
+                      Array.from({ length: 5 }).map((_, i) => <UserTableSkeletonRow key={i} />)
+                    ) : filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12">
+                          <Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                          <p className="text-sm text-muted-foreground">Tidak ada pengguna ditemukan</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <UserCog className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{user.full_name || "-"}</div>
+                                <div className="text-xs text-muted-foreground">{user.email}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              {user.phone || "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Shield className="h-3 w-3" />
+                              {user.nik_nip || "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{user.report_count || 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatDateTime(user.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                              {user.role === "admin" ? "Admin" : "User"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) =>
+                                requestRoleChange(user.id, value as "admin" | "user")
+                              }
+                              disabled={updatingUserId === user.id}
+                            >
+                              <SelectTrigger className="w-[110px] h-8 text-xs ml-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
-            )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="activity" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-muted-foreground" />
-                <h4 className="text-sm font-semibold">Log Aktivitas Pengguna</h4>
+            {/* ── Tab: Aktivitas ── */}
+            <TabsContent value="activity" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-semibold">Log Aktivitas Pengguna</h4>
+                </div>
+                <Button onClick={loadActivities} disabled={activityLoading} variant="outline" size="sm">
+                  <RefreshCcw className={`mr-2 h-4 w-4 ${activityLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
               </div>
-              <Button onClick={loadActivities} disabled={activityLoading} variant="outline" size="sm">
-                {activityLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-                Refresh
-              </Button>
-            </div>
 
-            {activityLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="text-center py-12">
-                <Activity className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">Belum ada aktivitas</p>
-              </div>
-            ) : (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -427,82 +545,94 @@ export const UserManagementSettings = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activities.map((activity) => (
-                      <TableRow key={activity.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{activity.user_email}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{activity.action}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatDateTime(activity.created_at)}
+                    {activityLoading ? (
+                      Array.from({ length: 6 }).map((_, i) => <ActivitySkeletonRow key={i} />)
+                    ) : activities.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-12">
+                          <Activity className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                          <p className="text-sm text-muted-foreground">Belum ada aktivitas</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      activities.map((activity) => (
+                        <TableRow key={activity.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm">{activity.user_email}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{activity.action}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatDateTime(activity.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
-            )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="permissions" className="space-y-4 mt-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <h4 className="text-sm font-semibold">Izin & Hak Akses</h4>
-              </div>
-
+            {/* ── Tab: Izin ── */}
+            <TabsContent value="permissions" className="space-y-4 mt-4">
               <div className="space-y-3">
-                <div className="bg-card border-border shadow-sm rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="font-medium mb-1">Administrator</div>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• Akses penuh ke semua fitur</li>
-                        <li>• Kelola pengguna dan role</li>
-                        <li>• Kelola laporan dan geo layer</li>
-                        <li>• Akses pengaturan sistem</li>
-                        <li>• Lihat audit log dan backup</li>
-                      </ul>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-semibold">Izin &amp; Hak Akses</h4>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-card border-border shadow-sm rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-medium mb-1">Administrator</div>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          <li>• Akses penuh ke semua fitur</li>
+                          <li>• Kelola pengguna dan role</li>
+                          <li>• Kelola laporan dan geo layer</li>
+                          <li>• Akses pengaturan sistem</li>
+                          <li>• Lihat audit log dan backup</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-card border-border shadow-sm rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Ban className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-medium mb-1">User Biasa</div>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          <li>• Buat dan lihat laporan sendiri</li>
+                          <li>• Lihat peta dan layer publik</li>
+                          <li>• Edit profil sendiri</li>
+                          <li>• Tidak bisa akses admin panel</li>
+                          <li>• Tidak bisa kelola pengguna lain</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-card border-border shadow-sm rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Ban className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="font-medium mb-1">User Biasa</div>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• Buat dan lihat laporan sendiri</li>
-                        <li>• Lihat peta dan layer publik</li>
-                        <li>• Edit profil sendiri</li>
-                        <li>• Tidak bisa akses admin panel</li>
-                        <li>• Tidak bisa kelola pengguna lain</li>
-                      </ul>
+                <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
+                    <div className="text-xs text-primary dark:text-blue-100">
+                      <strong>Catatan:</strong> Perubahan role memerlukan konfirmasi dan akan berlaku
+                      segera. User yang di-promote menjadi admin akan mendapat akses penuh ke admin panel.
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="bg-blue-50 dark:bg-primary/20 border border-blue-200 dark:border-primary rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <Shield className="h-4 w-4 text-primary dark:text-blue-400 mt-0.5" />
-                  <div className="text-xs text-primary dark:text-blue-100">
-                    <strong>Catatan:</strong> Perubahan role akan berlaku segera. User yang di-promote
-                    menjadi admin akan mendapat akses penuh ke admin panel.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </>
   );
 };

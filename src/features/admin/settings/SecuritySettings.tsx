@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -9,8 +9,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Shield, Lock, Eye, Key, Loader2, AlertTriangle, CheckCircle2, Clock, FileKey } from "lucide-react";
+import {
+  Shield,
+  Lock,
+  Eye,
+  Key,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  FileKey,
+  RotateCcw,
+} from "lucide-react";
 import { useSecurityConfig } from "@/features/admin/useSecurityConfig";
 
 export const SecuritySettings = () => {
@@ -61,6 +73,26 @@ export const SecuritySettings = () => {
     }
   }, [config]);
 
+  const isDirty = useMemo(() => {
+    if (!config) return false;
+    return (
+      JSON.stringify(authSettings) !== JSON.stringify(config.authentication) ||
+      JSON.stringify(accessSettings) !== JSON.stringify(config.access) ||
+      JSON.stringify(auditSettings) !== JSON.stringify(config.audit) ||
+      JSON.stringify(encryptionSettings) !== JSON.stringify(config.encryption)
+    );
+  }, [authSettings, accessSettings, auditSettings, encryptionSettings, config]);
+
+  const handleReset = useCallback(() => {
+    if (config) {
+      setAuthSettings(config.authentication);
+      setAccessSettings(config.access);
+      setAuditSettings(config.audit);
+      setEncryptionSettings(config.encryption);
+      toast.info("Perubahan pengaturan keamanan di-reset");
+    }
+  }, [config]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -102,9 +134,21 @@ export const SecuritySettings = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <Card variant="glass" className="border-0">
+        <CardHeader className="p-4 sm:p-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <div className="space-y-4 pt-2">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -113,7 +157,7 @@ export const SecuritySettings = () => {
   return (
     <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Shield className="h-5 w-5 text-red-500" />
@@ -123,10 +167,22 @@ export const SecuritySettings = () => {
               Konfigurasi autentikasi, akses, audit, dan enkripsi sistem
             </CardDescription>
           </div>
-          <Badge variant="destructive" className="gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Sensitif
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isDirty ? (
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">
+                Belum Disimpan
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                Tersimpan
+              </Badge>
+            )}
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Sensitif
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -582,10 +638,29 @@ export const SecuritySettings = () => {
           <p className="text-xs text-muted-foreground">
             Terakhir diperbarui: {config?.updatedAt ? new Date(config.updatedAt).toLocaleString('id-ID') : '-'}
           </p>
-          <Button onClick={handleSave} disabled={saving || loading} size="sm" className="w-full sm:w-auto">
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengaturan Keamanan
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {isDirty && (
+              <Button
+                onClick={handleReset}
+                variant="ghost"
+                size="sm"
+                disabled={saving}
+                className="text-xs gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={saving || loading || !isDirty}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Pengaturan Keamanan
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

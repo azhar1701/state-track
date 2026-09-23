@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { DownloadCloud, UploadCloud, Database, FileJson, Clock, Loader2, CheckCircle2, AlertTriangle, HardDrive } from "lucide-react";
 import { supabase } from "@/services/client";
@@ -60,11 +61,28 @@ export const BackupSettings = () => {
       }
 
       if (backupSettings.includeSettings) {
-        const { data, error } = await supabase.from("system_settings").select("*").limit(1000);
-        if (!error && data) {
-          backup.system_settings = data;
+        // Backup system_settings
+        const { data: sysData, error: sysError } = await supabase.from("system_settings").select("*").limit(1000);
+        if (!sysError && sysData) {
+          backup.system_settings = sysData;
           tablesIncluded.push("system_settings");
-          totalRecords += data?.length || 0;
+          totalRecords += sysData.length;
+        }
+
+        // Backup app_settings
+        const { data: appData, error: appError } = await supabase.from("app_settings").select("*").limit(1000);
+        if (!appError && appData) {
+          backup.app_settings = appData;
+          tablesIncluded.push("app_settings");
+          totalRecords += appData.length;
+        }
+
+        // Backup custom_categories
+        const { data: catData, error: catError } = await supabase.from("custom_categories").select("*").limit(1000);
+        if (!catError && catData) {
+          backup.custom_categories = catData;
+          tablesIncluded.push("custom_categories");
+          totalRecords += catData.length;
         }
       }
 

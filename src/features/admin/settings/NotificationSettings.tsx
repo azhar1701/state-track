@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,20 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Loader2, Bell, CheckCircle, Mail, MessageSquare, Settings2, Zap, FileText } from 'lucide-react';
+import {
+  Loader2,
+  Bell,
+  CheckCircle,
+  CheckCircle2,
+  Mail,
+  MessageSquare,
+  Settings2,
+  Zap,
+  FileText,
+  RotateCcw,
+} from 'lucide-react';
 import { useSystemSettings } from '@/features/admin/useSystemSettings';
 
 type NotificationConfig = {
@@ -85,22 +97,63 @@ const defaultConfig: NotificationConfig = {
 };
 
 export const NotificationSettings = () => {
-  const { saveSetting } = useSystemSettings();
+  const { fetchSetting, saveSetting } = useSystemSettings();
   const [config, setConfig] = useState<NotificationConfig>(defaultConfig);
+  const [initialConfig, setInitialConfig] = useState<NotificationConfig>(defaultConfig);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setConfig(prev => ({ ...prev, ...parsed }));
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        setLoadingConfig(true);
+        // 1. Fetch from cloud database
+        const remote = await fetchSetting<NotificationConfig>('notification', 'config');
+        if (!isMounted) return;
+
+        if (remote && typeof remote === 'object') {
+          const merged = { ...defaultConfig, ...remote };
+          setConfig(merged);
+          setInitialConfig(merged);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          }
+          return;
+        }
+
+        // 2. Fallback to localStorage
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const merged = { ...defaultConfig, ...parsed };
+            setConfig(merged);
+            setInitialConfig(merged);
+            return;
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to load notification settings', error);
+      } finally {
+        if (isMounted) setLoadingConfig(false);
       }
-    } catch (error) {
-      logger.warn('Failed to load notification settings', error);
-    }
-  }, []);
+    };
+
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchSetting]);
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(config) !== JSON.stringify(initialConfig);
+  }, [config, initialConfig]);
+
+  const handleReset = useCallback(() => {
+    setConfig(initialConfig);
+    toast.info("Perubahan konfigurasi notifikasi di-reset");
+  }, [initialConfig]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -110,11 +163,13 @@ export const NotificationSettings = () => {
         return;
       }
 
-      await saveSetting('notification', 'config', config);
+      // Save quietly via hook to prevent dual toast
+      await saveSetting('notification', 'config', config, { silent: true });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
       }
+      setInitialConfig(config);
 
       toast.success('Pengaturan notifikasi berhasil disimpan', {
         icon: <CheckCircle className="h-4 w-4" />,
@@ -130,10 +185,33 @@ export const NotificationSettings = () => {
   const activeChannels = Object.values(config.channels).filter(Boolean).length;
   const activeTriggers = Object.values(config.triggers).filter(Boolean).length;
 
+  if (loadingConfig) {
+    return (
+      <Card variant="glass" className="border-0">
+        <CardHeader className="p-4 sm:p-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-80" />
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card variant="glass" className="border-0">
       <CardHeader className="p-4 sm:p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Bell className="h-5 w-5 text-amber-500" />
@@ -143,10 +221,22 @@ export const NotificationSettings = () => {
               Kelola channel, trigger, template, dan preferensi notifikasi
             </CardDescription>
           </div>
-          <Badge variant="outline" className="gap-1.5">
-            <Settings2 className="h-3 w-3" />
-            {activeChannels} Channel
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isDirty ? (
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">
+                Belum Disimpan
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                Tersimpan
+              </Badge>
+            )}
+            <Badge variant="outline" className="gap-1.5 hidden sm:inline-flex">
+              <Settings2 className="h-3 w-3" />
+              {activeChannels} Channel
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -589,10 +679,29 @@ export const NotificationSettings = () => {
           <p className="text-xs text-muted-foreground">
             Perubahan akan diterapkan pada notifikasi berikutnya
           </p>
-          <Button onClick={handleSave} disabled={saving} size="sm" className="w-full sm:w-auto">
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengaturan
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {isDirty && (
+              <Button
+                onClick={handleReset}
+                variant="ghost"
+                size="sm"
+                disabled={saving}
+                className="text-xs gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={saving || !isDirty}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Pengaturan
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
