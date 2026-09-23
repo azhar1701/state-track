@@ -92,9 +92,10 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
       setStats(null);
       setRow(null);
       try {
+        // Single query — fetch metadata + data together to avoid double round-trip
         const { data, error } = await supabase
           .from('geo_layers')
-          .select('id,key,name,geometry_type')
+          .select('id,key,name,geometry_type,data')
           .eq('key', layerKey)
           .limit(1)
           .maybeSingle();
@@ -102,23 +103,9 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
           toast.error('Gagal memuat layer');
           return;
         }
-        const basicRow = { ...data, data: null } as LayerRow;
-        setRow(basicRow);
         setLoading(false);
 
-        const { data: fullData, error: dataError } = await supabase
-          .from('geo_layers')
-          .select('data')
-          .eq('key', layerKey)
-          .limit(1)
-          .maybeSingle();
-
-        if (dataError || !fullData) {
-          setLoadingData(false);
-          return;
-        }
-
-        const r = { ...basicRow, data: fullData.data } as LayerRow;
+        const r = data as LayerRow;
         setRow(r);
         dataCache.current.set(layerKey, r);
         const raw = (r.data ?? {}) as { meta?: Record<string, unknown>; style?: Record<string, unknown>; featureCollection?: unknown };
@@ -200,7 +187,10 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
           return;
         }
       }
-      setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
+      const updatedRow = { ...row, data: nextData };
+      setRow(updatedRow);
+      // Invalidate cache so re-opening the layer shows fresh data
+      dataCache.current.set(row.key, updatedRow);
       toast.success('Metadata disimpan');
     } catch (e) {
       logger.error('[LayerInspector] saveMeta exception', sanitizeForLog(e));
@@ -217,24 +207,23 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
       const raw = (row.data ?? {}) as Record<string, unknown>;
       const nextData = { ...raw, style } as Record<string, unknown>;
       const updatePayload = { data: nextData } as Record<string, unknown>;
-      const updateById = async () => supabase.from('geo_layers').update(updatePayload).eq('id', row.id);
-      const updateByKey = async () => supabase.from('geo_layers').update(updatePayload).eq('key', row.key);
 
-      const { error } = await updateById();
+      const { error } = await supabase.from('geo_layers').update(updatePayload).eq('id', row.id);
       if (error) {
-        logger.warn('[LayerInspector] saveStyle failed by id', sanitizeForLog(error));
-        const fallback = await updateByKey();
+        logger.warn('[LayerInspector] saveStyle failed by id, trying by key', sanitizeForLog(error));
+        // Fallback: update by key (only once, no duplicate retry)
+        const fallback = await supabase.from('geo_layers').update(updatePayload).eq('key', row.key);
         if (fallback.error) {
           logger.error('[LayerInspector] saveStyle fallback failed', sanitizeForLog(fallback.error));
-          const retry = await updateByKey();
-          if (retry.error) {
-            toast.error(handleApiError(retry.error, 'Gagal menyimpan style'));
-            return;
-          }
+          toast.error(handleApiError(fallback.error, 'Gagal menyimpan style'));
+          return;
         }
       }
+      const updatedRow = { ...row, data: nextData };
+      setRow(updatedRow);
+      // Invalidate cache so re-opening the layer shows fresh data
+      dataCache.current.set(row.key, updatedRow);
       toast.success('Style disimpan');
-      setRow((prev) => (prev ? { ...prev, data: nextData } : prev));
     } catch (e) {
       logger.error('[LayerInspector] saveStyle exception', sanitizeForLog(e));
       toast.error('Gagal menyimpan style');
@@ -244,14 +233,20 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
   };
 
   const downloadGeoJSON = () => {
-    if (!row) return;
+    if (!featureCollection) {
+      toast.error('Data fitur belum dimuat');
+      return;
+    }
     try {
-      const blob = new Blob([JSON.stringify(row.data, null, 2)], { type: 'application/json' });
+      // Export only the FeatureCollection, not the entire DB record
+      const blob = new Blob([JSON.stringify(featureCollection, null, 2)], { type: 'application/geo+json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${row.key}.geojson.json`;
+      a.download = `${row?.key ?? 'layer'}.geojson`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
       toast.error('Gagal mengunduh GeoJSON');
@@ -296,7 +291,7 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 mx-6">
+            <TabsList className="grid w-full grid-cols-4 px-6">
               <TabsTrigger value="ringkasan">Ringkasan</TabsTrigger>
               <TabsTrigger value="atribut">Atribut</TabsTrigger>
               <TabsTrigger value="metadata">Metadata</TabsTrigger>

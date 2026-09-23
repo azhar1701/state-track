@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileUp, CheckCircle2, Info } from 'lucide-react';
+import { Upload, FileUp, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import shp from 'shpjs';
 import type { FeatureCollection, Geometry } from 'geojson';
@@ -22,6 +22,9 @@ const CRS_OPTIONS = [
   { value: 'EPSG:32749', label: 'UTM 49S (EPSG:32749)' },
 ];
 
+const MAX_FILE_SIZE_MB = 50;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export default function LayerUploader({ onSave }: LayerUploaderProps) {
   const [key, setKey] = useState('');
   const [name, setName] = useState('');
@@ -33,17 +36,25 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const parseFile = async (file: File) => {
+  const parseFile = async (f: File) => {
+    // File size guard
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(`Ukuran file terlalu besar`, {
+        description: `Maksimum ${MAX_FILE_SIZE_MB}MB. File ini ${(f.size / 1024 / 1024).toFixed(1)}MB.`
+      });
+      return;
+    }
+
     try {
-      const ext = file.name.toLowerCase().split('.').pop();
+      const ext = f.name.toLowerCase().split('.').pop();
       let raw: unknown = null;
 
       if (ext === 'geojson' || ext === 'json') {
-        raw = JSON.parse(await file.text());
+        raw = JSON.parse(await f.text());
       } else if (ext === 'zip') {
-        raw = await shp(await file.arrayBuffer());
+        raw = await shp(await f.arrayBuffer());
       } else {
-        throw new Error('Format tidak didukung');
+        throw new Error(`Format ".${ext}" tidak didukung. Gunakan GeoJSON atau Shapefile (.zip).`);
       }
 
       const collection = (raw as { type?: string })?.type === 'FeatureCollection'
@@ -51,21 +62,19 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
         : null;
 
       if (!collection || !collection.features?.length) {
-        throw new Error('File tidak valid atau kosong');
+        throw new Error('File tidak valid atau tidak mengandung fitur');
       }
 
       setFc(collection);
-      setFile(file);
+      setFile(f);
 
       // Auto-fill name from filename
       if (!name) {
-        setName(file.name.replace(/\.(geojson|json|zip)$/i, ''));
+        setName(f.name.replace(/\.(geojson|json|zip)$/i, ''));
       }
       if (!key) {
-        setKey(file.name.replace(/\.(geojson|json|zip)$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '_'));
+        setKey(f.name.replace(/\.(geojson|json|zip)$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '_'));
       }
-
-      toast.success('File berhasil diparse');
     } catch (e) {
       toast.error('Gagal membaca file', { description: e instanceof Error ? e.message : 'Unknown error' });
       setFile(null);
@@ -80,13 +89,9 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
     }
 
     setUploading(true);
-    setProgress(0);
+    setProgress(50); // Parsing sudah selesai, siap simpan
 
     try {
-      setProgress(30);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setProgress(70);
       await onSave({
         key,
         name,
@@ -104,7 +109,10 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
       setFc(null);
       setProgress(0);
     } catch (e) {
-      toast.error('Gagal menyimpan layer');
+      toast.error('Gagal menyimpan layer', {
+        description: e instanceof Error ? e.message : undefined
+      });
+      setProgress(0);
     } finally {
       setUploading(false);
     }
@@ -148,7 +156,9 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
               <div className="flex flex-wrap gap-2 justify-center">
                 <Badge variant="secondary">GeoJSON</Badge>
                 <Badge variant="secondary">Shapefile (.zip)</Badge>
-                <Badge variant="secondary">CSV</Badge>
+                <Badge variant="outline" className="text-muted-foreground text-xs">
+                  Max {MAX_FILE_SIZE_MB}MB
+                </Badge>
               </div>
             )}
 
@@ -156,6 +166,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
               variant={file ? 'outline' : 'default'}
               size="lg"
               onClick={() => inputRef.current?.click()}
+              disabled={uploading}
             >
               <Upload className="h-4 w-4 mr-2" />
               {file ? 'Ganti File' : 'Pilih File'}
@@ -164,7 +175,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
             <input
               ref={inputRef}
               type="file"
-              accept=".geojson,.json,.zip,.csv"
+              accept=".geojson,.json,.zip"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -189,15 +200,25 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
         </Alert>
       )}
 
+      {/* Size warning for large files */}
+      {file && file.size > 10 * 1024 * 1024 && (
+        <Alert variant="default" className="border-amber-500/40 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
+            File berukuran {(file.size / 1024 / 1024).toFixed(1)}MB. Proses upload mungkin membutuhkan waktu lebih lama.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Form */}
       {fc && (
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="key">Layer Key *</Label>
+                <Label htmlFor="layer-key">Layer Key *</Label>
                 <Input
-                  id="key"
+                  id="layer-key"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   placeholder="unique_layer_key"
@@ -207,9 +228,9 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Nama Layer *</Label>
+                <Label htmlFor="layer-name">Nama Layer *</Label>
                 <Input
-                  id="name"
+                  id="layer-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nama yang mudah dibaca"
@@ -219,9 +240,9 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="crs">Coordinate Reference System</Label>
+              <Label htmlFor="layer-crs">Coordinate Reference System</Label>
               <Select value={crs} onValueChange={setCrs} disabled={uploading}>
-                <SelectTrigger id="crs">
+                <SelectTrigger id="layer-crs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,7 +258,7 @@ export default function LayerUploader({ onSave }: LayerUploaderProps) {
             {uploading && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Uploading...</span>
+                  <span className="text-muted-foreground">Menyimpan layer...</span>
                   <span className="font-medium">{progress}%</span>
                 </div>
                 <Progress value={progress} />

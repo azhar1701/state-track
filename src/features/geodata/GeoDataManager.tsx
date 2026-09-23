@@ -14,13 +14,20 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import LayerInspector from '@/features/geodata/LayerInspector';
 import LayerUploader from '@/features/geodata/LayerUploader';
-import { Loader2, Map as MapIcon, Eye, RefreshCw, Download, Upload } from 'lucide-react';
+import { Loader2, Map as MapIcon, Eye, RefreshCw, Download, Upload, XCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { bbox } from '@turf/turf';
 
 function InlineEditableText({ value, onSave }: { value: string; onSave: (v: string) => void | Promise<void> }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value);
+
+  // Sync local state when prop changes (e.g. after refresh)
+  useEffect(() => {
+    if (!editing) setVal(value);
+  }, [value, editing]);
+
   return editing ? (
     <div className="flex items-center gap-2">
       <input className="h-8 w-full max-w-[240px] rounded border bg-background px-2 text-sm" value={val} onChange={(e) => setVal(e.target.value)} />
@@ -44,6 +51,7 @@ export default function GeoDataManager() {
   const [inspectKey, setInspectKey] = useState<string | null>(null);
   const [layerValidation, setLayerValidation] = useState(() => new Map<string, { valid: boolean; errorCount: number; featureCount: number }>());
   const [layerStats, setLayerStats] = useState(() => new Map<string, { featureCount: number; bounds?: number[] }>());
+  const [isExporting, setIsExporting] = useState(false);
 
   const validateLayerById = useCallback(async (layerId: string, layerKey: string) => {
     try {
@@ -160,6 +168,7 @@ export default function GeoDataManager() {
   };
 
   const handleBatchExport = async () => {
+    setIsExporting(true);
     try {
       const { data, error } = await supabase.from('geo_layers').select('key,name,geometry_type,data,created_at');
       if (error) throw error;
@@ -173,11 +182,15 @@ export default function GeoDataManager() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `all-layers-${Date.now()}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(`${(data || []).length} layer berhasil diekspor`);
     } catch (e) {
       toast.error('Gagal mengekspor layer');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -233,8 +246,8 @@ export default function GeoDataManager() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button size="sm" variant="outline" onClick={handleBatchExport}>
-            <Download className="h-4 w-4 mr-2" />
+          <Button size="sm" variant="outline" onClick={handleBatchExport} disabled={isExporting || layers.length === 0}>
+            {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
             Export Semua
           </Button>
         </div>
@@ -334,7 +347,6 @@ export default function GeoDataManager() {
                 <TableBody>
                   {filteredLayers.map((r) => {
                     const stats = layerStats.get(r.key);
-                    const validation = layerValidation.get(r.key);
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/30">
                         <TableCell className="font-medium">
@@ -350,11 +362,16 @@ export default function GeoDataManager() {
                           <span className="font-semibold">{stats?.featureCount || 0}</span>
                         </TableCell>
                         <TableCell>
-                          {validation && !validation.valid ? (
-                            <Badge variant="destructive">⚠️ {validation.errorCount} error</Badge>
-                          ) : (
-                            <Badge variant="secondary">✓ Valid</Badge>
-                          )}
+                          {(() => {
+                            if (!layerValidation.has(r.key)) {
+                              // Layer beyond the first 10 has not been validated
+                              return <Badge variant="outline" className="text-muted-foreground text-xs">— Belum divalidasi</Badge>;
+                            }
+                            const v = layerValidation.get(r.key)!;
+                            return v.valid
+                              ? <Badge variant="secondary">✓ Valid</Badge>
+                              : <Badge variant="destructive">⚠️ {v.errorCount} error</Badge>;
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -392,13 +409,38 @@ export default function GeoDataManager() {
                   {filteredLayers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-12">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          {loading ? (
-                            <><Loader2 className="h-8 w-8 animate-spin" /><span>Memuat layer...</span></>
-                          ) : (
-                            <><span className="text-4xl">📂</span><span>Tidak ada layer yang sesuai filter</span></>
-                          )}
-                        </div>
+                        {loading ? (
+                          // Skeleton shimmer — avoids CLS spinner anti-pattern
+                          <div className="space-y-2 px-4">
+                            {[...Array(4)].map((_, i) => (
+                              <Skeleton key={i} className="h-12 w-full rounded-md" style={{ opacity: 1 - i * 0.2 }} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                            <span className="text-4xl">📂</span>
+                            <span className="text-sm">
+                              {layerSearch || geometryFilter !== 'all' || validationFilter !== 'all'
+                                ? 'Tidak ada layer yang sesuai filter'
+                                : 'Belum ada layer. Upload layer pertama Anda.'}
+                            </span>
+                            {(layerSearch || geometryFilter !== 'all' || validationFilter !== 'all') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                onClick={() => {
+                                  setLayerSearch('');
+                                  setGeometryFilter('all');
+                                  setValidationFilter('all');
+                                }}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Reset Filter
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   )}
