@@ -241,6 +241,9 @@ const AdminSettings = () => {
               <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Pengguna</span>
             </TabsTrigger>
+          </TabsList>
+        </div>
+
         <TabsContent value="map" className="mt-6 space-y-4">
           <Tabs defaultValue="display" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4 bg-card/80 backdrop-blur-md border border-border/60 shadow-sm rounded-xl">
