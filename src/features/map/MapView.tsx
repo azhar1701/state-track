@@ -342,6 +342,13 @@ const MapView = () => {
   // map actions
   const goToUserLocation = () => { if (userLocation) { setMapCenter(userLocation); setMapZoom(15); } };
 
+  // One-tap extent reset → flyTo Ciamis bounding box
+  const resetToCiamisExtent = useCallback(() => {
+    if (!mapInstance) return;
+    mapInstance.flyTo([-7.325, 108.353], 12, { duration: 1.2, easeLinearity: 0.25 });
+    toast.success("Kembali ke wilayah Ciamis", { icon: "🧭", duration: 2000 });
+  }, [mapInstance]);
+
   const handleZoomToLayer = useCallback(() => {
     if (!selectedLayer || !mapInstance) return;
     const layer = selectedLayer.layer;
@@ -550,7 +557,7 @@ const MapView = () => {
       <div className={`relative w-full h-full ${activeMapTool ? "cursor-crosshair" : ""}`}>
         <MapCanvas basemap={basemap} center={mapCenter} zoom={mapZoom} ref={setMapInstance}>
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
-            {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={goToUserLocation} />}
+            {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={goToUserLocation} onResetExtent={resetToCiamisExtent} />}
 
             {overlays.adminBoundaries && adminGeoJson && (
               <Pane name="admin-boundaries" style={{ zIndex: 350 }}>
@@ -587,7 +594,21 @@ const MapView = () => {
               <Marker position={userLocation} icon={L.icon({ iconUrl: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOCIgZmlsbD0iIzM5ODJmNiIgZmlsbC1vcGFjaXR5PSIwLjMiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNCIgZmlsbD0iIzM5ODJmNiIvPgo8L3N2Zz4=", iconSize:[24,24], iconAnchor:[12,12] })} />
             )}
 
-            {routingPath && <Polyline positions={routingPath} pathOptions={{ color:"#3b82f6", weight:6, opacity:0.8, dashArray:"10, 10" }} />}
+            {routingPath && (
+              <Polyline
+                positions={routingPath}
+                pathOptions={{ color: "#3b82f6", weight: 6, opacity: 0.9 }}
+                ref={(ref) => {
+                  if (ref) {
+                    const el = (ref as unknown as { getElement?: () => HTMLElement | null }).getElement?.();
+                    if (el) el.classList.add("pulsing-route-polyline");
+                    // fitBounds so the full route is visible
+                    const bounds = (ref as unknown as { getBounds?: () => L.LatLngBounds }).getBounds?.();
+                    if (bounds?.isValid()) mapInstance?.fitBounds(bounds.pad(0.12));
+                  }
+                }}
+              />
+            )}
 
             <MapInteractionLayer
               activeMapTool={activeMapTool}
@@ -601,6 +622,7 @@ const MapView = () => {
             showSearch={showSearchPanel}
             onToggleSearch={() => { setShowSearchPanel((v)=>!v); setShowFilterPanel(false); setShowOverlayPanel(false); }}
             canLocate={!!userLocation} onLocate={goToUserLocation}
+            onResetExtent={resetToCiamisExtent}
             onToggleFilters={() => { setShowFilterPanel((v)=>!v); setShowSearchPanel(false); setShowOverlayPanel(false); }}
             onToggleOverlays={() => { setShowOverlayPanel((v)=>!v); setShowSearchPanel(false); setShowFilterPanel(false); }}
             onToggleDrawing={() => { setShowGeomanDraw((p)=>!p); setActiveMapTool(null); setShowSpatialAnalysis(false); setShowRouteOptimization(false); }}
@@ -664,8 +686,19 @@ const MapView = () => {
               reports={filteredReports.map((r)=>({id:r.id,title:r.title,coords:[r.latitude,r.longitude],category:r.category,status:r.status,severity:r.severity||undefined}))}
               onRouteGenerated={(route) => {
                 if (!mapInstance) return;
-                L.polyline(route.points.map((p)=>[p.coords[0],p.coords[1]] as [number,number]),{color:"#10b981",weight:4,opacity:0.8}).addTo(mapInstance);
-                route.points.forEach((pt,idx) => { L.marker([pt.coords[0],pt.coords[1]],{icon:L.divIcon({html:`<div style="background:#10b981;color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">${idx+1}</div>`,className:"route-marker",iconSize:[24,24]})}).addTo(mapInstance); });
+                const latLngs: [number, number][] = route.points.map((p) => [p.coords[0], p.coords[1]]);
+                const polyline = L.polyline(latLngs, { color: "#10b981", weight: 5, opacity: 0.9, className: "pulsing-route-polyline" }).addTo(mapInstance);
+                const bounds = polyline.getBounds();
+                if (bounds.isValid()) mapInstance.fitBounds(bounds.pad(0.12));
+                route.points.forEach((pt, idx) => {
+                  L.marker([pt.coords[0], pt.coords[1]], {
+                    icon: L.divIcon({
+                      html: `<div style="background:#10b981;color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.35)">${idx + 1}</div>`,
+                      className: "route-marker",
+                      iconSize: [26, 26],
+                    }),
+                  }).addTo(mapInstance);
+                });
               }}
               onClose={() => setShowRouteOptimization(false)} />
           )}

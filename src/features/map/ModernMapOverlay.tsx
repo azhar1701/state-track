@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Ruler,
+  Compass,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
@@ -27,6 +28,7 @@ interface ModernMapOverlayProps {
   // Location
   canLocate: boolean;
   onLocate: () => void;
+  onResetExtent?: () => void;
   // Filters & Overlays
   onToggleFilters?: () => void;
   onToggleOverlays?: () => void;
@@ -59,6 +61,7 @@ export const ModernMapOverlay = ({
   onToggleSearch,
   canLocate,
   onLocate,
+  onResetExtent,
   onToggleFilters,
   onToggleOverlays,
   onToggleDrawing,
@@ -131,6 +134,20 @@ export const ModernMapOverlay = ({
                 aria-label="Lokasi Saya"
               >
                 <Navigation className="icon-sm" />
+              </Button>
+            )}
+
+            {/* Reset Extent */}
+            {onResetExtent && (
+              <Button
+                onClick={onResetExtent}
+                size="sm"
+                variant="ghost"
+                className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 hover:bg-primary/10 text-primary"
+                title="Kembali ke Wilayah Ciamis"
+                aria-label="Reset Extent ke Ciamis"
+              >
+                <Compass className="icon-sm" />
               </Button>
             )}
 

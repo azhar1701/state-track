@@ -492,23 +492,77 @@ All colors MUST be HSL.
 }
 
 .leaflet-popup-content-wrapper {
-  background: hsl(var(--card)) !important;
-  border: 1px solid hsl(var(--border) / 0.5) !important;
-  border-radius: 1.5rem !important;
-  box-shadow: var(--shadow-lifted) !important;
+  background: hsl(var(--card) / 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid hsl(var(--border) / 0.8) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: var(--shadow-float) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 .dark .leaflet-popup-content-wrapper {
-  background: hsl(var(--card)) !important;
+  background: hsl(var(--card) / 0.9) !important;
+  border: 1px solid hsl(var(--border) / 0.7) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
 }
 
 .leaflet-popup-tip {
-  background: hsl(var(--card)) !important;
-  box-shadow: none !important;
+  background: hsl(var(--card) / 0.95) !important;
+  border: 1px solid hsl(var(--border) / 0.6) !important;
+  box-shadow: var(--shadow-soft) !important;
 }
 
 .dark .leaflet-popup-tip {
-  background: hsl(var(--card)) !important;
+  background: hsl(var(--card) / 0.95) !important;
+  border: 1px solid hsl(var(--border) / 0.6) !important;
+}
+
+.leaflet-popup-close-button {
+  top: 10px !important;
+  right: 10px !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 9999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: hsl(var(--background) / 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid hsl(var(--border) / 0.7) !important;
+  color: hsl(var(--foreground)) !important;
+  font-size: 15px !important;
+  font-weight: bold !important;
+  transition: all 0.15s ease !important;
+  z-index: 20 !important;
+  text-decoration: none !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: hsl(var(--destructive) / 0.15) !important;
+  color: hsl(var(--destructive)) !important;
+  border-color: hsl(var(--destructive) / 0.4) !important;
+}
+
+/* Route Polyline Pulse Animation */
+@keyframes route-pulse {
+  0%, 100% {
+    stroke-opacity: 0.85;
+    stroke-width: 4px;
+  }
+  50% {
+    stroke-opacity: 1;
+    stroke-width: 6px;
+  }
+}
+
+.pulsing-route-polyline {
+  animation: route-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .custom-marker {
@@ -557,6 +611,68 @@ All colors MUST be HSL.
 
 .dark::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
+}
+
+/* ============================================================
+   PILAR 2 — Geospatial HUD: Liquid Glass Leaflet Popup
+   ============================================================ */
+
+/* Reset & container */
+.leaflet-popup-content-wrapper {
+  background: hsl(var(--background) / 0.85) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid hsl(var(--border) / 0.6) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 8px 32px hsl(var(--foreground) / 0.12),
+              0 2px 8px hsl(var(--foreground) / 0.06) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  font-family: inherit !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Tip (caret) */
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
+.leaflet-popup-tip {
+  background: hsl(var(--background) / 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: none !important;
+}
+
+/* Close button */
+.leaflet-popup-close-button {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 18px !important;
+  top: 8px !important;
+  right: 8px !important;
+  transition: color 0.15s ease;
+}
+
+.leaflet-popup-close-button:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* ============================================================
+   PILAR 2 — Pulsing Route Polyline Animation
+   ============================================================ */
+
+@keyframes route-pulse {
+  0%, 100% { opacity: 0.9; stroke-width: 6px; }
+  50%       { opacity: 0.5; stroke-width: 4px; }
+}
+
+/* Applied via className on the Polyline / L.polyline */
+.pulsing-route-polyline path,
+.leaflet-overlay-pane svg path.pulsing-route-polyline {
+  animation: route-pulse 2s ease-in-out infinite;
 }
 
 /* Reduced-motion support: disable animations and transitions for motion-sensitive users */
