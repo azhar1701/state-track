@@ -306,7 +306,7 @@ const AdminDashboard = () => {
           </TabsContent>
           <TabsContent value="help">
             <Suspense fallback={<DetailSkeleton />}>
-              <HelpCenterLazy />
+              <HelpCenterLazy embedded={true} />
             </Suspense>
           </TabsContent>
           <TabsContent value="settings">
