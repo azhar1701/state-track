@@ -22,7 +22,7 @@ export default function StatsGrid({ stats, variants }: StatsGridProps) {
         <motion.div key={i} variants={variants}>
           <Card
             variant="glass"
-            className="p-5 md:p-6 rounded-2xl h-full hover:-translate-y-1 hover:shadow-xl transition-all duration-500 group"
+            className="p-5 md:p-6 rounded-2xl h-full hover:scale-[1.02] hover:-translate-y-1 hover:shadow-lifted transition-all duration-300 group"
           >
             <div className={`p-3 ${stat.bg} rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform duration-500`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />

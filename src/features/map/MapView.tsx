@@ -751,9 +751,30 @@ const MapView = () => {
 
           {(loading||adminLoading||Object.entries(dynamicLoading).some(([k,v])=>overlays.dynamic?.[k]&&v)) && (
             <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1100] flex flex-col gap-2 pointer-events-none">
-              {loading && <div className="bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2 shadow-md"><div className="flex items-center gap-2 text-sm text-white"><Loader2 className="w-4 h-4 animate-spin" /><span className="font-medium">Memuat laporan...</span></div></div>}
-              {adminLoading&&overlays.adminBoundaries && <div className="bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2 shadow-md"><div className="flex items-center gap-2 text-sm text-white"><Loader2 className="w-4 h-4 animate-spin" /><span className="font-medium">Memuat batas administratif...</span></div></div>}
-              {Object.entries(dynamicLoading).some(([k,v])=>overlays.dynamic?.[k]&&v) && <div className="bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2 shadow-md"><div className="flex items-center gap-2 text-sm text-white"><Loader2 className="w-4 h-4 animate-spin" /><span className="font-medium">Memuat layer geospasial...</span></div></div>}
+              {loading && (
+                <div className="bg-background/90 backdrop-blur-md border border-border rounded-2xl px-4 py-2 shadow-float animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="font-medium">Memuat laporan...</span>
+                  </div>
+                </div>
+              )}
+              {adminLoading && overlays.adminBoundaries && (
+                <div className="bg-background/90 backdrop-blur-md border border-border rounded-2xl px-4 py-2 shadow-float animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="font-medium">Memuat batas administratif...</span>
+                  </div>
+                </div>
+              )}
+              {Object.entries(dynamicLoading).some(([k,v])=>overlays.dynamic?.[k]&&v) && (
+                <div className="bg-background/90 backdrop-blur-md border border-border rounded-2xl px-4 py-2 shadow-float animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="font-medium">Memuat layer geospasial...</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
               </div>

@@ -5,9 +5,11 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import { useMapReports, Report } from '../hooks/useMapReports';
 import { MapFilters } from '../FilterPanel';
 import { MapOverlays } from '../OverlayToggle';
-import { formatReportLocation } from '@/lib/formatters';
+import { formatReportLocation, getOptimizedImageUrl } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusBadge, SeverityBadge } from '@/components/common/ReportBadges';
+import { MapPin, ArrowRight } from 'lucide-react';
 
 interface ReportLayerProps {
   filters: MapFilters;
@@ -99,20 +101,50 @@ export const ReportLayer = ({ filters, overlays, onReportClick }: ReportLayerPro
                 click: () => onReportClick(report),
               }}
             >
-              <Popup className="custom-popup">
-                <div className="p-1 max-w-[200px]">
-                  <h3 className="font-bold text-sm mb-1 leading-tight">{report.title}</h3>
-                  <div className="flex gap-1 mb-2">
-                    <Badge variant="outline" className="text-[10px] h-4">{report.category}</Badge>
-                    <Badge variant={report.status === 'selesai' ? 'success' : 'secondary'} className="text-[10px] h-4">
-                      {report.status}
-                    </Badge>
+              <Popup className="custom-popup" maxWidth={260} minWidth={220}>
+                <div className="p-3 w-[230px] space-y-2">
+                  {(report.photo_urls?.[0] || report.photo_url) && (
+                    <div className="w-full h-24 rounded-xl overflow-hidden bg-muted/50 border border-border/40">
+                      <img
+                        src={getOptimizedImageUrl(report.photo_urls?.[0] || report.photo_url, 300, 60)}
+                        alt={report.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-sm leading-tight text-foreground line-clamp-2">
+                      {report.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <StatusBadge status={report.status} className="text-[10px] py-0 h-4.5 px-2 font-medium" />
+                      {report.severity && (
+                        <SeverityBadge severity={report.severity} className="text-[10px] py-0 h-4.5 px-2 font-medium" />
+                      )}
+                      <Badge variant="outline" className="text-[10px] py-0 h-4.5 px-2 font-normal text-muted-foreground border-border/60">
+                        {report.category}
+                      </Badge>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground line-clamp-2 mb-2">
-                    {formatReportLocation(report.location_name, report.desa, report.kecamatan)}
-                  </p>
-                  <Button size="sm" className="w-full h-7 text-[10px]" onClick={() => onReportClick(report)}>
-                    Detail Laporan
+
+                  <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground pt-1">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary" />
+                    <span className="line-clamp-2 leading-relaxed">
+                      {formatReportLocation(report.location_name, report.desa, report.kecamatan)}
+                    </span>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs font-medium gap-1.5 mt-2 rounded-xl"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReportClick(report);
+                    }}
+                  >
+                    <span>Detail Laporan</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </Popup>

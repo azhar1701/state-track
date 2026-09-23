@@ -23,7 +23,7 @@ export default function FeatureGrid({ features, variants }: FeatureGridProps) {
         <motion.div key={i} variants={variants}>
           <Card
             variant="glass"
-            className={`p-8 rounded-3xl h-full border border-border/50 ${f.border} transition-all duration-500 group hover:shadow-2xl hover:shadow-primary/5`}
+            className={`p-8 rounded-3xl h-full border border-border/50 ${f.border} hover:scale-[1.02] hover:-translate-y-1.5 hover:shadow-lifted transition-all duration-300 group hover:shadow-primary/5 cursor-pointer`}
           >
             <div className={`w-14 h-14 ${f.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner`}>
               <f.icon className={`w-7 h-7 ${f.color}`} />

@@ -121,7 +121,7 @@ export const AdminFilters = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground">Filter aktif:</span>
             {statusFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-white dark:bg-slate-900 text-primary border-primary/20 shadow-sm">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-background text-primary border-primary/20 shadow-sm">
                 {statusFilter}
                 <button
                   onClick={() => setStatusFilter('semua')}
@@ -133,7 +133,7 @@ export const AdminFilters = ({
               </Badge>
             )}
             {severityFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-white dark:bg-slate-900 text-amber-500 border-amber-500/20 shadow-sm">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-background text-amber-500 border-amber-500/20 shadow-sm">
                 {severityFilter}
                 <button
                   onClick={() => setSeverityFilter('semua')}
@@ -145,7 +145,7 @@ export const AdminFilters = ({
               </Badge>
             )}
             {categoryFilter !== 'semua' && (
-              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-white dark:bg-slate-900 text-muted-foreground border-border/50 shadow-sm">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-background text-muted-foreground border-border/50 shadow-sm">
                 {categoryFilter}
                 <button
                   onClick={() => setCategoryFilter('semua')}
@@ -157,7 +157,7 @@ export const AdminFilters = ({
               </Badge>
             )}
             {search.length > 0 && (
-              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-white dark:bg-slate-900 text-muted-foreground border-border/50 shadow-sm">
+              <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider py-1 pl-2.5 pr-1 bg-background text-muted-foreground border-border/50 shadow-sm">
                 "{search}"
                 <button
                   onClick={() => setSearch('')}
