@@ -107,7 +107,7 @@ export const AdminFilters = ({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari judul..."
+                  placeholder="Cari judul, lokasi, desa, kecamatan..."
                   className="h-9"
                 />
               </div>

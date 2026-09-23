@@ -1,4 +1,4 @@
-import { useMemo, useState, Suspense, lazy } from "react";
+import { useMemo, useState, useEffect, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
 import { useAdminReports } from "./useAdminReports";
@@ -22,8 +22,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { useDebounce } from "@/hooks/useDebounce";
+import { exportReportsToCsv } from "./exportReports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatSkeleton, TableSkeleton, DetailSkeleton } from "@/components/common/Skeletons";
 
@@ -46,9 +48,16 @@ const AdminDashboard = () => {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('semua');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('semua');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 350);
   const [sortBy, setSortBy] = useState<SortOption>('created_at_desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Reset to first page whenever search or filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, severityFilter, categoryFilter, sortBy]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<ReportStatus | ''>('');
@@ -59,7 +68,7 @@ const AdminDashboard = () => {
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Use our new hook
+  // Use our hook with debounced search
   const {
     reports,
     totalFiltered,
@@ -73,7 +82,7 @@ const AdminDashboard = () => {
     statusFilter,
     severityFilter,
     categoryFilter,
-    search,
+    search: debouncedSearch,
     sortBy,
     page,
     pageSize
@@ -122,6 +131,21 @@ const AdminDashboard = () => {
       setConfirmBulkOpen(false);
     } catch (err) {
       logger.error("Bulk update failed", err);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportReportsToCsv({
+        statusFilter,
+        severityFilter,
+        categoryFilter,
+        search: debouncedSearch,
+        sortBy
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -185,7 +209,16 @@ const AdminDashboard = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <CardTitle className="text-lg">Daftar Laporan ({totalFiltered})</CardTitle>
                   <div className="flex items-center gap-2">
-                    {/* Export buttons hidden until implementation */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1.5 rounded-lg border-border/80 hover:bg-accent shadow-sm"
+                      disabled={isExporting || totalFiltered === 0}
+                      onClick={handleExport}
+                    >
+                      {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <Download className="w-3.5 h-3.5 text-primary" />}
+                      <span>Ekspor CSV</span>
+                    </Button>
                   </div>
                 </div>
               </CardHeader>

@@ -65,7 +65,10 @@ export const useAdminReports = (params: FetchReportsParams) => {
       if (statusFilter !== "semua") query = query.eq("status", statusFilter);
       if (severityFilter !== "semua") query = query.eq("severity", severityFilter);
       if (categoryFilter !== "semua") query = query.eq("category", categoryFilter);
-      if (search) query = query.ilike("title", `%${search}%`);
+      if (search.trim()) {
+        const term = search.trim();
+        query = query.or(`title.ilike.%${term}%,location_name.ilike.%${term}%,desa.ilike.%${term}%,kecamatan.ilike.%${term}%`);
+      }
 
       if (sortBy === "created_at_desc") {
         query = query.order("created_at", { ascending: false });
@@ -103,16 +106,29 @@ export const useAdminReports = (params: FetchReportsParams) => {
     queryKey: ["admin", "categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reports")
-        .select("category");
-      if (error) throw error;
-      
-      const set = new Set<ReportCategory>();
-      data.forEach((r) => {
-        if (r.category) set.add(r.category as ReportCategory);
-      });
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
+        .from("custom_categories")
+        .select("value")
+        .eq("is_active", true);
+
+      if (!error && data && data.length > 0) {
+        return data
+          .map((c) => (c as { value: string }).value as ReportCategory)
+          .sort((a, b) => a.localeCompare(b));
+      }
+
+      // Default categories fallback
+      return [
+        "banjir",
+        "irigasi",
+        "tanggul",
+        "pencemaran",
+        "drainase",
+        "longsor",
+        "kekeringan",
+        "lainnya",
+      ] as ReportCategory[];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const updateStatusMutation = useMutation({
