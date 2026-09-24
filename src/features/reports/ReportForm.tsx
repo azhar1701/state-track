@@ -210,7 +210,7 @@ const ReportForm = () => {
           </CardContent>
 
           {/* Unified Sticky Action Bar */}
-          <div className="sticky bottom-0 z-30 px-4 py-3 sm:px-6 sm:py-3.5 bg-card/95 backdrop-blur-md border-t border-border/80 flex items-center justify-between gap-2 sm:gap-4 shadow-float">
+          <div className="sticky bottom-0 z-30 px-4 py-3 sm:px-6 sm:py-3.5 pb-safe bg-card/95 backdrop-blur-md border-t border-border/80 flex items-center justify-between gap-2 sm:gap-4 shadow-float">
             <Button
               type="button"
               variant="outline"

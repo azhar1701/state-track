@@ -312,8 +312,8 @@ export const ModernMapOverlay = ({
       </div>
 
       {/* Bottom Left: Collapsible Legend */}
-      <div className="absolute bottom-48 md:bottom-4 left-3 md:left-4 pointer-events-none z-[900]">
-        <div className="bg-card/95 backdrop-blur-md border border-border/80 shadow-float rounded-xl overflow-hidden pointer-events-auto max-w-xs">
+      <div className="absolute bottom-48 md:bottom-32 xl:bottom-4 left-3 md:left-4 pointer-events-none z-[900]">
+        <div className="bg-card/95 backdrop-blur-md border border-border/80 shadow-float rounded-xl overflow-hidden pointer-events-auto max-w-[260px] sm:max-w-xs">
           {/* Legend Header */}
           <button
             onClick={() => setLegendCollapsed(!legendCollapsed)}

@@ -14,6 +14,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 
 import type { Report } from '@/services/types';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ReportDetailViewProps {
     report: Report;
@@ -67,6 +68,7 @@ const InfoCard = ({ icon: Icon, label, value, color = 'blue' }: {
 };
 
 export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin }: ReportDetailViewProps) => {
+    const isMobileOrTablet = useIsMobile(1024);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const y = useMotionValue(0);
@@ -132,15 +134,15 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
             {/* Side Drawer (Desktop) / Bottom Sheet (Mobile) */}
             <motion.div
                 ref={constraintsRef}
-                initial={{ x: '100%', y: 0 }}
+                initial={isMobileOrTablet ? { y: '100%', x: 0 } : { x: '100%', y: 0 }}
                 animate={{ x: 0, y: 0 }}
-                exit={{ x: '100%', y: 0 }}
+                exit={isMobileOrTablet ? { y: '100%', x: 0 } : { x: '100%', y: 0 }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                 style={{ opacity }}
                 className={cn(
                     'fixed z-[1401] bg-popover/90 backdrop-blur-xl border-border shadow-2xl flex flex-col glass-floating',
                     'lg:top-0 lg:right-0 lg:h-full lg:w-[420px] lg:border-l lg:rounded-none',
-                    'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-[2.5rem] max-lg:h-[90vh]'
+                    'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-[2.5rem] max-lg:h-[90dvh]'
                 )}
             >
                 {/* Mobile Drag Handle */}

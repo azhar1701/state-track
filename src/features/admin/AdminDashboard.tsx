@@ -224,11 +224,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => onChangeTab(v as AdminTab)}>
-          <TabsList className="w-full flex flex-wrap gap-2 mb-4 md:mb-6 bg-card border-border shadow-sm rounded-xl p-2 h-auto">
-            <TabsTrigger value="reports" className="flex-1 min-w-[140px]">Laporan</TabsTrigger>
-            <TabsTrigger value="geo" className="flex-1 min-w-[140px]">Geo Data</TabsTrigger>
-            <TabsTrigger value="help" className="flex-1 min-w-[140px]">Help Center</TabsTrigger>
-            <TabsTrigger value="settings" className="flex-1 min-w-[140px]">Pengaturan</TabsTrigger>
+          <TabsList className="w-full flex overflow-x-auto no-scrollbar flex-nowrap sm:flex-wrap gap-2 mb-4 md:mb-6 bg-card border-border shadow-sm rounded-xl p-1.5 md:p-2 h-auto justify-start sm:justify-center">
+            <TabsTrigger value="reports" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Laporan</TabsTrigger>
+            <TabsTrigger value="geo" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Geo Data</TabsTrigger>
+            <TabsTrigger value="help" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Help Center</TabsTrigger>
+            <TabsTrigger value="settings" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Pengaturan</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reports" className="mt-0">
@@ -352,7 +352,7 @@ const AdminDashboard = () => {
       </AlertDialog>
 
       <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-        <DrawerContent className="h-[88vh] max-h-[92vh] max-w-5xl mx-auto">
+        <DrawerContent className="h-[88dvh] max-h-[92dvh] max-w-5xl mx-auto">
           <Suspense fallback={
             <div className="p-6">
               <DrawerTitle className="sr-only">Detail Laporan</DrawerTitle>

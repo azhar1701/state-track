@@ -40,17 +40,18 @@ const AppInner = memo(() => {
 
   const location = useLocation();
   const isMapPage = location.pathname === "/map" || location.pathname.startsWith("/map/");
+  const isReportPage = location.pathname === "/report";
 
   const mainStyle = useMemo(() => ({
-    paddingBottom: isMobile && !isMapPage ? '72px' : '0'
-  }), [isMobile, isMapPage]);
+    paddingBottom: isMobile && !isMapPage && !isReportPage ? '72px' : '0'
+  }), [isMobile, isMapPage, isReportPage]);
 
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-50 bg-primary text-primary-foreground px-3 py-1 rounded-md">Lewati ke konten utama</a>
       <Navbar />
       <OfflineIndicator />
-      <main id="main-content" className={isMapPage ? "h-[calc(100dvh-3.5rem)] overflow-hidden" : "min-h-[calc(100vh-3.5rem)]"} style={mainStyle}>
+      <main id="main-content" className={isMapPage ? "h-[calc(100dvh-3.5rem)] overflow-hidden" : "min-h-[calc(100dvh-3.5rem)]"} style={mainStyle}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -72,7 +73,7 @@ const AppInner = memo(() => {
           </Suspense>
         </ErrorBoundary>
       </main>
-      {isMobile && <BottomNav />}
+      {isMobile && !isReportPage && <BottomNav />}
       <InstallPrompt />
       <NotificationPrompt />
       <KeyboardShortcuts />

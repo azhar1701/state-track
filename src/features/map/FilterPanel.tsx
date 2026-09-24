@@ -36,7 +36,7 @@ const statusLabels = {
 };
 
 export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelProps) => {
-  const isMobile = useIsMobile();
+  const isMobileOrTablet = useIsMobile(1024);
  const { user } = useAuth();
  const [localFilters, setLocalFilters] = useState<MapFilters>(filters);
  const [presets, setPresets] = useState<Array<{ id: string; name: string; filters: MapFilters }>>([]);
@@ -159,13 +159,13 @@ export const FilterPanel = ({ filters, onFilterChange, onClose }: FilterPanelPro
       />
 
       <motion.div
-        initial={isMobile ? { y: "100%" } : { x: "100%" }}
-        animate={isMobile ? { y: 0 } : { x: 0 }}
-        exit={isMobile ? { y: "100%" } : { x: "100%" }}
+        initial={isMobileOrTablet ? { y: "100%" } : { x: "100%" }}
+        animate={isMobileOrTablet ? { y: 0 } : { x: 0 }}
+        exit={isMobileOrTablet ? { y: "100%" } : { x: "100%" }}
         transition={{ type: "spring", damping: 26, stiffness: 220 }}
         className={cn(
           "fixed z-[1200] bg-popover/95 backdrop-blur-xl border-border shadow-lifted pointer-events-auto flex flex-col",
-          "max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[85vh] max-lg:border-t max-lg:pb-safe",
+          "max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[85dvh] max-lg:border-t max-lg:pb-safe",
           "lg:top-0 lg:right-0 lg:h-full lg:w-96 lg:border-l lg:rounded-none overflow-y-auto"
         )}
       >

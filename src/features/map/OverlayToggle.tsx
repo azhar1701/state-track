@@ -25,7 +25,7 @@ interface OverlayToggleProps {
 }
 
 export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLayers }: OverlayToggleProps) => {
-    const isMobile = useIsMobile();
+    const isMobileOrTablet = useIsMobile(1024);
     const [localOverlays, setLocalOverlays] = useState<MapOverlays>(overlays);
 
     const handleToggle = (key: keyof MapOverlays, value: boolean) => {
@@ -52,13 +52,13 @@ export const OverlayToggle = ({ overlays, onOverlayChange, onClose, availableLay
             />
 
             <motion.div
-                initial={isMobile ? { y: '100%' } : { x: '100%' }}
-                animate={isMobile ? { y: 0 } : { x: 0 }}
-                exit={isMobile ? { y: '100%' } : { x: '100%' }}
+                initial={isMobileOrTablet ? { y: '100%' } : { x: '100%' }}
+                animate={isMobileOrTablet ? { y: 0 } : { x: 0 }}
+                exit={isMobileOrTablet ? { y: '100%' } : { x: '100%' }}
                 transition={{ type: 'spring', damping: 26, stiffness: 220 }}
                 className={cn(
                     "fixed z-[1200] bg-popover/95 backdrop-blur-xl border-border shadow-lifted pointer-events-auto flex flex-col",
-                    "max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[85vh] max-lg:border-t max-lg:pb-safe",
+                    "max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-3xl max-lg:max-h-[85dvh] max-lg:border-t max-lg:pb-safe",
                     "lg:top-0 lg:right-0 lg:h-full lg:w-80 lg:border-l lg:rounded-none overflow-y-auto"
                 )}
             >

@@ -90,7 +90,7 @@ const Navbar = memo(() => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-background border-b border-border shadow-sm">
+    <nav className="sticky top-0 z-50 w-full bg-background border-b border-border shadow-sm pt-safe">
       <div className="container flex h-14 items-center px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 mr-8 group">
@@ -163,7 +163,7 @@ const Navbar = memo(() => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                    className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                     aria-label="Notifikasi"
                   >
                     <Bell className="h-4 w-4" />
@@ -229,7 +229,7 @@ const Navbar = memo(() => {
                     variant="ghost"
                     size="icon"
                     aria-label="Menu Pengguna"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                    className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                   >
                     <User className="h-4 w-4" />
                   </Button>
