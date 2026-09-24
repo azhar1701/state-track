@@ -20,6 +20,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
 import type { LegendOverlayItem } from "./Legend";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModernMapOverlayProps {
   // Search
@@ -82,7 +83,9 @@ export const ModernMapOverlay = ({
   legendOverlays = [],
   statusCounts,
 }: ModernMapOverlayProps) => {
-  const [legendCollapsed, setLegendCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const [legendCollapsed, setLegendCollapsed] = useState(isMobile);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
   const [drawingActive, setDrawingActive] = useState(false);
 
   const handleDrawClick = () => {
@@ -105,31 +108,31 @@ export const ModernMapOverlay = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[1000]">
-      {/* Top Section */}
-      <div className="absolute top-3 md:top-4 left-3 md:left-4 right-3 md:right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
+      {/* Top Section: Placed below top-row stats & basemap HUD on mobile */}
+      <div className="absolute top-14 md:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
         {/* Main Toolbar */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-1.5 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-2.5 py-1.5 pointer-events-auto">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-2 sm:px-2.5 py-1 sm:py-1.5 pointer-events-auto">
             {/* Search Button */}
             <Button
               onClick={onToggleSearch}
               variant={showSearch ? "default" : "ghost"}
               size="sm"
-              className="h-11 px-4 rounded-xl font-medium btn-haptic transition-transform active:scale-95"
+              className="h-9 sm:h-11 px-2.5 sm:px-4 rounded-xl font-medium btn-haptic transition-transform active:scale-95"
             >
-              <Search className="icon-sm mr-2" />
+              <Search className="icon-sm sm:mr-2" />
               <span className="hidden sm:inline">Cari</span>
             </Button>
 
-            <div className="w-px h-7 bg-border/70 mx-0.5" />
+            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5" />
 
-            {/* Location */}
+            {/* Location (desktop only, mobile has MobileMapControls) */}
             {canLocate && (
               <Button
                 onClick={onLocate}
                 size="sm"
                 variant="ghost"
-                className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                className="hidden md:inline-flex h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
                 title="Lokasi Saya"
                 aria-label="Lokasi Saya"
               >
@@ -137,13 +140,13 @@ export const ModernMapOverlay = ({
               </Button>
             )}
 
-            {/* Reset Extent */}
+            {/* Reset Extent (desktop only, mobile has MobileMapControls) */}
             {onResetExtent && (
               <Button
                 onClick={onResetExtent}
                 size="sm"
                 variant="ghost"
-                className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 hover:bg-primary/10 text-primary"
+                className="hidden md:inline-flex h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 hover:bg-primary/10 text-primary"
                 title="Kembali ke Wilayah Ciamis"
                 aria-label="Reset Extent ke Ciamis"
               >
@@ -156,7 +159,7 @@ export const ModernMapOverlay = ({
               onClick={onToggleFilters}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
               title="Filter Laporan"
               aria-label="Filter Laporan"
             >
@@ -168,7 +171,7 @@ export const ModernMapOverlay = ({
               onClick={onToggleOverlays}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
               title="Layer & Overlay"
               aria-label="Layer dan Overlay"
             >
@@ -180,21 +183,21 @@ export const ModernMapOverlay = ({
               onClick={handleDrawClick}
               variant={drawingActive ? "default" : "ghost"}
               size="sm"
-              className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
               title="Alat Gambar & Ukur"
               aria-label="Alat Gambar dan Ukur"
             >
               <Ruler className="icon-sm" />
             </Button>
 
-            <div className="w-px h-7 bg-border/70 mx-0.5" />
+            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5" />
 
             {/* Share */}
             <Button
               onClick={onShare}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
               title="Bagikan Tampilan Peta"
               aria-label="Bagikan Tampilan Peta"
             >
@@ -206,7 +209,7 @@ export const ModernMapOverlay = ({
               onClick={onExport}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
               title="Unduh Peta"
               aria-label="Unduh Peta"
             >
@@ -226,98 +229,142 @@ export const ModernMapOverlay = ({
       </div>
 
       {/* Bottom Section: Timeline Player */}
-      <div className="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 md:px-0 flex justify-center pointer-events-none z-[1000]">
+      <div className="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg px-3 md:px-0 flex justify-center pointer-events-none z-[1000]">
         {/* Tool Instructions */}
         {drawingActive && (
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-white px-6 py-3 rounded-xl shadow-lifted text-sm font-medium pointer-events-auto border border-border transition-all duration-300">
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lifted text-xs sm:text-sm font-medium pointer-events-auto border border-border transition-all duration-300">
             <div className="font-bold mb-1">📏 Alat Gambar & Ukur</div>
             <div className="text-2xs opacity-90">
               Gunakan toolbar untuk menggambar polygon, garis, lingkaran, dan mengukur jarak
             </div>
           </div>
         )}
-        <div className="w-full max-w-2xl bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-4 py-3 pointer-events-auto">
-          <div className="flex items-center gap-3 mb-2">
-            {/* Play Controls */}
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onStepPrev}
-                className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
-                title="Hari Sebelumnya"
-                aria-label="Hari Sebelumnya"
-              >
-                <ChevronLeft className="icon-sm" />
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onPlayPause}
-                className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-full shadow-md btn-haptic transition-transform hover:scale-105 active:scale-95"
-                title={isPlaying ? "Jeda" : "Putar Garis Waktu"}
-                aria-label={isPlaying ? "Jeda Garis Waktu" : "Putar Garis Waktu"}
-              >
-                {isPlaying ? <Pause className="icon-sm" /> : <Play className="icon-sm" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onStepNext}
-                className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
-                title="Hari Berikutnya"
-                aria-label="Hari Berikutnya"
-              >
-                <ChevronRight className="icon-sm" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onReset}
-                className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
-                title="Reset ke Awal"
-                aria-label="Reset ke Tanggal Awal"
-              >
-                <RotateCcw className="icon-sm" />
-              </Button>
+
+        {timelineCollapsed ? (
+          <div className="bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-full px-3 py-1.5 pointer-events-auto flex items-center gap-2 animate-in fade-in zoom-in-95">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onPlayPause}
+              className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 text-primary"
+              title={isPlaying ? "Jeda" : "Putar Linimasa"}
+              aria-label={isPlaying ? "Jeda Linimasa" : "Putar Linimasa"}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            </Button>
+            <span className="text-xs font-semibold text-foreground">
+              {format(currentDate, "dd MMM yyyy")}
+            </span>
+            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {statusCounts.total}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTimelineCollapsed(false)}
+              className="h-7 w-7 p-0 rounded-full text-muted-foreground hover:text-foreground"
+              title="Buka Slider Linimasa"
+              aria-label="Buka Slider Linimasa"
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="w-full bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 pointer-events-auto">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              {/* Play Controls */}
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onStepPrev}
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                  title="Hari Sebelumnya"
+                  aria-label="Hari Sebelumnya"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={onPlayPause}
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-full shadow-md btn-haptic transition-transform hover:scale-105 active:scale-95"
+                  title={isPlaying ? "Jeda" : "Putar Garis Waktu"}
+                  aria-label={isPlaying ? "Jeda Garis Waktu" : "Putar Garis Waktu"}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onStepNext}
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                  title="Hari Berikutnya"
+                  aria-label="Hari Berikutnya"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onReset}
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                  title="Reset ke Awal"
+                  aria-label="Reset ke Tanggal Awal"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Date Display */}
+              <div className="text-center">
+                <div className="text-xs sm:text-sm font-semibold">{format(currentDate, "dd MMM yyyy")}</div>
+              </div>
+
+              {/* Total Count Badge & Minimize */}
+              <div className="flex items-center gap-1.5">
+                <div className="bg-primary/10 text-primary px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-2xs font-medium">
+                  {statusCounts.total} <span className="hidden sm:inline">laporan</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTimelineCollapsed(true)}
+                  className="h-7 w-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                  title="Kecilkan Linimasa"
+                  aria-label="Kecilkan Linimasa"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             </div>
 
-            {/* Date Display */}
-            <div className="flex-1 text-center">
-              <div className="text-sm font-semibold">{format(currentDate, "dd MMM yyyy")}</div>
-            </div>
+            {/* Progress Bar */}
+            <Slider
+              value={[sliderValue]}
+              onValueChange={onSliderChange}
+              max={totalDays}
+              step={1}
+              className="w-full"
+              aria-label="Rentang Waktu Laporan"
+            />
 
-            {/* Total Count Badge */}
-            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-2xs font-medium">
-              {statusCounts.total} laporan
+            {/* Date Range */}
+            <div className="flex justify-between text-2xs text-muted-foreground mt-1">
+              <span>{format(minDate, "dd MMM yy")}</span>
+              <span>{format(maxDate, "dd MMM yy")}</span>
             </div>
           </div>
-
-          {/* Progress Bar */}
-          <Slider
-            value={[sliderValue]}
-            onValueChange={onSliderChange}
-            max={totalDays}
-            step={1}
-            className="w-full"
-            aria-label="Rentang Waktu Laporan"
-          />
-
-          {/* Date Range */}
-          <div className="flex justify-between text-2xs text-muted-foreground mt-1">
-            <span>{format(minDate, "dd MMM yy")}</span>
-            <span>{format(maxDate, "dd MMM yy")}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom Left: Collapsible Legend */}
-      <div className="absolute bottom-48 md:bottom-32 xl:bottom-4 left-3 md:left-4 pointer-events-none z-[900]">
-        <div className="bg-card/95 backdrop-blur-md border border-border/80 shadow-float rounded-xl overflow-hidden pointer-events-auto max-w-[260px] sm:max-w-xs">
+      <div className="absolute bottom-20 md:bottom-32 xl:bottom-4 left-3 md:left-4 pointer-events-none z-[900]">
+        <div className="bg-card/95 backdrop-blur-md border border-border/80 shadow-float rounded-xl overflow-hidden pointer-events-auto max-w-[220px] sm:max-w-xs max-h-[45dvh] flex flex-col">
           {/* Legend Header */}
           <button
             onClick={() => setLegendCollapsed(!legendCollapsed)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all"
+            className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all shrink-0"
             aria-expanded={!legendCollapsed}
             aria-label="Buka tutup legenda peta"
           >
@@ -331,7 +378,7 @@ export const ModernMapOverlay = ({
 
           {/* Legend Content */}
           {!legendCollapsed && (
-            <div className="px-3 py-2 text-2xs space-y-2.5">
+            <div className="px-3 py-2 text-2xs space-y-2.5 overflow-y-auto no-scrollbar">
               {/* Status */}
               <div>
                 <div className="font-bold text-foreground mb-1.5 text-3xs uppercase tracking-wide opacity-70">

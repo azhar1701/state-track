@@ -85,12 +85,12 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
   };
 
   return (
-    /* Positioned at top-right; sits beside the main centered toolbar */
-    <div className="absolute top-4 right-4 z-[1000]">
+    /* Positioned at top-right; sits beside the quick stats hud */
+    <div className="absolute top-3 md:top-4 right-3 md:right-4 z-[1000]">
       {/* Single trigger button — keeps top-right area clean with just one element */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3.5 py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl transition-all text-foreground btn-haptic"
+        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl transition-all text-foreground btn-haptic"
         aria-label="Ganti Basemap Peta"
         aria-expanded={isOpen}
         aria-haspopup="listbox"

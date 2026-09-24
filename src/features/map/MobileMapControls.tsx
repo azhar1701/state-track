@@ -17,7 +17,7 @@ export const MobileMapControls = ({
   onResetExtent,
 }: MobileMapControlsProps) => {
   return (
-    <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-1 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl p-1">
+    <div className="absolute bottom-48 md:bottom-24 right-3 md:right-4 z-[1000] flex flex-col gap-1 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl p-1">
       <Button
         onClick={onLocate}
         size="icon"

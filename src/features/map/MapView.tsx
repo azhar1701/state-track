@@ -459,7 +459,7 @@ const MapView = () => {
         <div className="flex flex-col gap-2">
           <div
             onClick={() => setShowStatsDetails((v) => !v)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl cursor-pointer hover:bg-background transition-all group"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl cursor-pointer hover:bg-background transition-all group"
             role="button"
             tabIndex={0}
             aria-label="Buka ringkasan statistik laporan"
@@ -471,8 +471,8 @@ const MapView = () => {
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{loading ? "..." : statusCounts.total} Laporan</span>
             </div>
-            <div className="w-px h-4 bg-border/80" />
-            <div className="flex items-center gap-1 text-[11px]">
+            <div className="hidden sm:block w-px h-4 bg-border/80" />
+            <div className="hidden sm:flex items-center gap-1 text-[11px]">
               <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
                 {statusCounts.baru} Baru
               </span>
