@@ -30,7 +30,7 @@ export const MapCanvas = forwardRef<L.Map, MapCanvasProps>(({ children, basemap,
         zoom={zoom}
         className="w-full h-full z-0"
         zoomControl={false}
-        attributionControl={false}
+        attributionControl={true}
         ref={ref}
       >
         <MapController basemap={basemap} />

@@ -16,6 +16,8 @@ import {
   ChevronUp,
   Ruler,
   Compass,
+  Activity,
+  Route,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
@@ -36,6 +38,11 @@ interface ModernMapOverlayProps {
   // Drawing & Measurement
   onToggleDrawing?: () => void;
   drawToolbarContent?: React.ReactNode;
+  // Advanced GIS Tools
+  showSpatialAnalysis?: boolean;
+  onToggleSpatialAnalysis?: () => void;
+  showRouteOptimization?: boolean;
+  onToggleRouteOptimization?: () => void;
   // Share & Export
   onShare: () => void;
   onExport: () => void;
@@ -67,6 +74,10 @@ export const ModernMapOverlay = ({
   onToggleOverlays,
   onToggleDrawing,
   drawToolbarContent,
+  showSpatialAnalysis,
+  onToggleSpatialAnalysis,
+  showRouteOptimization,
+  onToggleRouteOptimization,
   onShare,
   onExport,
   minDate,
@@ -189,6 +200,34 @@ export const ModernMapOverlay = ({
             >
               <Ruler className="icon-sm" />
             </Button>
+
+            {/* Spatial Analysis */}
+            {onToggleSpatialAnalysis && (
+              <Button
+                onClick={onToggleSpatialAnalysis}
+                variant={showSpatialAnalysis ? "default" : "ghost"}
+                size="sm"
+                className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                title="Analisis Spasial (Buffer & Densitas)"
+                aria-label="Analisis Spasial"
+              >
+                <Activity className="icon-sm" />
+              </Button>
+            )}
+
+            {/* Route Optimization */}
+            {onToggleRouteOptimization && (
+              <Button
+                onClick={onToggleRouteOptimization}
+                variant={showRouteOptimization ? "default" : "ghost"}
+                size="sm"
+                className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                title="Optimasi Rute Tim Lapangan"
+                aria-label="Optimasi Rute"
+              >
+                <Route className="icon-sm" />
+              </Button>
+            )}
 
             <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5" />
 

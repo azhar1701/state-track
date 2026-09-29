@@ -565,6 +565,22 @@ All colors MUST be HSL.
   animation: route-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.route-stop-marker-container {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.route-stop-pin {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.route-stop-pin:hover {
+  transform: scale(1.18);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.75) !important;
+}
+
 .custom-marker {
   background: transparent;
   border: none;

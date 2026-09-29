@@ -2,9 +2,10 @@ import { formatReportLocation } from "@/lib/formatters";
 import { logger } from "@/lib/logger";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Marker, useMap, GeoJSON as RLGeoJSON, Pane, Polyline } from "react-leaflet";
+import { AnimatePresence } from "framer-motion";
+import { Marker, useMap, GeoJSON as RLGeoJSON, Pane, Polyline, Popup } from "react-leaflet";
 import { Button } from "@/components/ui/button";
-import { Loader as Loader2, ChevronDown } from "lucide-react";
+import { Loader as Loader2, ChevronDown, Trash2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -18,7 +19,6 @@ import { useMapPreferences } from "./hooks/useMapPreferences";
 import { useDynamicLayers } from "./hooks/useDynamicLayers";
 import { useMapLayers } from "./hooks/useMapLayers";
 import { MapCanvas } from "./components/MapCanvas";
-import { ReportLayer } from "./components/ReportLayer";
 import type { BasemapType } from "./basemap-config";
 import { type LegendOverlayItem } from "@/features/map/Legend";
 import { reverseGeocode } from "@/features/map/geocoding";
@@ -37,8 +37,9 @@ import { format, isAfter, isBefore, startOfDay, addDays, differenceInCalendarDay
 import type { FeatureCollection, Geometry, Feature, Polygon, MultiPolygon, LineString, MultiLineString } from "geojson";
 import { sanitizeText, sanitizeForLog } from "@/lib/security";
 import { MobileMapControls } from "@/features/map/MobileMapControls";
-import { SpatialAnalysisPanel } from "@/features/map/SpatialAnalysisPanel";
+import { SpatialAnalysisPanel, type BufferActiveData } from "@/features/map/SpatialAnalysisPanel";
 import { RouteOptimizationPanel } from "@/features/map/RouteOptimizationPanel";
+import type { OptimizedRoute } from "@/features/map/routeOptimization";
 import { MapInteractionLayer } from "@/features/map/MapInteractionLayer";
 import { GeomanControls } from "@/features/map/GeomanControls";
 import { DrawToolbar } from "@/features/map/DrawToolbar";
@@ -103,6 +104,8 @@ const MapView = () => {
 
   // routing
   const [routingPath, setRoutingPath] = useState<[number, number][] | null>(null);
+  const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
+  const [activeBuffer, setActiveBuffer] = useState<BufferActiveData | null>(null);
 
   const [showStatsDetails, setShowStatsDetails] = useState(false);
 
@@ -588,8 +591,6 @@ const MapView = () => {
 
             {renderedLayers}
 
-            <ReportLayer filters={filters} overlays={overlays} onReportClick={(r) => setSelectedReport(r)} />
-
             {userLocation && (
               <Marker position={userLocation} icon={L.icon({ iconUrl: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOCIgZmlsbD0iIzM5ODJmNiIgZmlsbC1vcGFjaXR5PSIwLjMiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNCIgZmlsbD0iIzM5ODJmNiIvPgo8L3N2Zz4=", iconSize:[24,24], iconAnchor:[12,12] })} />
             )}
@@ -610,6 +611,97 @@ const MapView = () => {
               />
             )}
 
+            {optimizedRoute && optimizedRoute.geometry.length > 1 && (
+              <Polyline
+                positions={optimizedRoute.geometry}
+                pathOptions={{ color: "#10b981", weight: 6, opacity: 0.95 }}
+                ref={(ref) => {
+                  if (ref) {
+                    const el = (ref as unknown as { getElement?: () => HTMLElement | null }).getElement?.();
+                    if (el) el.classList.add("pulsing-route-polyline");
+                    const bounds = (ref as unknown as { getBounds?: () => L.LatLngBounds }).getBounds?.();
+                    if (bounds?.isValid()) mapInstance?.fitBounds(bounds.pad(0.12));
+                  }
+                }}
+              />
+            )}
+
+            {optimizedRoute?.points.map((pt, idx) => {
+              const isStart = idx === 0 && pt.isUserLocation;
+              const label = isStart ? "GPS" : `${idx + (optimizedRoute.points[0]?.isUserLocation ? 0 : 1)}`;
+              return (
+                <Marker
+                  key={`route-stop-${pt.id}-${idx}`}
+                  position={pt.coords}
+                  icon={L.divIcon({
+                    html: `<div class="route-stop-pin" style="background:#10b981;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border:2.5px solid white;box-shadow:0 3px 10px rgba(16,185,129,0.55);">${label}</div>`,
+                    className: "route-stop-marker-container",
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14],
+                  })}
+                >
+                  <Popup>
+                    <div className="p-1 text-xs min-w-[140px]">
+                      <div className="font-bold text-foreground">{pt.title || `Pemberhentian #${idx + 1}`}</div>
+                      <div className="text-muted-foreground mt-0.5 capitalize">{pt.category || "Infrastruktur"} {pt.severity ? `• ${pt.severity}` : ""}</div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+
+            {activeBuffer && (
+              <RLGeoJSON
+                key={`active-buffer-${activeBuffer.radiusKm}-${activeBuffer.color}`}
+                data={activeBuffer.geojson as unknown as GeoJSON.GeoJsonObject}
+                style={() => ({
+                  fillColor: activeBuffer.color,
+                  fillOpacity: 0.2,
+                  color: activeBuffer.color,
+                  weight: 2.5,
+                  dashArray: "6 4",
+                })}
+                onEachFeature={(_f, layer) => {
+                  layer.bindTooltip(
+                    `<div style="font-weight:700;font-size:12px">${activeBuffer.title}</div>
+                     <div style="font-size:11px">Radius: ${activeBuffer.radius} ${activeBuffer.units} • ${activeBuffer.impactResult?.impactedReports.length || 0} Laporan Terdampak</div>
+                     <div style="font-size:10px;opacity:0.8">Luas: ${activeBuffer.impactResult?.areaKm2 || 0} km² (${activeBuffer.impactResult?.areaHectares || 0} ha)</div>`,
+                    { sticky: true }
+                  );
+                }}
+              />
+            )}
+
+            {densityCells.length > 0 && (
+              <Pane name="density-cells" style={{ zIndex: 370 }}>
+                {densityCells.map((cell) => (
+                  <RLGeoJSON
+                    key={cell.id}
+                    data={{ type: "Feature", properties: { count: cell.count }, geometry: cell.geometry } as Feature<Geometry>}
+                    style={() => ({
+                      fillColor: "#ef4444",
+                      fillOpacity: Math.min(cell.count / 10, 1) * 0.6,
+                      color: "#dc2626",
+                      weight: 1,
+                    })}
+                    onEachFeature={(_f, l) => l.bindTooltip(`${cell.count} laporan`, { sticky: true })}
+                  />
+                ))}
+              </Pane>
+            )}
+
+            {multiLayerHeatmap && (
+              <MultiLayerHeatmap
+                points={filteredReports.map((r) => ({
+                  coords: [r.latitude, r.longitude],
+                  category: r.category,
+                  severity: r.severity || undefined,
+                }))}
+                enabled={multiLayerHeatmap}
+                categories={Array.from(new Set(reports.map((r) => r.category)))}
+              />
+            )}
+
             <MapInteractionLayer
               activeMapTool={activeMapTool}
               onPolygonDrawn={(polygon) => { setDrawnPolygon(polygon); toast.success("Polygon berhasil digambar"); }}
@@ -627,6 +719,24 @@ const MapView = () => {
             onToggleOverlays={() => { setShowOverlayPanel((v)=>!v); setShowSearchPanel(false); setShowFilterPanel(false); }}
             onToggleDrawing={() => { setShowGeomanDraw((p)=>!p); setActiveMapTool(null); setShowSpatialAnalysis(false); setShowRouteOptimization(false); }}
             drawToolbarContent={mapInstance&&showGeomanDraw ? <DrawToolbar visible={showGeomanDraw} activeMode={geomanDrawMode} map={mapInstance} /> : null}
+            showSpatialAnalysis={showSpatialAnalysis}
+            onToggleSpatialAnalysis={() => {
+              setShowSpatialAnalysis((v) => !v);
+              setShowRouteOptimization(false);
+              setShowFilterPanel(false);
+              setShowOverlayPanel(false);
+              setShowSearchPanel(false);
+              setShowGeomanDraw(false);
+            }}
+            showRouteOptimization={showRouteOptimization}
+            onToggleRouteOptimization={() => {
+              setShowRouteOptimization((v) => !v);
+              setShowSpatialAnalysis(false);
+              setShowFilterPanel(false);
+              setShowOverlayPanel(false);
+              setShowSearchPanel(false);
+              setShowGeomanDraw(false);
+            }}
             onShare={handleShare} onExport={() => handleExport()}
             minDate={minDate} maxDate={maxDate} currentDate={timeFilterDate} onDateChange={setTimeFilterDate}
             totalDays={Math.max(0,differenceInCalendarDays(maxDate,minDate))}
@@ -672,49 +782,210 @@ const MapView = () => {
 
           <LayerDetailDrawer isOpen={!!selectedLayer} onClose={() => setSelectedLayer(null)} feature={(selectedLayer?.feature as GeoJSON.Feature<Geometry,Record<string,unknown>>)||null} onZoomToFeature={handleZoomToLayer} />
 
-          {showSpatialAnalysis && (
-            <SpatialAnalysisPanel
-              reports={filteredReports.map((r)=>({id:r.id,coords:[r.latitude,r.longitude],category:r.category,status:r.status}))}
-              onBufferCreated={(buf) => { if (!mapInstance) return; L.geoJSON(buf,{style:{color:"#3b82f6",weight:2,fillOpacity:0.1}}).addTo(mapInstance); toast.success("Buffer zone berhasil dibuat"); }}
-              onDensityCalculated={(cells) => { setDensityCells(cells); toast.success(`${cells.length} density cells dihitung`); }}
-              onStatsCalculated={(s) => { toast.success("Analisis statistik selesai",{description:`NNI: ${s.nni.toFixed(3)} - ${s.clustered?"Clustered":"Dispersed"}`}); }}
-              onClose={() => setShowSpatialAnalysis(false)} />
-          )}
+          <AnimatePresence>
+            {showSpatialAnalysis && (
+              <SpatialAnalysisPanel
+                reports={filteredReports.map((r) => ({
+                  id: r.id,
+                  title: r.title,
+                  coords: [r.latitude, r.longitude],
+                  category: r.category,
+                  status: r.status,
+                  severity: r.severity || undefined,
+                }))}
+                initialPoint={cursorLatLng || mapCenter}
+                userLocation={userLocation}
+                activeBuffer={activeBuffer}
+                hasActiveDensity={densityCells.length > 0}
+                onBufferCreated={(data) => {
+                  setActiveBuffer(data);
+                }}
+                onClearBuffer={() => {
+                  setActiveBuffer(null);
+                  toast.info("Buffer zone dibersihkan");
+                }}
+                onDensityCalculated={(cells) => {
+                  setDensityCells(cells);
+                  toast.success(`${cells.length} density cells dihitung`);
+                }}
+                onClearDensity={() => {
+                  setDensityCells([]);
+                  toast.info("Grid densitas dibersihkan");
+                }}
+                onStatsCalculated={(s) => {
+                  toast.success("Analisis statistik selesai", {
+                    description: `NNI: ${s.nni.toFixed(3)} - ${s.clustered ? "Clustered" : "Dispersed"}`,
+                  });
+                }}
+                onFocusPoint={(coords) => {
+                  if (mapInstance) {
+                    mapInstance.flyTo(coords, 16, { duration: 1.2 });
+                  }
+                }}
+                onFocusBounds={(bounds) => {
+                  if (mapInstance) {
+                    mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+                  }
+                }}
+                onClose={() => setShowSpatialAnalysis(false)}
+              />
+            )}
+          </AnimatePresence>
 
-          {showRouteOptimization && (
-            <RouteOptimizationPanel
-              reports={filteredReports.map((r)=>({id:r.id,title:r.title,coords:[r.latitude,r.longitude],category:r.category,status:r.status,severity:r.severity||undefined}))}
-              onRouteGenerated={(route) => {
-                if (!mapInstance) return;
-                const latLngs: [number, number][] = route.points.map((p) => [p.coords[0], p.coords[1]]);
-                const polyline = L.polyline(latLngs, { color: "#10b981", weight: 5, opacity: 0.9, className: "pulsing-route-polyline" }).addTo(mapInstance);
-                const bounds = polyline.getBounds();
-                if (bounds.isValid()) mapInstance.fitBounds(bounds.pad(0.12));
-                route.points.forEach((pt, idx) => {
-                  L.marker([pt.coords[0], pt.coords[1]], {
-                    icon: L.divIcon({
-                      html: `<div style="background:#10b981;color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.35)">${idx + 1}</div>`,
-                      className: "route-marker",
-                      iconSize: [26, 26],
-                    }),
-                  }).addTo(mapInstance);
-                });
-              }}
-              onClose={() => setShowRouteOptimization(false)} />
-          )}
+          {/* Floating HUD Indicator Badges (Route, Buffer, Density) */}
+          <div className="absolute top-20 right-4 z-[1100] flex flex-col items-end gap-2 pointer-events-none">
+            {optimizedRoute && !showRouteOptimization && (
+              <div className="pointer-events-auto flex items-center gap-2 bg-background/95 dark:bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 px-3.5 py-2 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <div className="text-xs">
+                  <span className="font-bold text-foreground">Rute Aktif:</span>{" "}
+                  <span className="text-muted-foreground font-medium">
+                    {optimizedRoute.totalDistance.toFixed(1)} km (~{optimizedRoute.totalDurationMinutes} mnt)
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowRouteOptimization(true)}
+                  className="h-7 text-xs px-2.5 rounded-xl ml-1 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                >
+                  Panel Rute
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setOptimizedRoute(null)}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive rounded-xl"
+                  title="Hapus Rute"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
 
-          {multiLayerHeatmap && (
-            <MultiLayerHeatmap points={filteredReports.map((r)=>({coords:[r.latitude,r.longitude],category:r.category,severity:r.severity||undefined}))} enabled={multiLayerHeatmap} categories={Array.from(new Set(reports.map((r)=>r.category)))} />
-          )}
+            {activeBuffer && !showSpatialAnalysis && (
+              <div className="pointer-events-auto flex items-center gap-2 bg-background/95 dark:bg-slate-900/95 backdrop-blur-xl border border-border/80 px-3.5 py-2 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2">
+                <div
+                  className="w-2.5 h-2.5 rounded-full animate-pulse"
+                  style={{ backgroundColor: activeBuffer.color }}
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-foreground">Buffer Aktif:</span>{" "}
+                  <span className="text-muted-foreground font-medium">
+                    {activeBuffer.radius} {activeBuffer.units} ({activeBuffer.impactResult?.impactedReports.length || 0} Terdampak)
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSpatialAnalysis(true)}
+                  className="h-7 text-xs px-2.5 rounded-xl ml-1"
+                >
+                  Panel Analisis
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setActiveBuffer(null);
+                    toast.info("Buffer zone dibersihkan");
+                  }}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive rounded-xl"
+                  title="Hapus Buffer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+
+            {densityCells.length > 0 && !showSpatialAnalysis && (
+              <div className="pointer-events-auto flex items-center gap-2 bg-background/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-500/40 px-3.5 py-2 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <div className="text-xs">
+                  <span className="font-bold text-foreground">Grid Densitas:</span>{" "}
+                  <span className="text-muted-foreground font-medium">
+                    {densityCells.length} Sel Aktif
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSpatialAnalysis(true)}
+                  className="h-7 text-xs px-2.5 rounded-xl ml-1 border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                >
+                  Panel Analisis
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setDensityCells([]);
+                    toast.info("Grid densitas dibersihkan");
+                  }}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive rounded-xl"
+                  title="Hapus Densitas"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <AnimatePresence>
+            {showRouteOptimization && (
+              <RouteOptimizationPanel
+                reports={filteredReports.map((r) => ({
+                  id: r.id,
+                  title: r.title,
+                  coords: [r.latitude, r.longitude],
+                  category: r.category,
+                  status: r.status,
+                  severity: r.severity || undefined,
+                  locationName: r.location_name || undefined,
+                }))}
+                userLocation={userLocation}
+                onRouteGenerated={(route) => {
+                  setOptimizedRoute(route);
+                }}
+                onClearRoute={() => {
+                  setOptimizedRoute(null);
+                }}
+                onFocusPoint={(coords) => {
+                  if (mapInstance) {
+                    mapInstance.flyTo(coords, 16, { duration: 1.2 });
+                  }
+                }}
+                onClose={() => setShowRouteOptimization(false)}
+              />
+            )}
+          </AnimatePresence>
 
           {densityCells.length > 0 && (
-            <Pane name="density-cells" style={{ zIndex: 370 }}>
-              {densityCells.map((cell) => (
-                <RLGeoJSON key={cell.id} data={{type:"Feature",properties:{count:cell.count},geometry:cell.geometry} as Feature<Geometry>}
-                  style={() => ({fillColor:"#ef4444",fillOpacity:Math.min(cell.count/10,1)*0.6,color:"#dc2626",weight:1})}
-                  onEachFeature={(_f,l) => l.bindTooltip(`${cell.count} laporan`,{sticky:true})} />
-              ))}
-            </Pane>
+            <div
+              className={`absolute ${
+                activeBuffer || (optimizedRoute && !showRouteOptimization) ? "top-32" : "top-20"
+              } left-4 z-[1100] flex items-center gap-2 bg-background/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-500/40 px-3.5 py-2 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2`}
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+              <div className="text-xs">
+                <span className="font-bold text-foreground">Grid Densitas:</span>{" "}
+                <span className="text-muted-foreground font-medium">
+                  {densityCells.length} Sel Aktif
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setDensityCells([]);
+                  toast.info("Grid densitas dibersihkan");
+                }}
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive rounded-xl"
+                title="Hapus Densitas"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           )}
 
           {!selectedReport && (

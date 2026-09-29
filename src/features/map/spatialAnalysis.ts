@@ -102,22 +102,137 @@ export const useNNIQuery = (enabled: boolean) => {
   });
 };
 
-/* --- Legacy Turf-based helpers for SpatialAnalysisPanel.tsx --- */
+/* --- Legacy & Modern Turf-based helpers for SpatialAnalysisPanel.tsx --- */
 
+export interface ImpactedReport {
+  id: string;
+  title: string;
+  category: string;
+  severity?: 'ringan' | 'sedang' | 'berat';
+  status: string;
+  distanceKm: number;
+  bearing: number;
+  coords: [number, number];
+}
+
+export interface BufferAnalysisResult {
+  geojson: FeatureCollection<Polygon | MultiPolygon>;
+  center: [number, number];
+  radius: number;
+  units: 'kilometers' | 'meters' | 'miles';
+  radiusKm: number;
+  areaKm2: number;
+  areaHectares: number;
+  perimeterKm: number;
+  impactedReports: ImpactedReport[];
+  severityBreakdown: {
+    berat: number;
+    sedang: number;
+    ringan: number;
+    lainnya: number;
+  };
+}
+
+/**
+ * Creates buffer polygon(s) around coordinates [lat, lon]
+ * Note: Converts Leaflet [lat, lon] to Turf GeoJSON [lon, lat]
+ */
 export function createBuffer(
   coords: [number, number] | [number, number][],
   options: BufferOptions
-): FeatureCollection {
+): FeatureCollection<Polygon | MultiPolygon> {
   const { radius, units = 'kilometers', steps = 64 } = options;
+
   if (Array.isArray(coords[0])) {
-    const features = (coords as [number, number][]).map((pt, idx) => {
-      const buffered = buffer(point(pt), radius, { units, steps });
-      return buffered ? ({ ...buffered, id: `buffer-${idx}` } as Feature<Polygon | MultiPolygon>) : null;
-    }).filter((f): f is Feature<Polygon | MultiPolygon> => f !== null);
+    const features = (coords as [number, number][])
+      .map((pt, idx) => {
+        const turfPt = point([pt[1], pt[0]]);
+        const buffered = buffer(turfPt, radius, { units, steps });
+        return buffered
+          ? ({ ...buffered, id: `buffer-${idx}` } as Feature<Polygon | MultiPolygon>)
+          : null;
+      })
+      .filter((f): f is Feature<Polygon | MultiPolygon> => f !== null);
     return featureCollection(features);
   }
-  const buffered = buffer(point(coords as [number, number]), radius, { units, steps });
-  return buffered ? featureCollection([buffered as Feature<Polygon | MultiPolygon>]) : featureCollection([]);
+
+  const [lat, lon] = coords as [number, number];
+  const turfPt = point([lon, lat]);
+  const buffered = buffer(turfPt, radius, { units, steps });
+  return buffered
+    ? featureCollection([buffered as Feature<Polygon | MultiPolygon>])
+    : featureCollection([]);
+}
+
+/**
+ * Perform impact assessment of buffer zone on reported infrastructure
+ */
+export function analyzeBufferImpact(
+  center: [number, number], // [lat, lon]
+  options: BufferOptions,
+  reports: Array<{
+    id: string;
+    title: string;
+    coords: [number, number]; // [lat, lon]
+    category: string;
+    status: string;
+    severity?: 'ringan' | 'sedang' | 'berat';
+  }>
+): BufferAnalysisResult {
+  const geojson = createBuffer(center, options);
+  const radiusKm = options.units === 'meters' ? options.radius / 1000 : options.radius;
+
+  const areaKm2 = Number((Math.PI * Math.pow(radiusKm, 2)).toFixed(3));
+  const areaHectares = Number((areaKm2 * 100).toFixed(1));
+  const perimeterKm = Number((2 * Math.PI * radiusKm).toFixed(2));
+
+  const centerTurf = point([center[1], center[0]]);
+  const impactedReports: ImpactedReport[] = [];
+  const severityBreakdown = {
+    berat: 0,
+    sedang: 0,
+    ringan: 0,
+    lainnya: 0,
+  };
+
+  reports.forEach((r) => {
+    const reportTurf = point([r.coords[1], r.coords[0]]);
+    const dist = distance(centerTurf, reportTurf, { units: 'kilometers' });
+
+    if (dist <= radiusKm + 0.005) {
+      const brng = bearing(centerTurf, reportTurf);
+      impactedReports.push({
+        id: r.id,
+        title: r.title,
+        category: r.category,
+        severity: r.severity,
+        status: r.status,
+        distanceKm: Number(dist.toFixed(2)),
+        bearing: brng,
+        coords: r.coords,
+      });
+
+      if (r.severity === 'berat') severityBreakdown.berat++;
+      else if (r.severity === 'sedang') severityBreakdown.sedang++;
+      else if (r.severity === 'ringan') severityBreakdown.ringan++;
+      else severityBreakdown.lainnya++;
+    }
+  });
+
+  impactedReports.sort((a, b) => a.distanceKm - b.distanceKm);
+
+  return {
+    geojson,
+    center,
+    radius: options.radius,
+    units: options.units || 'kilometers',
+    radiusKm,
+    areaKm2,
+    areaHectares,
+    perimeterKm,
+    impactedReports,
+    severityBreakdown,
+  };
 }
 
 export function findWithinRadius(
@@ -126,10 +241,17 @@ export function findWithinRadius(
   radius: number,
   units: 'kilometers' | 'meters' = 'kilometers'
 ): ProximityResult[] {
-  const from = point(target);
+  const from = point([target[1], target[0]]);
   return points
-    .map(({ id, coords }) => ({ id, distance: distance(from, point(coords), { units }), bearing: bearing(from, point(coords)) }))
-    .filter(r => r.distance <= radius)
+    .map(({ id, coords }) => {
+      const to = point([coords[1], coords[0]]);
+      return {
+        id,
+        distance: distance(from, to, { units }),
+        bearing: bearing(from, to),
+      };
+    })
+    .filter((r) => r.distance <= radius)
     .sort((a, b) => a.distance - b.distance);
 }
 
@@ -138,65 +260,147 @@ export function calculateNearestNeighbors(
 ): Array<{ id: string; nearestId: string; distance: number }> {
   return points.map(({ id, coords }) => {
     let minDist = Infinity, nearestId = '';
-    points.forEach(other => {
+    const from = point([coords[1], coords[0]]);
+    points.forEach((other) => {
       if (other.id === id) return;
-      const d = distance(point(coords), point(other.coords), { units: 'kilometers' });
-      if (d < minDist) { minDist = d; nearestId = other.id; }
+      const to = point([other.coords[1], other.coords[0]]);
+      const d = distance(from, to, { units: 'kilometers' });
+      if (d < minDist) {
+        minDist = d;
+        nearestId = other.id;
+      }
     });
     return { id, nearestId, distance: minDist };
   });
 }
 
-export function createHexGrid(bbox: [number, number, number, number], cellSize: number, units: 'kilometers' | 'meters' = 'kilometers'): FeatureCollection {
+export function createHexGrid(
+  bbox: [number, number, number, number],
+  cellSize: number,
+  units: 'kilometers' | 'meters' = 'kilometers'
+): FeatureCollection {
   return hexGrid(bbox, cellSize, { units });
 }
 
-export function calculateDensity(points: [number, number][], grid: FeatureCollection): DensityCell[] {
-  return grid.features.map((cell, idx) => {
-    let count = 0;
-    points.forEach(pt => { if (booleanPointInPolygon(point(pt), cell as Feature<Polygon>)) count++; });
-    return { id: `cell-${idx}`, count, geometry: cell.geometry as Polygon, center: centroid(cell).geometry.coordinates as [number, number] };
-  }).filter(c => c.count > 0);
+export function calculateDensity(
+  points: [number, number][],
+  grid: FeatureCollection
+): DensityCell[] {
+  return grid.features
+    .map((cell, idx) => {
+      let count = 0;
+      points.forEach(([lat, lng]) => {
+        if (booleanPointInPolygon(point([lng, lat]), cell as Feature<Polygon>)) count++;
+      });
+      return {
+        id: `cell-${idx}`,
+        count,
+        geometry: cell.geometry as Polygon,
+        center: centroid(cell).geometry.coordinates as [number, number],
+      };
+    })
+    .filter((c) => c.count > 0);
 }
 
-export function calculateNearestNeighborIndex(points: [number, number][], studyAreaKm2: number): SpatialStats {
-  if (points.length < 2) return { nearestNeighborIndex: 0, nni: 0, meanDistance: 0, standardDeviation: 0, clustered: false };
-  const neighbors = calculateNearestNeighbors(points.map((coords, i) => ({ id: `${i}`, coords })));
-  const distances = neighbors.map(n => n.distance);
+export function calculateNearestNeighborIndex(
+  points: [number, number][],
+  studyAreaKm2: number
+): SpatialStats {
+  if (points.length < 2) {
+    return {
+      nearestNeighborIndex: 0,
+      nni: 0,
+      meanDistance: 0,
+      standardDeviation: 0,
+      clustered: false,
+    };
+  }
+  const neighbors = calculateNearestNeighbors(
+    points.map((coords, i) => ({ id: `${i}`, coords }))
+  );
+  const distances = neighbors.map((n) => n.distance);
   const observedMean = distances.reduce((a, b) => a + b, 0) / distances.length;
   const expectedMean = 0.5 / Math.sqrt(points.length / studyAreaKm2);
   const nni = observedMean / expectedMean;
-  const variance = distances.reduce((sum, d) => sum + Math.pow(d - observedMean, 2), 0) / distances.length;
-  return { 
-    nearestNeighborIndex: nni, 
+  const variance =
+    distances.reduce((sum, d) => sum + Math.pow(d - observedMean, 2), 0) /
+    distances.length;
+  return {
+    nearestNeighborIndex: nni,
     nni,
-    meanDistance: observedMean, 
-    standardDeviation: Math.sqrt(variance), 
-    clustered: nni < 1 
+    meanDistance: observedMean,
+    standardDeviation: Math.sqrt(variance),
+    clustered: nni < 1,
   };
 }
 
-export function calculateBBox(points: [number, number][]): [number, number, number, number] {
+export function calculateBBox(
+  points: [number, number][],
+  padding: number = 0.05
+): [number, number, number, number] {
   if (points.length === 0) return [0, 0, 0, 0];
-  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-  points.forEach(([lng, lat]) => {
-    if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
-    if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
+  let minLng = Infinity,
+    minLat = Infinity,
+    maxLng = -Infinity,
+    maxLat = -Infinity;
+  points.forEach(([lat, lng]) => {
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
   });
+  if (minLng >= maxLng) {
+    minLng -= padding;
+    maxLng += padding;
+  }
+  if (minLat >= maxLat) {
+    minLat -= padding;
+    maxLat += padding;
+  }
   return [minLng, minLat, maxLng, maxLat];
 }
 
-export function kernelDensity(points: [number, number][], bandwidth: number, gridSize: number = 50): DensityCell[] {
+export function kernelDensity(
+  points: [number, number][],
+  bandwidth: number,
+  gridSize: number = 50
+): DensityCell[] {
   if (points.length === 0) return [];
   const [minLng, minLat, maxLng, maxLat] = calculateBBox(points);
-  const lngStep = (maxLng - minLng) / gridSize, latStep = (maxLat - minLat) / gridSize, cells: DensityCell[] = [];
+  const lngStep = (maxLng - minLng) / gridSize,
+    latStep = (maxLat - minLat) / gridSize,
+    cells: DensityCell[] = [];
   for (let i = 0; i < gridSize; i++) {
     for (let j = 0; j < gridSize; j++) {
-      const lng = minLng + i * lngStep, lat = minLat + j * latStep, center: [number, number] = [lng + lngStep / 2, lat + latStep / 2];
+      const lng = minLng + i * lngStep,
+        lat = minLat + j * latStep,
+        center: [number, number] = [lng + lngStep / 2, lat + latStep / 2];
       let density = 0;
-      points.forEach(pt => { density += Math.exp(-0.5 * Math.pow(distance(point(center), point(pt), { units: 'kilometers' }) / bandwidth, 2)); });
+      points.forEach(([pLat, pLng]) => {
+        density += Math.exp(
+          -0.5 *
+            Math.pow(
+              distance(point(center), point([pLng, pLat]), { units: 'kilometers' }) /
+                bandwidth,
+              2
+            )
+        );
+      });
       if (density > 0.01) {
-        cells.push({ id: `kde-${i}-${j}`, count: Math.round(density * 100), center, geometry: polygon([[[lng, lat], [lng + lngStep, lat], [lng + lngStep, lat + latStep], [lng, lat + latStep], [lng, lat]]]).geometry as Polygon });
+        cells.push({
+          id: `kde-${i}-${j}`,
+          count: Math.round(density * 100),
+          center,
+          geometry: polygon([
+            [
+              [lng, lat],
+              [lng + lngStep, lat],
+              [lng + lngStep, lat + latStep],
+              [lng, lat + latStep],
+              [lng, lat],
+            ],
+          ]).geometry as Polygon,
+        });
       }
     }
   }

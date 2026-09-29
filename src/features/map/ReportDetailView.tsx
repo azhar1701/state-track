@@ -140,7 +140,7 @@ export const ReportDetailView = ({ report, onClose, onNavigate, onRoute, isAdmin
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                 style={{ opacity }}
                 className={cn(
-                    'fixed z-[1401] bg-popover/90 backdrop-blur-xl border-border shadow-2xl flex flex-col glass-floating',
+                    'fixed z-[1401] bg-popover/90 backdrop-blur-xl border-border shadow-2xl flex flex-col glass-overlay',
                     'lg:top-0 lg:right-0 lg:h-full lg:w-[420px] lg:border-l lg:rounded-none',
                     'max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:rounded-t-[2.5rem] max-lg:h-[90dvh]'
                 )}

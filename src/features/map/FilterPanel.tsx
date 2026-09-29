@@ -24,9 +24,12 @@ interface FilterPanelProps {
 }
 
 const categoryLabels = {
- irigasi: 'Irigasi',
- sungai: 'Sungai',
- lainnya: 'Lainnya',
+  jalan: 'Jalan',
+  jembatan: 'Jembatan',
+  irigasi: 'Irigasi',
+  drainase: 'Drainase',
+  sungai: 'Sungai',
+  lainnya: 'Lainnya',
 } as const;
 
 const statusLabels = {
