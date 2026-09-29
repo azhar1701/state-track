@@ -87,7 +87,6 @@ export default defineConfig(({ mode }) => {
             leaflet: ["leaflet", "react-leaflet"],
             charts: ["recharts"],
             supabase: ["@supabase/supabase-js"],
-            docs: ["jspdf", "jspdf-autotable"],
           },
         },
       },

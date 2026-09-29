@@ -27,12 +27,15 @@ async function uploadPhotosRobust(userId: string, out: OutboxReport) {
   // Start from the first photo that hasn't been uploaded yet
   for (let i = currentUrls.length; i < out.photos.length; i++) {
     const p = out.photos[i];
-    const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
+    const rawExt = (p.name.split('.').pop() || 'jpg').toLowerCase();
+    const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = allowedExts.includes(rawExt) ? rawExt : 'jpg';
     const fileName = `${userId}/${out.id}_${i}_${Date.now()}.${ext}`;
+    const contentType = p.type && p.type.startsWith('image/') ? p.type : 'image/jpeg';
     
     const { error: uploadError } = await supabase.storage
       .from('report-photos')
-      .upload(fileName, p.data, { contentType: p.type, upsert: false });
+      .upload(fileName, p.data, { contentType, upsert: false });
     
     if (uploadError) {
       // Save progress so we don't re-upload previous photos

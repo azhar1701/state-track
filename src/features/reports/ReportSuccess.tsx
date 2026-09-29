@@ -39,7 +39,7 @@ const ReportSuccess = () => {
       ? `Halo, saya telah melaporkan infrastruktur SDA di Kabupaten Ciamis melalui SIPASDA dengan No. Tiket: ${id}. Mohon bantuan untuk pemantauan dan tindak lanjut.`
       : "Halo, saya telah mengirimkan laporan infrastruktur sumber daya air melalui aplikasi SIPASDA Ciamis.";
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (

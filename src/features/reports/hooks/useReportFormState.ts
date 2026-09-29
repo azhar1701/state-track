@@ -146,15 +146,39 @@ export const useReportFormState = () => {
     allDesaList.filter(d => d.kecamatan_id === selectedKecamatanId),
     [allDesaList, selectedKecamatanId]);
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB max per image
+  const MAX_PHOTOS = 10;
+
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement> | File) => {
-    let files: File[] = [];
+    let rawFiles: File[] = [];
     if (e instanceof File) {
-      files = [e];
+      rawFiles = [e];
     } else {
-      files = Array.from(e.target.files || []).slice(0, 10);
+      rawFiles = Array.from(e.target.files || []);
     }
 
-    if (!files.length) return;
+    if (!rawFiles.length) return;
+
+    if (photoFiles.length + rawFiles.length > MAX_PHOTOS) {
+      toast.error(`Maksimal ${MAX_PHOTOS} foto diperbolehkan.`);
+      return;
+    }
+
+    const validFiles: File[] = [];
+    for (const file of rawFiles) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        toast.error(`Format file '${file.name}' tidak didukung. Gunakan JPG, PNG, atau WEBP.`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`Ukuran file '${file.name}' melebihi batas 15MB.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (!validFiles.length) return;
 
     setLoading(true);
     try {
@@ -162,9 +186,10 @@ export const useReportFormState = () => {
       const compressed: File[] = [];
       const previews: string[] = [];
 
-      for (const f of files) {
+      for (const f of validFiles) {
         const cf = await imageCompression(f, opts);
-        compressed.push(new File([cf], f.name, { type: "image/jpeg" }));
+        const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        compressed.push(new File([cf], safeName, { type: "image/jpeg" }));
         previews.push(await imageCompression.getDataUrlFromFile(cf));
       }
 

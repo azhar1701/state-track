@@ -58,7 +58,7 @@ export const SystemGuard: React.FC<SystemGuardProps> = ({
             variant="default" 
             size="lg" 
             className="rounded-full gap-2 px-8 h-12"
-            onClick={() => window.open('https://app.supabase.com', '_blank')}
+            onClick={() => window.open('https://app.supabase.com', '_blank', 'noopener,noreferrer')}
           >
             Buka Supabase Console <ExternalLink className="w-4 h-4" />
           </Button>

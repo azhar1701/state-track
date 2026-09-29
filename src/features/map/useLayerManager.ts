@@ -88,6 +88,12 @@ export const useLayerManager = () => {
 
       // Upload to storage if file provided
       if (params.file) {
+        const MAX_LAYER_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+        if (params.file.size > MAX_LAYER_FILE_SIZE) {
+          toast.error('Ukuran file layer melebihi batas 25MB', { id: toastId });
+          return false;
+        }
+
         const sanitizedFilename = sanitizeFilename(params.file.name);
         const filePath = `layers/${Date.now()}_${sanitizedFilename}`;
 

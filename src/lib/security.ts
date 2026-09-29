@@ -59,14 +59,16 @@ export const sanitizeText = (dirty: string): string => {
  * Browser-only implementation (no Node.js path module)
  */
 export const sanitizePath = (basePath: string, userPath: string): string => {
-  // Remove any path traversal attempts
-  const cleaned = userPath.replace(/\.\./g, '').replace(/[\\/]+/g, '/');
+  if (!userPath) return basePath.replace(/\/+$/, '');
   
-  // Ensure it doesn't start with /
-  const normalized = cleaned.startsWith('/') ? cleaned.slice(1) : cleaned;
+  // Remove null bytes and control chars
+  const sanitized = userPath.replace(/\0/g, '').replace(/\\+/g, '/').replace(/\/+/g, '/');
   
-  // Join with base path
-  const joined = `${basePath.replace(/\/$/, '')}/${normalized}`;
+  // Segment-based whitelist to strictly prevent directory traversal (e.g. '....//', '../', '.../')
+  const safeSegments = sanitized
+    .split('/')
+    .filter(segment => segment.length > 0 && segment.replace(/\./g, '').length > 0);
   
-  return joined;
+  const base = basePath.replace(/\/+$/, '');
+  return safeSegments.length > 0 ? `${base}/${safeSegments.join('/')}` : base;
 };

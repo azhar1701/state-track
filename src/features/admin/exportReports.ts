@@ -71,8 +71,12 @@ export async function exportReportsToCsv(params: ExportReportsParams): Promise<v
 
     const escapeCsv = (val: unknown): string => {
       if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
+      let str = String(val);
+      // OWASP CWE-1236 mitigation: Prevent CSV/Formula Injection in Excel / Sheets
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
     };
 
     const rows = data.map((r) => [
