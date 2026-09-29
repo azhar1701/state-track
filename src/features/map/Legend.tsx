@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/card';
+import { MAP_STATUS_COLORS, MAP_SEVERITY_COLORS } from './mapIcons';
 
 export type LegendOverlayItem =
   | { type: 'line'; label: string; color: string; dashArray?: string }
@@ -8,14 +9,14 @@ export type LegendOverlayItem =
 
 export const Legend = ({ overlays }: { overlays?: LegendOverlayItem[] }) => {
   const statusItems = [
-    { color: '#f59e0b', label: 'Baru' },
-    { color: '#3b82f6', label: 'Diproses' },
-    { color: '#10b981', label: 'Selesai' },
+    { color: MAP_STATUS_COLORS.baru.color, label: MAP_STATUS_COLORS.baru.label },
+    { color: MAP_STATUS_COLORS.diproses.color, label: MAP_STATUS_COLORS.diproses.label },
+    { color: MAP_STATUS_COLORS.selesai.color, label: MAP_STATUS_COLORS.selesai.label },
   ];
   const severityItems = [
-    { color: '#22c55e', label: 'Ringan' },
-    { color: '#f97316', label: 'Sedang' },
-    { color: '#ef4444', label: 'Berat' },
+    { color: MAP_SEVERITY_COLORS.ringan.color, label: MAP_SEVERITY_COLORS.ringan.label },
+    { color: MAP_SEVERITY_COLORS.sedang.color, label: MAP_SEVERITY_COLORS.sedang.label },
+    { color: MAP_SEVERITY_COLORS.berat.color, label: MAP_SEVERITY_COLORS.berat.label },
   ];
 
   return (

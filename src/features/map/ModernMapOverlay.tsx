@@ -23,6 +23,7 @@ import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
 import type { LegendOverlayItem } from "./Legend";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MAP_STATUS_COLORS, MAP_SEVERITY_COLORS } from "./mapIcons";
 
 interface ModernMapOverlayProps {
   // Search
@@ -96,7 +97,7 @@ export const ModernMapOverlay = ({
 }: ModernMapOverlayProps) => {
   const isMobile = useIsMobile();
   const [legendCollapsed, setLegendCollapsed] = useState(isMobile);
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(isMobile);
   const [drawingActive, setDrawingActive] = useState(false);
 
   const handleDrawClick = () => {
@@ -106,15 +107,15 @@ export const ModernMapOverlay = ({
   };
 
   const statusItems = [
-    { color: "#f59e0b", label: "Baru", count: statusCounts.baru },
-    { color: "#3b82f6", label: "Diproses", count: statusCounts.diproses },
-    { color: "#10b981", label: "Selesai", count: statusCounts.selesai },
+    { color: MAP_STATUS_COLORS.baru.color, label: MAP_STATUS_COLORS.baru.label, count: statusCounts.baru },
+    { color: MAP_STATUS_COLORS.diproses.color, label: MAP_STATUS_COLORS.diproses.label, count: statusCounts.diproses },
+    { color: MAP_STATUS_COLORS.selesai.color, label: MAP_STATUS_COLORS.selesai.label, count: statusCounts.selesai },
   ];
 
   const severityItems = [
-    { color: "#22c55e", label: "Ringan" },
-    { color: "#f97316", label: "Sedang" },
-    { color: "#ef4444", label: "Berat" },
+    { color: MAP_SEVERITY_COLORS.ringan.color, label: MAP_SEVERITY_COLORS.ringan.label },
+    { color: MAP_SEVERITY_COLORS.sedang.color, label: MAP_SEVERITY_COLORS.sedang.label },
+    { color: MAP_SEVERITY_COLORS.berat.color, label: MAP_SEVERITY_COLORS.berat.label },
   ];
 
   return (
@@ -122,20 +123,20 @@ export const ModernMapOverlay = ({
       {/* Top Section: Placed below top-row stats & basemap HUD on mobile */}
       <div className="absolute top-14 md:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col gap-2 pointer-events-none z-[1000]">
         {/* Main Toolbar */}
-        <div className="flex justify-center">
-          <div className="flex items-center gap-1 sm:gap-1.5 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-2 sm:px-2.5 py-1 sm:py-1.5 pointer-events-auto">
+        <div className="flex justify-center max-w-full">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-2 sm:px-2.5 py-1 sm:py-1.5 pointer-events-auto max-w-full overflow-x-auto no-scrollbar">
             {/* Search Button */}
             <Button
               onClick={onToggleSearch}
               variant={showSearch ? "default" : "ghost"}
               size="sm"
-              className="h-9 sm:h-11 px-2.5 sm:px-4 rounded-xl font-medium btn-haptic transition-transform active:scale-95"
+              className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl font-medium btn-haptic transition-transform active:scale-95 shrink-0"
             >
               <Search className="icon-sm sm:mr-2" />
               <span className="hidden sm:inline">Cari</span>
             </Button>
 
-            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5" />
+            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5 shrink-0" />
 
             {/* Location (desktop only, mobile has MobileMapControls) */}
             {canLocate && (
@@ -143,7 +144,7 @@ export const ModernMapOverlay = ({
                 onClick={onLocate}
                 size="sm"
                 variant="ghost"
-                className="hidden md:inline-flex h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                className="hidden md:inline-flex h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
                 title="Lokasi Saya"
                 aria-label="Lokasi Saya"
               >
@@ -157,7 +158,7 @@ export const ModernMapOverlay = ({
                 onClick={onResetExtent}
                 size="sm"
                 variant="ghost"
-                className="hidden md:inline-flex h-11 w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 hover:bg-primary/10 text-primary"
+                className="hidden md:inline-flex h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 hover:bg-primary/10 text-primary shrink-0"
                 title="Kembali ke Wilayah Ciamis"
                 aria-label="Reset Extent ke Ciamis"
               >
@@ -170,7 +171,7 @@ export const ModernMapOverlay = ({
               onClick={onToggleFilters}
               variant="ghost"
               size="sm"
-              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
               title="Filter Laporan"
               aria-label="Filter Laporan"
             >
@@ -182,7 +183,7 @@ export const ModernMapOverlay = ({
               onClick={onToggleOverlays}
               variant="ghost"
               size="sm"
-              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
               title="Layer & Overlay"
               aria-label="Layer dan Overlay"
             >
@@ -194,7 +195,7 @@ export const ModernMapOverlay = ({
               onClick={handleDrawClick}
               variant={drawingActive ? "default" : "ghost"}
               size="sm"
-              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
               title="Alat Gambar & Ukur"
               aria-label="Alat Gambar dan Ukur"
             >
@@ -207,7 +208,7 @@ export const ModernMapOverlay = ({
                 onClick={onToggleSpatialAnalysis}
                 variant={showSpatialAnalysis ? "default" : "ghost"}
                 size="sm"
-                className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
                 title="Analisis Spasial (Buffer & Densitas)"
                 aria-label="Analisis Spasial"
               >
@@ -221,7 +222,7 @@ export const ModernMapOverlay = ({
                 onClick={onToggleRouteOptimization}
                 variant={showRouteOptimization ? "default" : "ghost"}
                 size="sm"
-                className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
                 title="Optimasi Rute Tim Lapangan"
                 aria-label="Optimasi Rute"
               >
@@ -229,14 +230,14 @@ export const ModernMapOverlay = ({
               </Button>
             )}
 
-            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5" />
+            <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5 shrink-0" />
 
             {/* Share */}
             <Button
               onClick={onShare}
               variant="ghost"
               size="sm"
-              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
               title="Bagikan Tampilan Peta"
               aria-label="Bagikan Tampilan Peta"
             >
@@ -248,7 +249,7 @@ export const ModernMapOverlay = ({
               onClick={onExport}
               variant="ghost"
               size="sm"
-              className="h-9 w-9 sm:h-11 sm:w-11 p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
               title="Unduh Peta"
               aria-label="Unduh Peta"
             >

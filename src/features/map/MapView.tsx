@@ -312,8 +312,15 @@ const MapView = () => {
     if (!mapInstance) return;
     const updateScale = () => {
       const zoom = mapInstance.getZoom();
-      const scale = (40075017 * Math.cos((mapInstance.getCenter().lat * Math.PI) / 180)) / Math.pow(2, zoom + 8);
-      setCurrentScale(`1 : ${(Math.round(scale / 100) * 100).toLocaleString("id-ID")}`);
+      const lat = mapInstance.getCenter().lat;
+      // standard OGC/GIS resolution: meters per pixel
+      const metersPerPixel = (40075016.686 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom + 8);
+      // scale denominator based on 96 DPI (3779.53 pixels per meter)
+      const scaleDenominator = metersPerPixel * 3779.527559;
+      const roundedScale = scaleDenominator >= 10000
+        ? Math.round(scaleDenominator / 1000) * 1000
+        : Math.round(scaleDenominator / 100) * 100;
+      setCurrentScale(`1 : ${roundedScale.toLocaleString("id-ID")}`);
     };
     mapInstance.on("zoomend moveend", updateScale);
     updateScale();
@@ -960,52 +967,41 @@ const MapView = () => {
             )}
           </AnimatePresence>
 
-          {densityCells.length > 0 && (
-            <div
-              className={`absolute ${
-                activeBuffer || (optimizedRoute && !showRouteOptimization) ? "top-32" : "top-20"
-              } left-4 z-[1100] flex items-center gap-2 bg-background/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-500/40 px-3.5 py-2 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2`}
-            >
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-              <div className="text-xs">
-                <span className="font-bold text-foreground">Grid Densitas:</span>{" "}
-                <span className="text-muted-foreground font-medium">
-                  {densityCells.length} Sel Aktif
-                </span>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setDensityCells([]);
-                  toast.info("Grid densitas dibersihkan");
-                }}
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive rounded-xl"
-                title="Hapus Densitas"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          )}
-
           {!selectedReport && (
-            <div className="custom-scale-control absolute bottom-4 right-4 z-[800] bg-background/90 backdrop-blur-md border border-border/80 rounded-2xl px-3.5 py-1.5 text-[11px] font-mono shadow-float pointer-events-none hidden sm:flex items-center gap-2.5 text-foreground">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Skala</span>
-                <span className="font-semibold">{currentScale}</span>
+            <>
+              {/* Responsive Scale & Coordinates (Kembali ke tempat semula di pojok kanan bawah) */}
+              <div className="custom-scale-control absolute bottom-[5.5rem] md:bottom-4 right-3 md:right-4 z-[800] bg-background/90 dark:bg-slate-900/90 backdrop-blur-md border border-border/80 rounded-2xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono shadow-float pointer-events-none flex items-center gap-2 sm:gap-2.5 text-foreground animate-in fade-in">
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Skala</span>
+                  <span className="font-semibold">{currentScale}</span>
+                </div>
+                <div className="w-px h-3 sm:h-3.5 bg-border/80" />
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">
+                    {cursorLatLng ? "Kursor" : "Pusat"}
+                  </span>
+                  <span className="font-semibold">
+                    {(cursorLatLng || mapCenter)[0].toFixed(4)}, {(cursorLatLng || mapCenter)[1].toFixed(4)}
+                  </span>
+                </div>
               </div>
-              {cursorLatLng && (
-                <>
-                  <div className="w-px h-3.5 bg-border/80" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Koordinat</span>
-                    <span className="font-semibold">
-                      {cursorLatLng[0].toFixed(5)}, {cursorLatLng[1].toFixed(5)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+
+              {/* Legal Map Attribution Badge */}
+              <div className="absolute bottom-[5.5rem] md:bottom-2 left-3 md:left-4 z-[790] pointer-events-auto">
+                <div className="text-[9px] sm:text-[10px] text-muted-foreground bg-background/85 dark:bg-slate-900/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/50 shadow-sm flex items-center gap-1 select-none">
+                  <span>©</span>
+                  <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline text-foreground/80 font-medium"
+                  >
+                    OpenStreetMap
+                  </a>
+                  <span className="hidden xs:inline">contributors</span>
+                </div>
+              </div>
+            </>
           )}
 
           {ctxOpen && ctxPoint && ctxLatLng && (

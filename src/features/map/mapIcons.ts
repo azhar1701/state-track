@@ -69,28 +69,31 @@ export const createClusterCustomIcon = (cluster: L.MarkerCluster): L.DivIcon => 
 };
 
 // ---------------------------------------------------------------------------
-// Report marker icon
 // ---------------------------------------------------------------------------
+// Standard GIS Status & Severity Color Tokens (Single Source of Truth)
+// ---------------------------------------------------------------------------
+
+export const MAP_STATUS_COLORS = {
+  baru: { color: '#f97316', label: 'Baru', letter: 'B' },
+  diproses: { color: '#3b82f6', label: 'Diproses', letter: 'P' },
+  selesai: { color: '#10b981', label: 'Selesai', letter: 'S' },
+} as const;
+
+export const MAP_SEVERITY_COLORS = {
+  ringan: { color: '#22c55e', label: 'Ringan' },
+  sedang: { color: '#f59e0b', label: 'Sedang' },
+  berat: { color: '#ef4444', label: 'Berat' },
+} as const;
 
 export const createCustomIcon = (
   _category: string,
   status: string,
   severity?: Report['severity'],
 ): L.DivIcon => {
-  const statusColors = {
-    baru: { bg: '#f97316', label: 'B' },
-    diproses: { bg: '#3b82f6', label: 'P' },
-    selesai: { bg: '#10b981', label: 'S' },
-  } as const;
-
-  const severityBorders = {
-    ringan: '#22c55e',
-    sedang: '#f59e0b',
-    berat: '#ef4444',
-  } as const;
-
-  const statusConf = statusColors[status as keyof typeof statusColors] ?? statusColors.baru;
-  const borderColor = severity ? severityBorders[severity] : '#e5e7eb';
+  const statusKey = (status.toLowerCase() as keyof typeof MAP_STATUS_COLORS);
+  const statusConf = MAP_STATUS_COLORS[statusKey] ?? MAP_STATUS_COLORS.baru;
+  const severityKey = severity ? (severity.toLowerCase() as keyof typeof MAP_SEVERITY_COLORS) : undefined;
+  const borderColor = severityKey ? MAP_SEVERITY_COLORS[severityKey]?.color : '#e5e7eb';
   const borderWidth = severity ? '3px' : '2px';
 
   return L.divIcon({
@@ -107,7 +110,7 @@ export const createCustomIcon = (
  position: absolute;
  width: 36px;
  height: 36px;
- background: linear-gradient(135deg, ${statusConf.bg} 0%, color-mix(in srgb, ${statusConf.bg} 85%, black) 100%);
+ background: linear-gradient(135deg, ${statusConf.color} 0%, color-mix(in srgb, ${statusConf.color} 85%, black) 100%);
  border: ${borderWidth} solid ${borderColor};
  border-radius: 50%;
  display: flex;
@@ -122,7 +125,7 @@ export const createCustomIcon = (
  color: white;
  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
  ">
- ${statusConf.label}
+ ${statusConf.letter}
  </div>
  ${severity ? `
  <div style="
