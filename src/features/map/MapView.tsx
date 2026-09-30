@@ -72,6 +72,7 @@ const MapView = () => {
 
   // user location
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
   const getUserLocation = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -214,9 +215,16 @@ const MapView = () => {
       groups.forEach((features, name) => {
         for (const poly of features) {
           try {
-            const line = turf.polygonToLine(poly as unknown as Feature<Polygon | MultiPolygon>) as Feature<LineString | MultiLineString>;
-            line.properties = { ...(line.properties || {}), KECAMATAN: name };
-            lineFeatures.push(line);
+            const line = turf.polygonToLine(poly as unknown as Feature<Polygon | MultiPolygon>);
+            if (line.type === "FeatureCollection") {
+              for (const subFeature of line.features) {
+                subFeature.properties = { ...(subFeature.properties || {}), KECAMATAN: name };
+                lineFeatures.push(subFeature as Feature<LineString | MultiLineString>);
+              }
+            } else if (line.type === "Feature") {
+              line.properties = { ...(line.properties || {}), KECAMATAN: name };
+              lineFeatures.push(line as Feature<LineString | MultiLineString>);
+            }
           } catch (e) { logger.warn(`Failed kecamatan boundary for ${name}`, sanitizeForLog(e)); }
         }
       });
@@ -349,8 +357,59 @@ const MapView = () => {
     }
   }, [reports, urlParams.selectedReportId, setMapCenter, setMapZoom]);
 
-  // map actions
-  const goToUserLocation = () => { if (userLocation) { setMapCenter(userLocation); setMapZoom(15); } };
+  // map actions - GPS Locate & Enable
+  const handleLocateOrEnableGPS = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Geolokasi tidak didukung pada browser atau perangkat Anda");
+      return;
+    }
+
+    if (userLocation) {
+      setMapCenter(userLocation);
+      setMapZoom(16);
+      if (mapInstance) {
+        mapInstance.flyTo(userLocation, 16, { duration: 1.2 });
+      }
+      toast.success("Berpindah ke lokasi Anda saat ini", { icon: "📍" });
+      return;
+    }
+
+    setIsLocating(true);
+    const toastId = toast.loading("Mencari sinyal GPS Anda...", { duration: 10000 });
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        toast.dismiss(toastId);
+        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUserLocation(coords);
+        setMapCenter(coords);
+        setMapZoom(16);
+        if (mapInstance) {
+          mapInstance.flyTo(coords, 16, { duration: 1.2 });
+        }
+        toast.success("GPS Aktif: Lokasi Anda ditemukan!", {
+          description: `Koordinat: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`,
+          icon: "📍",
+          duration: 3500,
+        });
+      },
+      (err) => {
+        setIsLocating(false);
+        toast.dismiss(toastId);
+        logger.warn("Error getting GPS location:", sanitizeForLog(err));
+        let errorMsg = "Gagal mengakses sinyal GPS";
+        if (err.code === 1) errorMsg = "Izin akses lokasi ditolak oleh browser/pengguna";
+        else if (err.code === 2) errorMsg = "Posisi perangkat tidak dapat ditentukan";
+        else if (err.code === 3) errorMsg = "Waktu pencarian GPS habis (timeout)";
+        toast.error(errorMsg, {
+          description: "Silakan aktifkan izin lokasi di pengaturan browser",
+          duration: 4000,
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, [userLocation, mapInstance, setMapCenter, setMapZoom]);
 
   // One-tap extent reset → flyTo Ciamis bounding box
   const resetToCiamisExtent = useCallback(() => {
@@ -567,33 +626,67 @@ const MapView = () => {
       <div className={`relative w-full h-full ${activeMapTool ? "cursor-crosshair" : ""}`}>
         <MapCanvas basemap={basemap} center={mapCenter} zoom={mapZoom} ref={setMapInstance}>
             <FlyToLocation center={mapCenter} zoom={mapZoom} />
-            {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={goToUserLocation} onResetExtent={resetToCiamisExtent} />}
+            {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={handleLocateOrEnableGPS} onResetExtent={resetToCiamisExtent} />}
 
             {overlays.adminBoundaries && adminGeoJson && (
-              <Pane name="admin-boundaries" style={{ zIndex: 350 }}>
-                <RLGeoJSON
-                  key="admin-boundaries"
-                  data={adminGeoJson}
-                  style={() => ({ color: "#6b7280", weight: 1, opacity: 0.8, dashArray: "4 3", fillOpacity: 0 })}
-                  onEachFeature={(feature, layer) => {
-                    const p = feature.properties as Record<string, unknown> | undefined;
-                    const featureId = `admin-${Math.random().toString(36).substr(2, 9)}`;
-                    registerLayer(featureId, layer, { color: "#6b7280", weight: 1, opacity: 0.8, fillOpacity: 0 });
-                    const name = (p?.DESA_1 as string)||(p?.DESA as string)||(p?.KECAMATAN as string)||(p?.Kecamatan as string)||(p?.name as string)||(p?.NAMOBJ as string)||undefined;
-                    if (name) layer.bindTooltip(String(name), { sticky: true, direction: "center", className: "bg-black/60 text-white px-1 py-0.5 rounded border text-[11px]" });
-                    layer.on("click", () => setSelectedLayer({ id: featureId, feature, layer }));
-                    layer.on("mouseover", () => { (layer as unknown as {setStyle?:(o:L.PathOptions)=>void}).setStyle?.({weight:2,color:"#111827"}); });
-                    layer.on("mouseout", () => { if (selectedLayer?.id!==featureId) (layer as unknown as {setStyle?:(o:L.PathOptions)=>void}).setStyle?.({weight:1,color:"#6b7280"}); });
-                    layer.on("remove", () => unregisterLayer(featureId));
-                  }}
-                />
-              </Pane>
+              <RLGeoJSON
+                key={`admin-boundaries-${adminGeoJson.features?.length || 0}`}
+                data={adminGeoJson}
+                style={() => ({
+                  color: "#2563eb",
+                  weight: 1.5,
+                  opacity: 0.75,
+                  dashArray: "5 4",
+                  fillOpacity: 0.08,
+                  fillColor: "#3b82f6",
+                })}
+                onEachFeature={(feature, layer) => {
+                  const p = feature.properties as Record<string, unknown> | undefined;
+                  const featureId = `admin-${Math.random().toString(36).substr(2, 9)}`;
+                  registerLayer(featureId, layer, { color: "#2563eb", weight: 1.5, opacity: 0.75, fillOpacity: 0.08 });
+                  const name =
+                    (p?.DESA_1 as string) ||
+                    (p?.DESA as string) ||
+                    (p?.KECAMATAN as string) ||
+                    (p?.Kecamatan as string) ||
+                    (p?.name as string) ||
+                    (p?.NAMOBJ as string) ||
+                    undefined;
+                  if (name) {
+                    layer.bindTooltip(String(name), {
+                      sticky: true,
+                      direction: "center",
+                      className: "bg-slate-900/80 text-white px-1.5 py-0.5 rounded border border-white/20 text-[11px] font-medium shadow-sm",
+                    });
+                  }
+                  layer.on("click", () => setSelectedLayer({ id: featureId, feature, layer }));
+                  layer.on("mouseover", () => {
+                    (layer as unknown as { setStyle?: (o: L.PathOptions) => void }).setStyle?.({
+                      weight: 2.5,
+                      color: "#1d4ed8",
+                      fillOpacity: 0.18,
+                    });
+                  });
+                  layer.on("mouseout", () => {
+                    if (selectedLayer?.id !== featureId) {
+                      (layer as unknown as { setStyle?: (o: L.PathOptions) => void }).setStyle?.({
+                        weight: 1.5,
+                        color: "#2563eb",
+                        fillOpacity: 0.08,
+                      });
+                    }
+                  });
+                  layer.on("remove", () => unregisterLayer(featureId));
+                }}
+              />
             )}
 
             {overlays.adminBoundaries && kecamatanLines && (
-              <Pane name="kecamatan-boundaries" style={{ zIndex: 360, pointerEvents: "none" }}>
-                <RLGeoJSON key="kecamatan-boundaries" data={kecamatanLines} style={() => ({ color: "#111827", weight: 2, opacity: 0.9, dashArray: "6 4" })} />
-              </Pane>
+              <RLGeoJSON
+                key={`kecamatan-boundaries-${kecamatanLines.features?.length || 0}`}
+                data={kecamatanLines}
+                style={() => ({ color: "#0f172a", weight: 2.5, opacity: 0.9, dashArray: "6 4" })}
+              />
             )}
 
             {renderedLayers}
@@ -720,7 +813,10 @@ const MapView = () => {
           <ModernMapOverlay
             showSearch={showSearchPanel}
             onToggleSearch={() => { setShowSearchPanel((v)=>!v); setShowFilterPanel(false); setShowOverlayPanel(false); }}
-            canLocate={!!userLocation} onLocate={goToUserLocation}
+            canLocate={typeof navigator !== "undefined" && "geolocation" in navigator}
+            hasUserLocation={!!userLocation}
+            isLocating={isLocating}
+            onLocate={handleLocateOrEnableGPS}
             onResetExtent={resetToCiamisExtent}
             onToggleFilters={() => { setShowFilterPanel((v)=>!v); setShowSearchPanel(false); setShowOverlayPanel(false); }}
             onToggleOverlays={() => { setShowOverlayPanel((v)=>!v); setShowSearchPanel(false); setShowFilterPanel(false); }}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Search,
@@ -18,6 +19,7 @@ import {
   Compass,
   Activity,
   Route,
+  Loader2,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
@@ -32,6 +34,8 @@ interface ModernMapOverlayProps {
   // Location
   canLocate: boolean;
   onLocate: () => void;
+  hasUserLocation?: boolean;
+  isLocating?: boolean;
   onResetExtent?: () => void;
   // Filters & Overlays
   onToggleFilters?: () => void;
@@ -70,6 +74,8 @@ export const ModernMapOverlay = ({
   onToggleSearch,
   canLocate,
   onLocate,
+  hasUserLocation = false,
+  isLocating = false,
   onResetExtent,
   onToggleFilters,
   onToggleOverlays,
@@ -138,17 +144,27 @@ export const ModernMapOverlay = ({
 
             <div className="w-px h-6 sm:h-7 bg-border/70 mx-0.5 shrink-0" />
 
-            {/* Location (desktop only, mobile has MobileMapControls) */}
+            {/* Location / GPS Button */}
             {canLocate && (
               <Button
                 onClick={onLocate}
                 size="sm"
                 variant="ghost"
-                className="hidden md:inline-flex h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0"
-                title="Lokasi Saya"
-                aria-label="Lokasi Saya"
+                disabled={isLocating}
+                className={cn(
+                  "inline-flex h-11 w-11 min-h-[44px] min-w-[44px] p-0 rounded-xl btn-haptic transition-transform hover:scale-105 active:scale-95 shrink-0",
+                  hasUserLocation
+                    ? "text-primary bg-primary/15 hover:bg-primary/25 border border-primary/30"
+                    : "text-foreground hover:bg-muted"
+                )}
+                title={hasUserLocation ? "Pusatkan ke Lokasi Saya" : "Nyalakan GPS / Cari Lokasi Saya"}
+                aria-label={hasUserLocation ? "Pusatkan ke Lokasi Saya" : "Nyalakan GPS"}
               >
-                <Navigation className="icon-sm" />
+                {isLocating ? (
+                  <Loader2 className="icon-sm animate-spin text-primary" />
+                ) : (
+                  <Navigation className={cn("icon-sm", hasUserLocation && "fill-current text-primary")} />
+                )}
               </Button>
             )}
 
