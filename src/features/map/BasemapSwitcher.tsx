@@ -19,15 +19,15 @@ const basemapIcons: Record<BasemapType, React.ReactNode> = {
   light: <Sun className="icon-sm" />,
 };
 
+// Basemaps yang ditampilkan di UI — dark & light (Carto) disembunyikan sementara
+const VISIBLE_BASEMAPS: BasemapType[] = ['osm', 'satellite', 'terrain'];
+
 export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: BasemapSwitcherProps) => {
   const map = useMap();
   const [currentBasemap, setCurrentBasemap] = useState<BasemapType>(initialBasemap);
   const [isOpen, setIsOpen] = useState(false);
   const tileLayerRef = useRef<TileLayer | null>(null);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
-
-  // Basemaps yang ditampilkan di UI — dark & light (Carto) disembunyikan sementara
-  const VISIBLE_BASEMAPS: BasemapType[] = ['osm', 'satellite', 'terrain'];
 
   // Helper for offline tile caching strategy
   useEffect(() => {
@@ -71,6 +71,29 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
     window.addEventListener('basemap-change', handleGlobalChange);
     return () => window.removeEventListener('basemap-change', handleGlobalChange);
   }, [switchBasemap]);
+
+  // Keyboard navigation for dropdown accessibility (WCAG 2.1.1)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsOpen(false);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const currentIndex = VISIBLE_BASEMAPS.indexOf(currentBasemap);
+        if (e.key === 'ArrowDown') {
+          const nextIndex = (currentIndex + 1) % VISIBLE_BASEMAPS.length;
+          switchBasemap(VISIBLE_BASEMAPS[nextIndex]);
+        } else {
+          const prevIndex = (currentIndex - 1 + VISIBLE_BASEMAPS.length) % VISIBLE_BASEMAPS.length;
+          switchBasemap(VISIBLE_BASEMAPS[prevIndex]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, currentBasemap, switchBasemap]);
 
   const handleOfflineToggle = (e: React.MouseEvent) => {
     // Prevent click from bubbling up to the backdrop and immediately closing
@@ -126,8 +149,9 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
           */}
           <div
             role="listbox"
+            tabIndex={0}
             aria-label="Pilih Basemap"
-            className="absolute top-full right-0 mt-2 w-48 bg-background/95 backdrop-blur-md border border-border/80 shadow-lifted rounded-2xl overflow-hidden p-1 animate-in fade-in slide-in-from-top-2 duration-150"
+            className="absolute top-full right-0 mt-2 w-48 bg-background/95 backdrop-blur-md border border-border/80 shadow-lifted rounded-2xl overflow-hidden p-1 animate-in fade-in slide-in-from-top-2 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {/* Basemap options — hanya tampilkan basemap gratis */}
             {(Object.keys(basemaps) as BasemapType[])
@@ -136,10 +160,11 @@ export const BasemapSwitcher = ({ onBasemapChange, initialBasemap = 'osm' }: Bas
               <button
                 key={key}
                 role="option"
+                tabIndex={0}
                 aria-selected={currentBasemap === key}
                 onClick={() => switchBasemap(key)}
                 className={cn(
-                  "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors text-left rounded-xl",
+                  "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                   currentBasemap === key
                     ? "bg-primary/10 text-primary font-medium"
                     : "hover:bg-muted text-foreground"

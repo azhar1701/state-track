@@ -260,9 +260,12 @@ export const ModernMapOverlay = ({
 
         {/* Draw Sub-Toolbar */}
         {drawingActive && drawToolbarContent && (
-          <div className="flex justify-center mt-2">
+          <div className="flex flex-col items-center gap-1.5 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-2xl px-3 py-2 pointer-events-auto">
               {drawToolbarContent}
+            </div>
+            <div className="bg-primary/90 text-primary-foreground text-[11px] font-medium px-3 py-1 rounded-full shadow-md pointer-events-auto border border-primary/20 backdrop-blur-sm flex items-center gap-1.5">
+              <span>📏 Pilih alat untuk menggambar bidang atau mengukur jarak di peta</span>
             </div>
           </div>
         )}
@@ -270,15 +273,6 @@ export const ModernMapOverlay = ({
 
       {/* Bottom Section: Timeline Player */}
       <div className="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg px-3 md:px-0 flex justify-center pointer-events-none z-[1000]">
-        {/* Tool Instructions */}
-        {drawingActive && (
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lifted text-xs sm:text-sm font-medium pointer-events-auto border border-border transition-all duration-300">
-            <div className="font-bold mb-1">📏 Alat Gambar & Ukur</div>
-            <div className="text-2xs opacity-90">
-              Gunakan toolbar untuk menggambar polygon, garis, lingkaran, dan mengukur jarak
-            </div>
-          </div>
-        )}
 
         {timelineCollapsed ? (
           <div className="bg-background/90 backdrop-blur-md border border-border/80 shadow-float rounded-full px-3 py-1.5 pointer-events-auto flex items-center gap-2 animate-in fade-in zoom-in-95">
@@ -379,15 +373,17 @@ export const ModernMapOverlay = ({
               </div>
             </div>
 
-            {/* Progress Bar */}
-            <Slider
-              value={[sliderValue]}
-              onValueChange={onSliderChange}
-              max={totalDays}
-              step={1}
-              className="w-full"
-              aria-label="Rentang Waktu Laporan"
-            />
+            {/* Progress Bar with Enhanced Contrast */}
+            <div className="py-1 px-0.5">
+              <Slider
+                value={[sliderValue]}
+                onValueChange={onSliderChange}
+                max={totalDays}
+                step={1}
+                className="w-full cursor-pointer py-1"
+                aria-label="Rentang Waktu Laporan"
+              />
+            </div>
 
             {/* Date Range */}
             <div className="flex justify-between text-2xs text-muted-foreground mt-1">
