@@ -49,6 +49,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AdminReportMiniMap } from "./AdminReportMiniMap";
 
 interface AdminDetailProps {
   selectedReport: ReportListItem | null;
@@ -563,13 +564,37 @@ const AdminDetail = ({
             </div>
           </div>
 
+          {/* Spatial Context: Interactive Mini-Map Preview */}
+          <div className="space-y-2.5 pb-4 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Orientasi & Verifikasi Spasial
+              </label>
+              {fullReport?.latitude && fullReport?.longitude && (
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  {Number(fullReport.latitude).toFixed(5)}, {Number(fullReport.longitude).toFixed(5)}
+                </span>
+              )}
+            </div>
+            <AdminReportMiniMap
+              reportId={selectedReport.id}
+              latitude={fullReport?.latitude ? Number(fullReport.latitude) : null}
+              longitude={fullReport?.longitude ? Number(fullReport.longitude) : null}
+              title={selectedReport.title}
+              category={selectedReport.category}
+              severity={selectedReport.severity}
+              locationName={selectedReport.location_name}
+            />
+          </div>
+
           {/* Location & Reporter details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-4 border-b border-border/50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pb-4 border-b border-border/50">
             {/* GPS Coordinates with copy */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
-                Koordinat GPS
+                Koordinat Presisi
               </label>
               {detailLoading ? (
                 <Skeleton className="h-5 w-36" />

@@ -3,7 +3,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, MapPin, Clock } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
+import { Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, MapPin, Clock, MoreVertical } from "lucide-react";
 import { ReportListItem, ReportStatus } from "./types";
 import { formatDateTime, formatReportLocation } from "@/lib/formatters";
 import { SeverityBadge, StatusBadge } from "@/components/common/ReportBadges";
@@ -162,7 +169,7 @@ export const AdminReportsTable = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <Select
                     value={report.status}
                     onValueChange={(value) =>
@@ -170,7 +177,7 @@ export const AdminReportsTable = ({
                     }
                     disabled={updatingId === report.id}
                   >
-                    <SelectTrigger className="h-8 text-xs px-2 rounded-lg border-border bg-background/50">
+                    <SelectTrigger className="h-9 text-xs px-2.5 rounded-lg border-border bg-background/80 shadow-xs min-w-[95px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -180,15 +187,35 @@ export const AdminReportsTable = ({
                     </SelectContent>
                   </Select>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                    onClick={() => onDeleteReport(report.id)}
-                    aria-label="Hapus laporan"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg border-border/80 hover:bg-accent text-muted-foreground hover:text-foreground shrink-0"
+                        aria-label="Menu opsi laporan"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem 
+                        onClick={() => onOpenDetail(report)}
+                        className="gap-2 text-xs cursor-pointer"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        Lihat Detail
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => onDeleteReport(report.id)}
+                        className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus Laporan
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>

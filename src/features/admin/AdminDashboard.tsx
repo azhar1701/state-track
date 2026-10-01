@@ -12,6 +12,8 @@ import {
   StatusFilter,
   SeverityFilter,
   CategoryFilter,
+  KecamatanFilter,
+  DesaFilter,
   SortOption,
   ReportStatus
 } from "./types";
@@ -47,6 +49,8 @@ const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('semua');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('semua');
+  const [kecamatanFilter, setKecamatanFilter] = useState<KecamatanFilter>('semua');
+  const [desaFilter, setDesaFilter] = useState<DesaFilter>('semua');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 350);
   const [sortBy, setSortBy] = useState<SortOption>('created_at_desc');
@@ -57,7 +61,7 @@ const AdminDashboard = () => {
   // Reset to first page whenever search or filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, severityFilter, categoryFilter, sortBy]);
+  }, [debouncedSearch, statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, sortBy]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<ReportStatus | ''>('');
@@ -76,6 +80,8 @@ const AdminDashboard = () => {
     isLoadingReports,
     stats,
     categories,
+    kecamatanList,
+    desaList,
     updateStatus,
     bulkUpdate,
     deleteReport
@@ -83,6 +89,8 @@ const AdminDashboard = () => {
     statusFilter,
     severityFilter,
     categoryFilter,
+    kecamatanFilter,
+    desaFilter,
     search: debouncedSearch,
     sortBy,
     page,
@@ -180,6 +188,8 @@ const AdminDashboard = () => {
         statusFilter,
         severityFilter,
         categoryFilter,
+        kecamatanFilter,
+        desaFilter,
         search: debouncedSearch,
         sortBy
       });
@@ -238,9 +248,13 @@ const AdminDashboard = () => {
               statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               severityFilter={severityFilter} setSeverityFilter={setSeverityFilter}
               categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+              kecamatanFilter={kecamatanFilter} setKecamatanFilter={setKecamatanFilter}
+              desaFilter={desaFilter} setDesaFilter={setDesaFilter}
               sortBy={sortBy} setSortBy={setSortBy}
               search={search} setSearch={setSearch}
               categories={categories}
+              kecamatanList={kecamatanList}
+              desaList={desaList}
             />
 
             <Card className="bg-card border-border shadow-sm">

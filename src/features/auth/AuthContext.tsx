@@ -14,9 +14,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const currentUserIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  // Optional fallback: allowlist admin emails via env var (comma-separated)
+  // Optional fallback: allowlist admin emails via env var (comma-separated or single)
   const ADMIN_EMAILS = useMemo(() => {
-    const raw = import.meta.env.VITE_ADMIN_EMAILS as string | undefined;
+    const raw = (import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAIL) as string | undefined;
     return (
       raw
         ?.split(",")

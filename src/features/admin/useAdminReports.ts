@@ -9,6 +9,8 @@ import {
   StatusFilter, 
   SeverityFilter, 
   CategoryFilter, 
+  KecamatanFilter,
+  DesaFilter,
   SortOption,
   REPORT_LIST_COLUMNS,
   ReportCategory
@@ -21,6 +23,8 @@ interface FetchReportsParams {
   statusFilter: StatusFilter;
   severityFilter: SeverityFilter;
   categoryFilter: CategoryFilter;
+  kecamatanFilter?: KecamatanFilter;
+  desaFilter?: DesaFilter;
   search: string;
   sortBy: SortOption;
   page: number;
@@ -30,7 +34,17 @@ interface FetchReportsParams {
 export const useAdminReports = (params: FetchReportsParams) => {
   const queryClient = useQueryClient();
   const { stats, refetch: refetchStats } = useReportStats();
-  const { statusFilter, severityFilter, categoryFilter, search, sortBy, page, pageSize } = params;
+  const { 
+    statusFilter, 
+    severityFilter, 
+    categoryFilter, 
+    kecamatanFilter = "semua", 
+    desaFilter = "semua", 
+    search, 
+    sortBy, 
+    page, 
+    pageSize 
+  } = params;
 
   // Realtime subscription
   useEffect(() => {
@@ -56,7 +70,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
   }, [queryClient]);
 
   const reportsQuery = useQuery({
-    queryKey: ["admin", "reports", statusFilter, severityFilter, categoryFilter, search, sortBy, page, pageSize],
+    queryKey: ["admin", "reports", statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, search, sortBy, page, pageSize],
     queryFn: async () => {
       let query = supabase
         .from("reports")
@@ -65,6 +79,8 @@ export const useAdminReports = (params: FetchReportsParams) => {
       if (statusFilter !== "semua") query = query.eq("status", statusFilter);
       if (severityFilter !== "semua") query = query.eq("severity", severityFilter);
       if (categoryFilter !== "semua") query = query.eq("category", categoryFilter);
+      if (kecamatanFilter !== "semua") query = query.eq("kecamatan", kecamatanFilter);
+      if (desaFilter !== "semua") query = query.eq("desa", desaFilter);
       if (search.trim()) {
         const term = search.trim();
         query = query.or(`title.ilike.%${term}%,location_name.ilike.%${term}%,desa.ilike.%${term}%,kecamatan.ilike.%${term}%`);
@@ -100,6 +116,21 @@ export const useAdminReports = (params: FetchReportsParams) => {
 
       return { items, total: count || 0 };
     },
+  });
+
+  const regionsQuery = useQuery({
+    queryKey: ["admin", "regions"],
+    queryFn: async () => {
+      const [kecRes, desaRes] = await Promise.all([
+        supabase.from("kecamatan").select("id, name").order("name"),
+        supabase.from("desa").select("id, name, kecamatan_id").order("name"),
+      ]);
+      return {
+        kecamatanList: (kecRes.data || []) as Array<{ id: string; name: string }>,
+        desaList: (desaRes.data || []) as Array<{ id: string; name: string; kecamatan_id: string }>,
+      };
+    },
+    staleTime: 10 * 60 * 1000,
   });
 
   const categoriesQuery = useQuery({
@@ -214,6 +245,9 @@ export const useAdminReports = (params: FetchReportsParams) => {
     stats,
     categories: categoriesQuery.data || [],
     isLoadingCategories: categoriesQuery.isLoading,
+    kecamatanList: regionsQuery.data?.kecamatanList || [],
+    desaList: regionsQuery.data?.desaList || [],
+    isLoadingRegions: regionsQuery.isLoading,
     updateStatus: updateStatusMutation.mutateAsync,
     bulkUpdate: bulkUpdateMutation.mutateAsync,
     deleteReport: deleteMutation.mutateAsync,

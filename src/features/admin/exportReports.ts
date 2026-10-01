@@ -2,12 +2,14 @@ import { supabase } from "@/services/client";
 import { formatDateTime } from "@/lib/formatters";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import type { StatusFilter, SeverityFilter, CategoryFilter, SortOption } from "./types";
+import type { StatusFilter, SeverityFilter, CategoryFilter, KecamatanFilter, DesaFilter, SortOption } from "./types";
 
 interface ExportReportsParams {
   statusFilter: StatusFilter;
   severityFilter: SeverityFilter;
   categoryFilter: CategoryFilter;
+  kecamatanFilter?: KecamatanFilter;
+  desaFilter?: DesaFilter;
   search: string;
   sortBy: SortOption;
 }
@@ -16,7 +18,15 @@ interface ExportReportsParams {
  * Exports filtered reports directly from Supabase to a UTF-8 BOM CSV file for Excel compatibility.
  */
 export async function exportReportsToCsv(params: ExportReportsParams): Promise<void> {
-  const { statusFilter, severityFilter, categoryFilter, search, sortBy } = params;
+  const { 
+    statusFilter, 
+    severityFilter, 
+    categoryFilter, 
+    kecamatanFilter = "semua", 
+    desaFilter = "semua", 
+    search, 
+    sortBy 
+  } = params;
 
   try {
     let query = supabase
@@ -26,6 +36,8 @@ export async function exportReportsToCsv(params: ExportReportsParams): Promise<v
     if (statusFilter !== "semua") query = query.eq("status", statusFilter);
     if (severityFilter !== "semua") query = query.eq("severity", severityFilter);
     if (categoryFilter !== "semua") query = query.eq("category", categoryFilter);
+    if (kecamatanFilter !== "semua") query = query.eq("kecamatan", kecamatanFilter);
+    if (desaFilter !== "semua") query = query.eq("desa", desaFilter);
     
     if (search.trim()) {
       const term = search.trim();
