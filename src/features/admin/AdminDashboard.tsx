@@ -32,7 +32,6 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Loader2, Download, ChevronDown, FileSpreadsheet, Globe } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -146,6 +145,26 @@ const AdminDashboard = () => {
     await updateStatus({ id, status });
     setSelectedReport(prev => (prev && prev.id === id ? { ...prev, status } : prev));
   };
+
+  const handleDetailUpdateReport = (updatedFields: Partial<ReportListItem>) => {
+    setSelectedReport(prev => (prev ? { ...prev, ...updatedFields } : prev));
+  };
+
+  // Reconcile selectedReport if reports list updates from server/real-time
+  useEffect(() => {
+    if (selectedReport && reports.length > 0) {
+      const match = reports.find(r => r.id === selectedReport.id);
+      if (match && (
+        match.title !== selectedReport.title ||
+        match.status !== selectedReport.status ||
+        match.severity !== selectedReport.severity ||
+        match.resolution !== selectedReport.resolution ||
+        match.updated_at !== selectedReport.updated_at
+      )) {
+        setSelectedReport(match);
+      }
+    }
+  }, [reports, selectedReport]);
 
 
   const allVisibleSelected = useMemo(() => {
@@ -504,29 +523,23 @@ const AdminDashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
-        <DrawerContent className="h-[88dvh] max-h-[92dvh] max-w-5xl mx-auto">
-          <Suspense fallback={
-            <div className="p-6">
-              <DrawerTitle className="sr-only">Detail Laporan</DrawerTitle>
-              <DrawerDescription className="sr-only">Sedang memuat detail laporan</DrawerDescription>
-              <DetailSkeleton />
-            </div>
-          }>
-            <AdminDetail
-              selectedReport={selectedReport}
-              onClose={() => setDetailOpen(false)}
-              onPrev={handlePrev}
-              onNext={handleNext}
-              hasPrev={hasPrev}
-              hasNext={hasNext}
-              currentIndex={selectedReportIndex >= 0 ? (page - 1) * pageSize + selectedReportIndex : undefined}
-              totalCount={totalFiltered}
-              onUpdateStatus={handleDetailUpdateStatus}
-            />
-          </Suspense>
-        </DrawerContent>
-      </Drawer>
+      {detailOpen && (
+        <Suspense fallback={null}>
+          <AdminDetail
+            open={detailOpen}
+            selectedReport={selectedReport}
+            onClose={() => setDetailOpen(false)}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            currentIndex={selectedReportIndex >= 0 ? (page - 1) * pageSize + selectedReportIndex : undefined}
+            totalCount={totalFiltered}
+            onUpdateStatus={handleDetailUpdateStatus}
+            onUpdateReport={handleDetailUpdateReport}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

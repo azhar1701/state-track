@@ -70,52 +70,66 @@ export const useReportDetail = (report: ReportListItem | null) => {
 
       const expectedUpdatedAt = force ? null : (report.updated_at || null);
       const targetStatus = status || report.status || "baru";
+      const newPriorityScore = severity === "berat" ? 85 : severity === "sedang" ? 50 : 25;
+
+      let updateSucceeded = false;
 
       // 1. Try atomic PostgreSQL RPC for conflict detection and update
-      const { data: rpcResult, error: rpcError } = await supabase.rpc(
-        "update_report_with_conflict_check",
-        {
-          p_report_id: id,
-          p_expected_updated_at: expectedUpdatedAt,
-          p_title: title,
-          p_severity: severity || null,
-          p_resolution: resolution || "",
-          p_status: targetStatus,
-        }
-      );
-
-      if (rpcError) {
-        // Fallback if RPC function does not exist in environment
-        if (rpcError.message?.includes("does not exist")) {
-          logger.warn("RPC update_report_with_conflict_check not found, falling back to direct table update");
-          if (!force && report.updated_at) {
-            const { data: latest } = await supabase
-              .from("reports")
-              .select("*")
-              .eq("id", id)
-              .single();
-            if (latest && new Date(latest.updated_at) > new Date(report.updated_at)) {
-              throw { type: 'conflict', data: latest };
-            }
+      try {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          "update_report_with_conflict_check",
+          {
+            p_report_id: id,
+            p_expected_updated_at: expectedUpdatedAt,
+            p_title: title,
+            p_severity: severity || null,
+            p_resolution: resolution || "",
+            p_status: targetStatus,
           }
-          const { error: directErr } = await supabase
-            .from("reports")
-            .update({
-              title,
-              severity: severity || null,
-              resolution,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", id);
-          if (directErr) throw directErr;
+        );
+
+        if (!rpcError) {
+          const result = rpcResult as { success: boolean; conflict: boolean; current_data?: unknown } | null;
+          if (result && !result.success && result.conflict) {
+            throw { type: 'conflict', data: result.current_data };
+          }
+          // Also sync priority_score
+          await supabase.from("reports").update({ priority_score: newPriorityScore }).eq("id", id);
+          updateSucceeded = true;
         } else {
-          throw rpcError;
+          logger.warn("RPC update_report_with_conflict_check returned error, using direct table update fallback:", rpcError);
         }
-      } else {
-        const result = rpcResult as { success: boolean; conflict: boolean; current_data?: unknown } | null;
-        if (result && !result.success && result.conflict) {
-          throw { type: 'conflict', data: result.current_data };
+      } catch (err: unknown) {
+        if (typeof err === "object" && err !== null && "type" in err && (err as { type: string }).type === "conflict") {
+          throw err;
         }
+        logger.warn("RPC invocation failed, trying direct table update fallback:", err);
+      }
+
+      // Fallback: direct table update if RPC did not complete
+      if (!updateSucceeded) {
+        if (!force && report.updated_at) {
+          const { data: latest } = await supabase
+            .from("reports")
+            .select("*")
+            .eq("id", id)
+            .single();
+          if (latest && new Date(latest.updated_at) > new Date(report.updated_at)) {
+            throw { type: 'conflict', data: latest };
+          }
+        }
+        const { error: directErr } = await supabase
+          .from("reports")
+          .update({
+            title,
+            severity: severity || null,
+            resolution,
+            status: targetStatus,
+            priority_score: newPriorityScore,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", id);
+        if (directErr) throw directErr;
       }
 
       // 2. Log changes for audit trail
