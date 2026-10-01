@@ -1,7 +1,9 @@
 import { useMemo, useState, useEffect, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
+import { supabase } from "@/services/client";
 import { useAuth } from "@/features/auth/useAuth";
-import { useAdminReports } from "./useAdminReports";
+import { useAdminReports, getDateRangeThreshold } from "./useAdminReports";
 import { AdminStatsCards } from "./AdminStatsCards";
 import { AdminFilters } from "./AdminFilters";
 import { AdminReportsTable } from "./AdminReportsTable";
@@ -14,6 +16,7 @@ import {
   CategoryFilter,
   KecamatanFilter,
   DesaFilter,
+  DateRangeFilter,
   SortOption,
   ReportStatus
 } from "./types";
@@ -22,12 +25,19 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem 
+} from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, ChevronDown, FileSpreadsheet, Globe } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { useDebounce } from "@/hooks/useDebounce";
-import { exportReportsToCsv } from "./exportReports";
+import { exportReportsToCsv, exportReportsToGeoJson } from "./exportReports";
+import { formatDateTime } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatSkeleton, TableSkeleton, DetailSkeleton } from "@/components/common/Skeletons";
 
@@ -51,6 +61,7 @@ const AdminDashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('semua');
   const [kecamatanFilter, setKecamatanFilter] = useState<KecamatanFilter>('semua');
   const [desaFilter, setDesaFilter] = useState<DesaFilter>('semua');
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>('semua');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 350);
   const [sortBy, setSortBy] = useState<SortOption>('created_at_desc');
@@ -61,7 +72,7 @@ const AdminDashboard = () => {
   // Reset to first page whenever search or filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, sortBy]);
+  }, [debouncedSearch, statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, dateRangeFilter, sortBy]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<ReportStatus | ''>('');
@@ -82,6 +93,7 @@ const AdminDashboard = () => {
     categories,
     kecamatanList,
     desaList,
+    lastSyncedAt,
     updateStatus,
     bulkUpdate,
     deleteReport
@@ -91,6 +103,7 @@ const AdminDashboard = () => {
     categoryFilter,
     kecamatanFilter,
     desaFilter,
+    dateRangeFilter,
     search: debouncedSearch,
     sortBy,
     page,
@@ -140,6 +153,37 @@ const AdminDashboard = () => {
     return reports.every((r) => selectedIds.has(r.id));
   }, [reports, selectedIds]);
 
+  const [isSelectingAllFiltered, setIsSelectingAllFiltered] = useState(false);
+
+  const handleSelectAllFiltered = async () => {
+    try {
+      setIsSelectingAllFiltered(true);
+      let query = supabase.from("reports").select("id");
+      if (statusFilter !== "semua") query = query.eq("status", statusFilter);
+      if (severityFilter !== "semua") query = query.eq("severity", severityFilter);
+      if (categoryFilter !== "semua") query = query.eq("category", categoryFilter);
+      if (kecamatanFilter !== "semua") query = query.eq("kecamatan", kecamatanFilter);
+      if (desaFilter !== "semua") query = query.eq("desa", desaFilter);
+      const threshold = getDateRangeThreshold(dateRangeFilter);
+      if (threshold) query = query.gte("created_at", threshold.toISOString());
+      if (debouncedSearch.trim()) {
+        const term = debouncedSearch.trim();
+        query = query.or(`title.ilike.%${term}%,location_name.ilike.%${term}%,desa.ilike.%${term}%,kecamatan.ilike.%${term}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      if (data) {
+        setSelectedIds(new Set(data.map((d: { id: string }) => d.id)));
+        toast.info(`Berhasil memilih seluruh ${data.length} laporan`);
+      }
+    } catch (err) {
+      logger.error("Failed to select all filtered reports", err);
+      toast.error("Gagal memilih seluruh laporan");
+    } finally {
+      setIsSelectingAllFiltered(false);
+    }
+  };
+
   const handleToggleSelectAll = () => {
     if (allVisibleSelected) {
       setSelectedIds(prev => {
@@ -181,7 +225,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleExport = async () => {
+  const handleExportCsv = async () => {
     setIsExporting(true);
     try {
       await exportReportsToCsv({
@@ -190,6 +234,25 @@ const AdminDashboard = () => {
         categoryFilter,
         kecamatanFilter,
         desaFilter,
+        dateRangeFilter,
+        search: debouncedSearch,
+        sortBy
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportGeoJson = async () => {
+    setIsExporting(true);
+    try {
+      await exportReportsToGeoJson({
+        statusFilter,
+        severityFilter,
+        categoryFilter,
+        kecamatanFilter,
+        desaFilter,
+        dateRangeFilter,
         search: debouncedSearch,
         sortBy
       });
@@ -226,20 +289,37 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 py-4 md:py-6">
       <div className="container px-3 md:px-4">
-        <div className="mb-4 md:mb-6">
+        <div className="mb-4 md:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold mb-1">Dashboard Admin</h1>
             <p className="text-sm md:text-base text-muted-foreground">Kelola laporan dan pengaturan sistem secara terpusat</p>
           </div>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto bg-card/70 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-border/70 shadow-xs">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Real-time Aktif</span>
+            </div>
+            <span className="text-muted-foreground/40 text-xs">•</span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Sinkron: {formatDateTime(lastSyncedAt.toISOString(), false)}
+            </span>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => onChangeTab(v as AdminTab)}>
-          <TabsList className="w-full flex overflow-x-auto no-scrollbar flex-nowrap sm:flex-wrap gap-2 mb-4 md:mb-6 bg-card border-border shadow-sm rounded-xl p-1.5 md:p-2 h-auto justify-start sm:justify-center">
-            <TabsTrigger value="reports" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Laporan</TabsTrigger>
-            <TabsTrigger value="geo" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Geo Data</TabsTrigger>
-            <TabsTrigger value="help" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Help Center</TabsTrigger>
-            <TabsTrigger value="settings" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Pengaturan</TabsTrigger>
-          </TabsList>
+          <div className="relative w-full mb-4 md:mb-6">
+            <TabsList className="w-full flex overflow-x-auto no-scrollbar flex-nowrap sm:flex-wrap gap-2 bg-card border-border shadow-sm rounded-xl p-1.5 md:p-2 h-auto justify-start sm:justify-center">
+              <TabsTrigger value="reports" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Laporan</TabsTrigger>
+              <TabsTrigger value="geo" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Geo Data</TabsTrigger>
+              <TabsTrigger value="help" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Help Center</TabsTrigger>
+              <TabsTrigger value="settings" className="flex-shrink-0 sm:flex-1 min-w-[110px] sm:min-w-[140px]">Pengaturan</TabsTrigger>
+            </TabsList>
+            {/* Indikator visual overflow scroll horizontal pada layar kecil */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/90 via-background/40 to-transparent sm:hidden rounded-r-xl" />
+          </div>
 
           <TabsContent value="reports" className="mt-0">
             <AdminStatsCards stats={stats} />
@@ -250,6 +330,7 @@ const AdminDashboard = () => {
               categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
               kecamatanFilter={kecamatanFilter} setKecamatanFilter={setKecamatanFilter}
               desaFilter={desaFilter} setDesaFilter={setDesaFilter}
+              dateRangeFilter={dateRangeFilter} setDateRangeFilter={setDateRangeFilter}
               sortBy={sortBy} setSortBy={setSortBy}
               search={search} setSearch={setSearch}
               categories={categories}
@@ -262,16 +343,36 @@ const AdminDashboard = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <CardTitle className="text-lg">Daftar Laporan ({totalFiltered})</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs gap-1.5 rounded-lg border-border/80 hover:bg-accent shadow-sm"
-                      disabled={isExporting || totalFiltered === 0}
-                      onClick={handleExport}
-                    >
-                      {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <Download className="w-3.5 h-3.5 text-primary" />}
-                      <span>Ekspor CSV</span>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs gap-1.5 rounded-lg border-border/80 hover:bg-accent shadow-sm"
+                          disabled={isExporting || totalFiltered === 0}
+                        >
+                          {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <Download className="w-3.5 h-3.5 text-primary" />}
+                          <span>Ekspor Laporan</span>
+                          <ChevronDown className="w-3 h-3 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={handleExportCsv} className="gap-2 text-xs cursor-pointer">
+                          <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="font-semibold">Ekspor CSV (Excel)</span>
+                            <span className="text-[10px] text-muted-foreground">Kompatibel spreadsheet dinas</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportGeoJson} className="gap-2 text-xs cursor-pointer">
+                          <Globe className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="font-semibold">Ekspor GeoJSON (GIS)</span>
+                            <span className="text-[10px] text-muted-foreground">Format spasial QGIS / ArcGIS</span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
@@ -292,6 +393,44 @@ const AdminDashboard = () => {
                     </Button>
                   </div>
                 </div>
+
+                {allVisibleSelected && totalFiltered > reports.length && (
+                  <div className="mb-4 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/20 flex flex-wrap items-center justify-between gap-2 text-xs text-primary animate-in fade-in duration-150">
+                    <span>
+                      {selectedIds.size >= totalFiltered ? (
+                        <>Seluruh <strong>{totalFiltered}</strong> laporan yang sesuai filter telah dipilih.</>
+                      ) : (
+                        <>Semua <strong>{reports.length}</strong> laporan di halaman ini telah dipilih.</>
+                      )}
+                    </span>
+                    {selectedIds.size < totalFiltered ? (
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="h-auto p-0 text-xs font-semibold text-primary underline hover:text-primary/80"
+                        onClick={handleSelectAllFiltered}
+                        disabled={isSelectingAllFiltered}
+                      >
+                        {isSelectingAllFiltered ? (
+                          <span className="flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Memilih...
+                          </span>
+                        ) : (
+                          `Pilih seluruh ${totalFiltered} laporan yang sesuai filter`
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="h-auto p-0 text-xs font-semibold text-muted-foreground underline hover:text-foreground"
+                        onClick={() => setSelectedIds(new Set())}
+                      >
+                        Batalkan semua pilihan
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {isLoadingReports ? (
                   <TableSkeleton rows={pageSize} />

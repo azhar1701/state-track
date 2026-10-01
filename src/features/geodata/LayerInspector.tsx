@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/services/client';
 import type { FeatureCollection, Geometry } from 'geojson';
 import LayerAttributeTable from './LayerAttributeTable';
+import { LayerMapPreview } from './LayerMapPreview';
 import { Loader2 } from 'lucide-react';
 import { sanitizeForLog, sanitizeHTML } from '@/lib/security';
 
@@ -291,8 +292,9 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 px-6">
+            <TabsList className="grid w-full grid-cols-5 px-6">
               <TabsTrigger value="ringkasan">Ringkasan</TabsTrigger>
+              <TabsTrigger value="peta">Pratinjau Peta</TabsTrigger>
               <TabsTrigger value="atribut">Atribut</TabsTrigger>
               <TabsTrigger value="metadata">Metadata</TabsTrigger>
               <TabsTrigger value="style">Style</TabsTrigger>
@@ -366,6 +368,30 @@ const LayerInspector = ({ open, onOpenChange, layerKey }: LayerInspectorProps) =
                     </div>
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+            <TabsContent value="peta" className="flex-1 overflow-auto mt-4 px-6 pb-6">
+              {activeTab === 'peta' && (
+                loadingData ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <LayerMapPreview
+                      featureCollection={featureCollection}
+                      geometryType={row?.geometry_type}
+                      layerName={row?.name}
+                      style={style}
+                    />
+                    <div className="text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      <span>Verifikasi batas spasial layer dan proyeksi koordinat (WGS84) secara visual.</span>
+                      <Button size="sm" variant="outline" className="h-7 text-xs self-start sm:self-auto" onClick={downloadGeoJSON}>
+                        Unduh GeoJSON
+                      </Button>
+                    </div>
+                  </div>
+                )
               )}
             </TabsContent>
             <TabsContent value="atribut" className="flex-1 overflow-auto mt-4 px-6 pb-6">

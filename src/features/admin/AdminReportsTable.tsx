@@ -10,7 +10,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, MapPin, Clock, MoreVertical } from "lucide-react";
+import { Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, MapPin, Clock, MoreVertical, ExternalLink } from "lucide-react";
 import { ReportListItem, ReportStatus } from "./types";
 import { formatDateTime, formatReportLocation } from "@/lib/formatters";
 import { SeverityBadge, StatusBadge } from "@/components/common/ReportBadges";
@@ -125,7 +125,7 @@ export const AdminReportsTable = ({
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     <Badge
                       variant="secondary"
-                      className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-muted/60"
+                      className="text-xs font-semibold capitalize px-2 py-0.5 bg-muted/80 text-foreground border border-border/70 shadow-2xs"
                     >
                       {report.category}
                     </Badge>
@@ -206,6 +206,12 @@ export const AdminReportsTable = ({
                         <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                         Lihat Detail
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="gap-2 text-xs cursor-pointer">
+                        <a href={`/map?selectedReportId=${report.id}`} target="_blank" rel="noopener noreferrer">
+                          <MapPin className="h-3.5 w-3.5 text-sky-500" />
+                          Buka di Peta GIS
+                        </a>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={() => onDeleteReport(report.id)}
@@ -272,13 +278,29 @@ export const AdminReportsTable = ({
                   </button>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-muted/50 border-border/50">
+                  <Badge variant="secondary" className="text-xs font-semibold capitalize px-2.5 py-0.5 bg-muted/80 text-foreground border border-border/70 shadow-2xs">
                     {report.category}
                   </Badge>
                 </TableCell>
-                <TableCell><SeverityBadge severity={report.severity} /></TableCell>
-                <TableCell className="max-w-[150px] truncate" title={shortLocation(report)}>
-                  {shortLocation(report) || <span className="text-muted-foreground text-xs">-</span>}
+                <TableCell>
+                  <SeverityBadge severity={report.severity} />
+                </TableCell>
+                <TableCell className="max-w-[170px]">
+                  <div className="flex items-center justify-between gap-1 group/loc">
+                    <span className="truncate text-xs" title={shortLocation(report)}>
+                      {shortLocation(report) || <span className="text-muted-foreground">-</span>}
+                    </span>
+                    <a
+                      href={`/map?selectedReportId=${report.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-60 group-hover/loc:opacity-100 shrink-0"
+                      title="Buka lokasi di Peta GIS Utama (Tab baru)"
+                      aria-label={`Buka peta lokasi ${report.title || ''}`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
                 </TableCell>
                 <TableCell className="max-w-[180px]">
                   {report.resolution?.trim()

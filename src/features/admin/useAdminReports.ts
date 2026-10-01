@@ -11,13 +11,36 @@ import {
   CategoryFilter, 
   KecamatanFilter,
   DesaFilter,
+  DateRangeFilter,
   SortOption,
   REPORT_LIST_COLUMNS,
   ReportCategory
 } from "./types";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createRealtimeBatcher, type RealtimePayload } from "@/lib/realtime-batcher";
 import { useReportStats } from "@/features/reports/hooks/useReportStats";
+
+export const getDateRangeThreshold = (filter: DateRangeFilter): Date | null => {
+  if (filter === "semua") return null;
+  const now = new Date();
+  if (filter === "today") {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  }
+  if (filter === "last_7_days") {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d;
+  }
+  if (filter === "last_30_days") {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d;
+  }
+  if (filter === "this_month") {
+    return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  }
+  return null;
+};
 
 interface FetchReportsParams {
   statusFilter: StatusFilter;
@@ -25,6 +48,7 @@ interface FetchReportsParams {
   categoryFilter: CategoryFilter;
   kecamatanFilter?: KecamatanFilter;
   desaFilter?: DesaFilter;
+  dateRangeFilter?: DateRangeFilter;
   search: string;
   sortBy: SortOption;
   page: number;
@@ -34,12 +58,14 @@ interface FetchReportsParams {
 export const useAdminReports = (params: FetchReportsParams) => {
   const queryClient = useQueryClient();
   const { stats, refetch: refetchStats } = useReportStats();
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date>(new Date());
   const { 
     statusFilter, 
     severityFilter, 
     categoryFilter, 
     kecamatanFilter = "semua", 
     desaFilter = "semua", 
+    dateRangeFilter = "semua",
     search, 
     sortBy, 
     page, 
@@ -52,6 +78,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
       () => {
         queryClient.invalidateQueries({ queryKey: ["admin", "reports"] });
         queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+        setLastSyncedAt(new Date());
       },
       { debounceMs: 500, maxWaitMs: 2000, channel: "admin-reports-realtime" }
     );
@@ -70,7 +97,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
   }, [queryClient]);
 
   const reportsQuery = useQuery({
-    queryKey: ["admin", "reports", statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, search, sortBy, page, pageSize],
+    queryKey: ["admin", "reports", statusFilter, severityFilter, categoryFilter, kecamatanFilter, desaFilter, dateRangeFilter, search, sortBy, page, pageSize],
     queryFn: async () => {
       let query = supabase
         .from("reports")
@@ -81,6 +108,11 @@ export const useAdminReports = (params: FetchReportsParams) => {
       if (categoryFilter !== "semua") query = query.eq("category", categoryFilter);
       if (kecamatanFilter !== "semua") query = query.eq("kecamatan", kecamatanFilter);
       if (desaFilter !== "semua") query = query.eq("desa", desaFilter);
+
+      const threshold = getDateRangeThreshold(dateRangeFilter);
+      if (threshold) {
+        query = query.gte("created_at", threshold.toISOString());
+      }
       if (search.trim()) {
         const term = search.trim();
         query = query.or(`title.ilike.%${term}%,location_name.ilike.%${term}%,desa.ilike.%${term}%,kecamatan.ilike.%${term}%`);
@@ -248,6 +280,7 @@ export const useAdminReports = (params: FetchReportsParams) => {
     kecamatanList: regionsQuery.data?.kecamatanList || [],
     desaList: regionsQuery.data?.desaList || [],
     isLoadingRegions: regionsQuery.isLoading,
+    lastSyncedAt: reportsQuery.dataUpdatedAt ? new Date(reportsQuery.dataUpdatedAt) : lastSyncedAt,
     updateStatus: updateStatusMutation.mutateAsync,
     bulkUpdate: bulkUpdateMutation.mutateAsync,
     deleteReport: deleteMutation.mutateAsync,

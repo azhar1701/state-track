@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminReportMiniMap } from "./AdminReportMiniMap";
+import { PhotoComparisonView } from "./PhotoComparisonView";
 
 interface AdminDetailProps {
   selectedReport: ReportListItem | null;
@@ -65,6 +66,13 @@ interface AdminDetailProps {
 
 // ── Pending nav state when user has unsaved changes ──────────────────
 type PendingNav = "prev" | "next" | null;
+
+const QUICK_RESOLUTION_TEMPLATES = [
+  { label: "Survei Terjadwal", text: "Tim teknis telah menjadwalkan survei lapangan untuk inspeksi dimensi kerusakan dan estimasi kebutuhan penanganan." },
+  { label: "Kirim Material", text: "Material darurat (bronjong kawat / karung pasir) telah dikirimkan ke lokasi kejadian." },
+  { label: "Koordinasi Pemdes/P3A", text: "Telah dikoordinasikan dengan pihak Pemerintah Desa dan pengurus P3A setempat untuk pengamanan area." },
+  { label: "Penanganan Selesai", text: "Pekerjaan perbaikan infrastruktur telah selesai dilaksanakan dan fungsi aliran air telah kembali normal." },
+];
 
 // ── Helper: render diff for a single field ───────────────────────────
 const DiffField = ({ label, from, to }: { label: string; from?: unknown; to?: unknown }) => {
@@ -657,6 +665,19 @@ const AdminDetail = ({
             )}
           </div>
 
+          {/* Interactive Photo Comparison Mode (Before vs After) */}
+          {reporterPhotos.length > 0 && evidencePhotos.length > 0 && (
+            <PhotoComparisonView
+              beforePhotos={reporterPhotos}
+              afterPhotos={evidencePhotos}
+              onOpenLightbox={(photoUrl) => {
+                const idx = allPhotos.indexOf(photoUrl);
+                setActivePhotoIndex(idx >= 0 ? idx : 0);
+                setLightboxOpen(true);
+              }}
+            />
+          )}
+
           {/* Reporter Photos Documentation */}
           <div className="space-y-2 pb-4 border-b border-border/50">
             <div className="flex items-center justify-between">
@@ -866,9 +887,27 @@ const AdminDetail = ({
 
           {/* Resolution textarea — shadcn Textarea */}
           <div className="space-y-2 pb-4 border-b border-border/50">
-            <label className="text-xs font-medium text-muted-foreground">
-              Catatan Hasil / Respon Penanganan Admin
-            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Catatan Hasil / Respon Penanganan Admin
+              </label>
+              <span className="text-[11px] text-muted-foreground">Template respon cepat:</span>
+            </div>
+            {/* Quick chips templates */}
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_RESOLUTION_TEMPLATES.map((tmpl) => (
+                <button
+                  key={tmpl.label}
+                  type="button"
+                  onClick={() => {
+                    setEditResolution((prev) => (prev.trim() ? `${prev}\n${tmpl.text}` : tmpl.text));
+                  }}
+                  className="text-2xs font-medium px-2 py-1 rounded-md bg-muted/70 hover:bg-primary/10 hover:text-primary border border-border/70 transition-colors"
+                >
+                  + {tmpl.label}
+                </button>
+              ))}
+            </div>
             <Textarea
               className="min-h-[100px] text-sm resize-none"
               value={editResolution}

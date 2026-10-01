@@ -22,6 +22,7 @@ export type SeverityFilter = "semua" | ReportSeverity;
 export type CategoryFilter = "semua" | ReportCategory;
 export type KecamatanFilter = "semua" | string;
 export type DesaFilter = "semua" | string;
+export type DateRangeFilter = "semua" | "today" | "last_7_days" | "last_30_days" | "this_month";
 export type SortOption = "created_at_desc" | "severity_desc" | "category_asc";
 
 export const REPORT_LIST_COLUMNS = "id,title,category,status,created_at,updated_at,location_name,severity,kecamatan,desa,resolution,priority_score";
