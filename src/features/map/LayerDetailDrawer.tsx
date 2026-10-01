@@ -48,7 +48,19 @@ export function LayerDetailDrawer({
  };
  }, [isOpen]);
 
- if (!isOpen || !feature) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !feature) return null;
 
  const properties = feature.properties || {};
  // Get title from common property names

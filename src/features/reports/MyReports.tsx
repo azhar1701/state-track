@@ -233,7 +233,6 @@ export default function MyReports() {
   const where = useMemo(() => ({ status, category, q }), [status, category, q]);
 
   const loadData = useCallback(async () => {
-    setSelectedReport(null);
     if (!user) {
       setRows([]);
       setTotal(0);
@@ -249,7 +248,7 @@ export default function MyReports() {
       let query = supabase
         .from("reports")
         .select(
-          "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,kecamatan,desa,resolution",
+          "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,photo_urls,severity,kecamatan,desa,resolution,location_name",
           { count: "exact" }
         )
         .eq("user_id", user.id)
@@ -291,7 +290,7 @@ export default function MyReports() {
         } = await supabase
           .from("reports")
           .select(
-            "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url"
+            "id,title,description,category,status,incident_date,created_at,user_id,latitude,longitude,photo_url,location_name"
           )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -307,6 +306,7 @@ export default function MyReports() {
           reporter_name: null,
           phone: null,
           photo_urls: null,
+          location_name: typeof r.location_name === "string" ? r.location_name : null,
           description: "Tidak ada deskripsi",
         })) as unknown as ReportRow[];
         count = fallbackCount;
@@ -321,6 +321,13 @@ export default function MyReports() {
 
       setRows(mapped);
       setTotal(count ?? 0);
+
+      // Reconcile open report if it's currently selected to maintain realtime sync without closing drawer
+      setSelectedReport((prev) => {
+        if (!prev) return null;
+        const match = mapped.find((r) => r.id === prev.id);
+        return match ? { ...prev, ...match } : prev;
+      });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Gagal memuat laporan";
       logger.error("Failed to load reports:", e);
@@ -333,6 +340,25 @@ export default function MyReports() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  // Reconcile selectedReport if rows change from server/real-time
+  useEffect(() => {
+    if (selectedReport && rows.length > 0) {
+      const match = rows.find((r) => r.id === selectedReport.id);
+      if (
+        match &&
+        (match.title !== selectedReport.title ||
+          match.status !== selectedReport.status ||
+          match.severity !== selectedReport.severity ||
+          match.resolution !== selectedReport.resolution ||
+          match.location_name !== selectedReport.location_name ||
+          match.photo_url !== selectedReport.photo_url ||
+          JSON.stringify(match.photo_urls) !== JSON.stringify(selectedReport.photo_urls))
+      ) {
+        setSelectedReport((prev) => (prev ? { ...prev, ...match } : prev));
+      }
+    }
+  }, [rows, selectedReport]);
 
   // Realtime sync for user's reports
   useEffect(() => {
@@ -367,6 +393,7 @@ export default function MyReports() {
     setCategory("all");
     setQ("");
     setPage(1);
+    setSelectedReport(null);
   };
 
   const refetch = () => {
@@ -749,12 +776,14 @@ export default function MyReports() {
         </div>
       )}
 
-      {/* Detail Drawer */}
+      {/* Detail Dialog / Modal */}
       <AnimatePresence>
         {selectedReport && (
           <ReportDetailDrawer
             report={selectedReport as ReportRow}
             onClose={() => setSelectedReport(null)}
+            mode="modal"
+            showMiniMap={true}
           />
         )}
       </AnimatePresence>

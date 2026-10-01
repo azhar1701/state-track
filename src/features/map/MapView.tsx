@@ -880,6 +880,8 @@ const MapView = () => {
               report={selectedReport}
               onClose={() => setSelectedReport(null)}
               onRoute={() => fetchRoute([selectedReport.latitude, selectedReport.longitude])}
+              mode="drawer"
+              showMiniMap={false}
             />
           )}
 
