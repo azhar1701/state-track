@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FeatureCollection } from 'geojson';
 import { supabase } from '@/services/client';
 import { useAuth } from '@/features/auth/useAuth';
 import type { Database } from '@/services/types';
 import { useLayerManager, type LayerData } from '@/features/map/useLayerManager';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import LayerInspector from '@/features/geodata/LayerInspector';
 import LayerUploader from '@/features/geodata/LayerUploader';
-import { Loader2, Map as MapIcon, Eye, RefreshCw, Download, Upload, XCircle } from 'lucide-react';
+import { Loader2, Map as MapIcon, Eye, RefreshCw, Download, Upload, XCircle, ArrowDownUp, GripVertical, ChevronUp, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { bbox } from '@turf/turf';
@@ -41,10 +41,10 @@ function InlineEditableText({ value, onSave }: { value: string; onSave: (v: stri
 
 export default function GeoDataManager() {
   const { user, isAdmin } = useAuth();
-  const { layers, loading, fetchLayers, deleteLayer, updateLayer } = useLayerManager();
+  const { layers, loading, fetchLayers, deleteLayer, updateLayer, updateLayerOrder } = useLayerManager();
   const navigate = useNavigate();
   const [layerSearch, setLayerSearch] = useState('');
-  const [layerSort, setLayerSort] = useState<'created_at_desc' | 'name_asc' | 'feature_count'>('created_at_desc');
+  const [layerSort, setLayerSort] = useState<'sort_order' | 'created_at_desc' | 'name_asc' | 'feature_count'>('sort_order');
   const [geometryFilter, setGeometryFilter] = useState<string>('all');
   const [validationFilter, setValidationFilter] = useState<'all' | 'valid' | 'invalid'>('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -52,6 +52,80 @@ export default function GeoDataManager() {
   const [layerValidation, setLayerValidation] = useState(() => new Map<string, { valid: boolean; errorCount: number; featureCount: number }>());
   const [layerStats, setLayerStats] = useState(() => new Map<string, { featureCount: number; bounds?: number[] }>());
   const [isExporting, setIsExporting] = useState(false);
+
+  // Layer order management state
+  const [orderedLayers, setOrderedLayers] = useState<LayerData[]>([]);
+  const [isDirtyOrder, setIsDirtyOrder] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isDirtyOrder) {
+      const sorted = [...layers].sort((a, b) => (a.sort_order ?? 500) - (b.sort_order ?? 500));
+      setOrderedLayers(sorted);
+    }
+  }, [layers, isDirtyOrder]);
+
+  const handleMoveLayer = async (fromIdx: number, direction: 'up' | 'down') => {
+    const toIdx = direction === 'up' ? fromIdx - 1 : fromIdx + 1;
+    if (toIdx < 0 || toIdx >= orderedLayers.length) return;
+
+    const next = [...orderedLayers];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setOrderedLayers(next);
+
+    const BASE = 360;
+    const STEP = 10;
+    const updates = next.map((l, i) => ({
+      id: l.id!,
+      sort_order: BASE + i * STEP,
+    }));
+
+    setSavingOrder(true);
+    try {
+      await updateLayerOrder(updates);
+      setIsDirtyOrder(false);
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    dragIndexRef.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndexRef.current === null || dragIndexRef.current === index) return;
+    const next = [...orderedLayers];
+    const [dragged] = next.splice(dragIndexRef.current, 1);
+    next.splice(index, 0, dragged);
+    dragIndexRef.current = index;
+    setOrderedLayers(next);
+    setIsDirtyOrder(true);
+  };
+
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
+  };
+
+  const handleSaveLayerOrder = async () => {
+    setSavingOrder(true);
+    try {
+      const BASE = 360;
+      const STEP = 10;
+      const updates = orderedLayers.map((l, i) => ({
+        id: l.id!,
+        sort_order: BASE + i * STEP,
+      }));
+      await updateLayerOrder(updates);
+      setIsDirtyOrder(false);
+    } finally {
+      setSavingOrder(false);
+    }
+  };
 
   const validateLayerById = useCallback(async (layerId: string, layerKey: string) => {
     try {
@@ -213,6 +287,7 @@ export default function GeoDataManager() {
     }
 
     return result.sort((a, b) => {
+      if (layerSort === 'sort_order') return (a.sort_order ?? 500) - (b.sort_order ?? 500);
       if (layerSort === 'name_asc') return a.name.localeCompare(b.name);
       if (layerSort === 'feature_count') {
         const aCount = layerStats.get(a.key)?.featureCount || 0;
@@ -277,6 +352,117 @@ export default function GeoDataManager() {
         </CardContent>
       </Card>
 
+      {/* ===== Card Urutan Layer di Peta ===== */}
+      <Card className="mb-6 border-2 border-primary/20 bg-card/60 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ArrowDownUp className="h-5 w-5 text-primary" />
+                Urutan Layer di Peta (Z-Index Canvas)
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Atur urutan tumpukan layer di peta. Seret (drag-and-drop) baris atau gunakan tombol panah untuk memindahkan posisi.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isDirtyOrder ? (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">
+                  Belum Disimpan
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  Tersimpan
+                </Badge>
+              )}
+              {isDirtyOrder && (
+                <Button
+                  size="sm"
+                  onClick={handleSaveLayerOrder}
+                  disabled={savingOrder}
+                  className="gap-1.5"
+                >
+                  {savingOrder && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Terapkan Urutan
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/30 border border-border/80 rounded-lg p-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-2 pb-2 mb-2 border-b border-border/60">
+              <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                ↓ Lapisan Paling Bawah (Latar / Dasar Peta)
+              </span>
+              <span className="font-medium text-sky-600 dark:text-sky-400">
+                ↑ Lapisan Paling Atas (Menimpa Layer Lain)
+              </span>
+            </div>
+
+            {orderedLayers.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Belum ada layer</p>
+            ) : (
+              <div className="space-y-2">
+                {orderedLayers.map((layer, idx) => (
+                  <div
+                    key={layer.id || layer.key}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-border bg-card hover:border-primary/40 hover:bg-accent/20 cursor-grab active:cursor-grabbing transition-all select-none"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="w-6 text-xs font-mono font-bold text-muted-foreground text-center shrink-0">
+                      #{idx + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate flex items-center gap-2">
+                        {layer.name}
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">({layer.key})</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {layer.geometry_type || 'Geometri tidak diketahui'}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[11px] font-mono shrink-0">
+                      z={layer.sort_order ?? 500}
+                    </Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        disabled={savingOrder || idx === 0}
+                        onClick={() => void handleMoveLayer(idx, 'up')}
+                        title="Geser ke lapisan lebih bawah (nilai z lebih kecil)"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        disabled={savingOrder || idx === orderedLayers.length - 1}
+                        onClick={() => void handleMoveLayer(idx, 'down')}
+                        title="Geser ke lapisan lebih atas (nilai z lebih tinggi)"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground pt-3 px-1">
+              💡 <strong>Tips:</strong> Layer di baris atas ditampilkan paling bawah di peta. Urutan layer otomatis disinkronkan ke kanvas peta secara real-time.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-2">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
@@ -320,10 +506,11 @@ export default function GeoDataManager() {
                 </SelectContent>
               </Select>
               <Select value={layerSort} onValueChange={(v) => setLayerSort(v as typeof layerSort)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Urutkan" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="sort_order">🗺️ Urutan Peta (Z-Index)</SelectItem>
                   <SelectItem value="created_at_desc">🕒 Terbaru</SelectItem>
                   <SelectItem value="name_asc">🔤 Nama (A-Z)</SelectItem>
                   <SelectItem value="feature_count">📊 Jumlah Fitur</SelectItem>
@@ -339,6 +526,7 @@ export default function GeoDataManager() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-semibold">Nama</TableHead>
                     <TableHead className="font-semibold">Tipe</TableHead>
+                    <TableHead className="font-semibold text-center">Urutan di Peta</TableHead>
                     <TableHead className="font-semibold">Fitur</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
                     <TableHead className="text-right font-semibold">Aksi</TableHead>
@@ -347,6 +535,7 @@ export default function GeoDataManager() {
                 <TableBody>
                   {filteredLayers.map((r) => {
                     const stats = layerStats.get(r.key);
+                    const orderIdx = orderedLayers.findIndex((l) => l.id === r.id);
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/30">
                         <TableCell className="font-medium">
@@ -357,6 +546,35 @@ export default function GeoDataManager() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{r.geometry_type || '-'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex items-center gap-1 bg-muted/60 px-2 py-1 rounded-md border text-xs">
+                            <span className="font-mono font-semibold text-primary">z={r.sort_order ?? 500}</span>
+                            <div className="flex flex-col gap-0.5 ml-1">
+                              <button
+                                type="button"
+                                disabled={savingOrder || orderIdx <= 0}
+                                onClick={() => {
+                                  if (orderIdx > 0) void handleMoveLayer(orderIdx, 'up');
+                                }}
+                                className="p-0.5 hover:bg-background rounded disabled:opacity-20 text-muted-foreground hover:text-foreground transition-colors"
+                                title="Geser ke lapisan lebih bawah (z-index lebih kecil)"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={savingOrder || orderIdx < 0 || orderIdx >= orderedLayers.length - 1}
+                                onClick={() => {
+                                  if (orderIdx >= 0 && orderIdx < orderedLayers.length - 1) void handleMoveLayer(orderIdx, 'down');
+                                }}
+                                className="p-0.5 hover:bg-background rounded disabled:opacity-20 text-muted-foreground hover:text-foreground transition-colors"
+                                title="Geser ke lapisan lebih atas (z-index lebih tinggi)"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span className="font-semibold">{stats?.featureCount || 0}</span>
@@ -408,7 +626,7 @@ export default function GeoDataManager() {
                   })}
                   {filteredLayers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12">
+                      <TableCell colSpan={6} className="text-center py-12">
                         {loading ? (
                           // Skeleton shimmer — avoids CLS spinner anti-pattern
                           <div className="space-y-2 px-4">

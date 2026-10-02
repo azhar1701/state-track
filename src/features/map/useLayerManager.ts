@@ -11,6 +11,7 @@ export interface LayerData {
   key: string;
   name: string;
   geometry_type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection' | null;
+  sort_order?: number;
   data: {
     featureCollection: FeatureCollection<Geometry>;
     crs: string;
@@ -39,8 +40,8 @@ export const useLayerManager = () => {
     try {
       const { data, error } = await supabase
         .from('geo_layers')
-        .select('id,key,name,geometry_type,created_at')
-        .order('created_at', { ascending: false });
+        .select('id,key,name,geometry_type,sort_order,created_at')
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
 
@@ -49,10 +50,11 @@ export const useLayerManager = () => {
         key: string;
         name: string;
         geometry_type: string | null;
+        sort_order: number | null;
         created_at: string;
       }>;
       const uniqueLayers = Array.from(
-        new Map(rows.map((l) => [l.id, { ...l, data: null as unknown as LayerData['data'] } as LayerData])).values()
+        new Map(rows.map((l) => [l.id, { ...l, sort_order: l.sort_order ?? 500, data: null as unknown as LayerData['data'] } as LayerData])).values()
       );
 
       setLayers(uniqueLayers as LayerData[]);
@@ -313,6 +315,24 @@ export const useLayerManager = () => {
     }
   }, []);
 
+  const updateLayerOrder = useCallback(async (orderUpdates: Array<{ id: string; sort_order: number }>) => {
+    const results = await Promise.allSettled(
+      orderUpdates.map(({ id, sort_order }) =>
+        supabase.from('geo_layers').update({ sort_order }).eq('id', id)
+      )
+    );
+    const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+    if (failed.length > 0) {
+      toast.error(`Gagal menyimpan ${failed.length} urutan layer.`);
+      return false;
+    }
+    sessionStorage.removeItem('map:availableLayers');
+    window.dispatchEvent(new CustomEvent('layer-updated', { detail: { reorder: true } }));
+    toast.success('Urutan layer di peta berhasil diperbarui');
+    await fetchLayers();
+    return true;
+  }, [fetchLayers]);
+
   return {
     layers,
     loading,
@@ -320,6 +340,7 @@ export const useLayerManager = () => {
     uploadLayer,
     deleteLayer,
     updateLayer,
+    updateLayerOrder,
     fetchLayerData,
     clearCache,
   };
