@@ -482,8 +482,16 @@ const MapView = () => {
       if (!on || !dynamicData[key]) return null;
       const config = dynamicStyle[key] || {};
       const geomType = availableLayers.find((l) => l.key === key)?.geometry_type || dynamicData[key]?.features?.find((f) => !!f?.geometry)?.geometry?.type || "";
+      const lower = key.toLowerCase();
+      // Use DB sort_order as Pane zIndex. Fallback to name-pattern for legacy/unsaved layers.
+      const dbSortOrder = availableLayers.find((l) => l.key === key)?.sort_order;
+      const zIdx = (dbSortOrder !== undefined && dbSortOrder !== 500)
+        ? dbSortOrder
+        : lower.includes("sawah") || lower.includes("padi") ? 360
+        : lower.includes("sungai") || lower.includes("river") || lower.includes("drainase") ? 370
+        : 375;
       return (
-        <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: 365 }}>
+        <Pane key={`pane-${key}`} name={`dyn-${key}`} style={{ zIndex: zIdx }}>
           <RLGeoJSON
             key={`geojson-${key}-${JSON.stringify(config)}`}
             data={dynamicData[key]!}
@@ -629,6 +637,7 @@ const MapView = () => {
             {isMobile && <MobileMapControls onZoomIn={() => mapInstance?.zoomIn()} onZoomOut={() => mapInstance?.zoomOut()} onLocate={handleLocateOrEnableGPS} onResetExtent={resetToCiamisExtent} />}
 
             {overlays.adminBoundaries && adminGeoJson && (
+              <Pane name="admin-boundaries-pane" style={{ zIndex: 350 }}>
               <RLGeoJSON
                 key={`admin-boundaries-${adminGeoJson.features?.length || 0}`}
                 data={adminGeoJson}
@@ -679,14 +688,17 @@ const MapView = () => {
                   layer.on("remove", () => unregisterLayer(featureId));
                 }}
               />
+              </Pane>
             )}
 
             {overlays.adminBoundaries && kecamatanLines && (
+              <Pane name="kecamatan-boundaries-pane" style={{ zIndex: 351 }}>
               <RLGeoJSON
                 key={`kecamatan-boundaries-${kecamatanLines.features?.length || 0}`}
                 data={kecamatanLines}
                 style={() => ({ color: "#0f172a", weight: 2.5, opacity: 0.9, dashArray: "6 4" })}
               />
+              </Pane>
             )}
 
             {renderedLayers}

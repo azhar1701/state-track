@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +19,11 @@ import {
   CheckCircle,
   CheckCircle2,
   RotateCcw,
+  GripVertical,
+  ArrowDownUp,
 } from 'lucide-react';
 import { useSystemSettings } from '@/features/admin/useSystemSettings';
+import { supabase } from '@/services/client';
 
 type GeoLayerSettings = {
   enforceCRS: boolean;
@@ -33,6 +36,14 @@ type GeoLayerSettings = {
   defaultOpacity: number;
   defaultVisible: boolean;
 };
+
+interface LayerOrderItem {
+  id: string;
+  key: string;
+  name: string;
+  geometry_type: string | null;
+  sort_order: number;
+}
 
 const STORAGE_KEY = 'admin:geoLayerSettings';
 
@@ -54,6 +65,13 @@ export const GeoLayerSettings = () => {
   const [initialSettings, setInitialSettings] = useState<GeoLayerSettings>(defaultSettings);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // --- Layer Order State ---
+  const [layerOrder, setLayerOrder] = useState<LayerOrderItem[]>([]);
+  const [layerOrderDirty, setLayerOrderDirty] = useState(false);
+  const [loadingLayers, setLoadingLayers] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,6 +116,29 @@ export const GeoLayerSettings = () => {
     };
   }, [fetchSetting]);
 
+  // Load layer list for order management
+  const loadLayerOrder = useCallback(async () => {
+    setLoadingLayers(true);
+    try {
+      const { data, error } = await supabase
+        .from('geo_layers')
+        .select('id,key,name,geometry_type,sort_order')
+        .neq('key', 'admin_boundaries')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      const rows = (data || []) as LayerOrderItem[];
+      setLayerOrder(rows.map((r) => ({ ...r, sort_order: r.sort_order ?? 500 })));
+      setLayerOrderDirty(false);
+    } catch (e) {
+      logger.warn('Failed to load layer order', e);
+      toast.error('Gagal memuat daftar layer');
+    } finally {
+      setLoadingLayers(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadLayerOrder(); }, [loadLayerOrder]);
+
   const isDirty = useMemo(() => {
     return JSON.stringify(settings) !== JSON.stringify(initialSettings);
   }, [settings, initialSettings]);
@@ -106,6 +147,77 @@ export const GeoLayerSettings = () => {
     setSettings(initialSettings);
     toast.info("Perubahan pengaturan GeoLayer di-reset");
   }, [initialSettings]);
+
+  // --- Drag and Drop handlers (HTML5 native) ---
+  const handleDragStart = useCallback((_e: React.DragEvent, index: number) => {
+    dragIndexRef.current = index;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, overIndex: number) => {
+    e.preventDefault();
+    const from = dragIndexRef.current;
+    if (from === null || from === overIndex) return;
+    setLayerOrder((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(overIndex, 0, item);
+      dragIndexRef.current = overIndex;
+      return next;
+    });
+    setLayerOrderDirty(true);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragIndexRef.current = null;
+  }, []);
+
+  const handleSaveLayerOrder = useCallback(async () => {
+    setSavingOrder(true);
+    try {
+      // Assign ascending sort_order values (step 10) based on current list order.
+      // This preserves relative spacing so future manual edits are easy.
+      const BASE = 400;
+      const STEP = 10;
+      const updates = layerOrder.map((layer, idx) => ({
+        id: layer.id,
+        sort_order: BASE + idx * STEP,
+      }));
+
+      // Upsert each row — Supabase doesn't support bulk update by different ids yet,
+      // so we send individual updates in parallel (batch of promises).
+      const results = await Promise.allSettled(
+        updates.map(({ id, sort_order }) =>
+          supabase.from('geo_layers').update({ sort_order }).eq('id', id)
+        )
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+      if (failed.length > 0) {
+        toast.error(`Gagal menyimpan ${failed.length} layer. Coba lagi.`);
+        return;
+      }
+
+      // Reflect new sort_order values locally
+      setLayerOrder((prev) =>
+        prev.map((layer, idx) => ({ ...layer, sort_order: BASE + idx * STEP }))
+      );
+      setLayerOrderDirty(false);
+
+      // Broadcast to MapView so it can re-fetch layer list
+      sessionStorage.removeItem('map:availableLayers');
+      window.dispatchEvent(new CustomEvent('layer-updated', { detail: { reorder: true } }));
+
+      toast.success('Urutan layer berhasil disimpan', {
+        description: 'Peta akan memuat ulang urutan layer secara otomatis.',
+        icon: <CheckCircle className="h-4 w-4" />,
+      });
+    } catch (e) {
+      logger.error('Failed to save layer order', e);
+      toast.error('Terjadi kesalahan saat menyimpan urutan layer');
+    } finally {
+      setSavingOrder(false);
+    }
+  }, [layerOrder]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -167,6 +279,96 @@ export const GeoLayerSettings = () => {
 
   return (
     <div className="space-y-4">
+      {/* ===== Layer Order Panel ===== */}
+      <Card variant="glass" className="border-0">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <ArrowDownUp className="h-5 w-5 text-primary" />
+                Urutan Layer di Peta
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Seret baris untuk mengatur urutan tumpuk layer — layer paling bawah daftar tampil paling atas di peta
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {layerOrderDirty && (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">
+                  Belum Disimpan
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadLayerOrder}
+                disabled={loadingLayers || savingOrder}
+                className="text-xs gap-1.5"
+                title="Muat ulang daftar layer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0">
+          {loadingLayers ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+            </div>
+          ) : layerOrder.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              Belum ada layer geospasial yang diunggah
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {/* Header hint */}
+              <div className="flex items-center justify-between px-2 mb-2">
+                <span className="text-xs text-muted-foreground font-medium">← Bawah peta</span>
+                <span className="text-xs text-muted-foreground font-medium">Atas peta →</span>
+              </div>
+              {layerOrder.map((layer, idx) => (
+                <div
+                  key={layer.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card hover:border-primary/40 hover:bg-accent/30 cursor-grab active:cursor-grabbing active:opacity-60 transition-all select-none"
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{layer.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {layer.geometry_type || 'unknown'} &middot; <code className="text-[10px]">{layer.key}</code>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono flex-shrink-0">
+                    z={layer.sort_order}
+                  </Badge>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground pt-2 px-1">
+                Layer di urutan atas daftar = tampil di bawah peta. Urutan diperbarui saat klik &ldquo;Terapkan Urutan&rdquo;.
+              </p>
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={handleSaveLayerOrder}
+                  disabled={savingOrder || !layerOrderDirty}
+                  size="sm"
+                  className="gap-1.5"
+                >
+                  {savingOrder && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Terapkan Urutan
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ===== Pengaturan GeoLayer Form ===== */}
       <Card variant="glass" className="border-0">
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-start justify-between gap-3">

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useDynamicLayers.ts
  * Manages dynamic geo_layers: listing, lazy-loading, CRS reprojection, style extraction.
  * Extracted from MapView.tsx to isolate Supabase + proj4 side-effects.
@@ -19,6 +19,8 @@ export interface AvailableLayer {
   key: string;
   name: string;
   geometry_type: string | null;
+  /** Layer stack order — lower value = rendered below (default 500). Set by admin in GeoLayerSettings. */
+  sort_order: number;
 }
 
 export interface LayerStyleConfig {
@@ -273,13 +275,13 @@ export const useDynamicLayers = (
       try {
         const { data, error } = await supabase
           .from("geo_layers")
-          .select("key,name,geometry_type")
-          .order("created_at", { ascending: false });
+          .select("key,name,geometry_type,sort_order")
+          .order("sort_order", { ascending: true });
         if (cancelled || error || !data) return;
         const rows = data as AvailableLayer[];
         const mapped = rows
           .filter((l) => l.key !== "admin_boundaries")
-          .map(({ key, name, geometry_type }) => ({ key, name, geometry_type }));
+          .map(({ key, name, geometry_type, sort_order }) => ({ key, name, geometry_type, sort_order: sort_order ?? 500 }));
         setAvailableLayers(mapped);
         sessionStorage.setItem("map:availableLayers", JSON.stringify(mapped));
       } catch (e) {

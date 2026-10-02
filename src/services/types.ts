@@ -343,6 +343,7 @@ export type Database = {
           name: string
           geometry_type: string | null
           data: Json | null
+          sort_order: number
           created_at: string
           updated_at: string
         }
@@ -352,6 +353,7 @@ export type Database = {
           name: string
           geometry_type?: string | null
           data?: Json | null
+          sort_order?: number
           created_at?: string
           updated_at?: string
         }
@@ -361,6 +363,7 @@ export type Database = {
           name?: string
           geometry_type?: string | null
           data?: Json | null
+          sort_order?: number
           created_at?: string
           updated_at?: string
         }
